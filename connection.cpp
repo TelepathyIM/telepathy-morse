@@ -127,7 +127,7 @@ void TelegramConnection::connectStepTwo()
 {
     Tp::DBusError *error = m_connectionError;
 
-    m_core->requestAuthCode(m_selfPhone);
+//    m_core->requestAuthCode(m_selfPhone);
 
     qDebug() << "Opening registration";
 
@@ -149,9 +149,8 @@ void TelegramConnection::connectStepTwo()
 
     if(!error->isValid()) {
         qDebug() << "Reg success";
+        addChannel(baseChannel);
     }
-
-    //        addChannel( baseChannel );
 
     //    simplePresenceIface->setStatuses(getSimpleStatusSpecMap());
 

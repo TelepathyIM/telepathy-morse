@@ -249,10 +249,10 @@ Tp::ContactAttributesMap TelegramConnection::getContactListAttributes(const QStr
             continue;
         }
         QVariantMap attributes;
-        attributes["org.freedesktop.Telepathy.Connection/contact-id"] = m_handles.value(handle);
-        attributes["org.freedesktop.Telepathy.Connection.Interface.ContactList/subscribe"] = Tp::SubscriptionStateYes;
-        attributes["org.freedesktop.Telepathy.Connection.Interface.ContactList/publish"] = Tp::SubscriptionStateYes;
-        attributes["org.freedesktop.Telepathy.Connection.Interface.SimplePresence/presence"] = QVariant::fromValue(getPresence(handle));
+        attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = m_handles.value(handle);
+        attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
+        attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/publish")] = Tp::SubscriptionStateYes;
+        attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(getPresence(handle));
         contactAttributes[handle] = attributes;
     }
     return contactAttributes;
@@ -271,10 +271,10 @@ Tp::ContactAttributesMap TelegramConnection::getContactAttributes(const Tp::UInt
             QVariantMap attributes;
             attributes["org.freedesktop.Telepathy.Connection/contact-id"] = m_handles.value(handle);
 
-            if (handle != selfHandle() && interfaces.contains("org.freedesktop.Telepathy.Connection.Interface.ContactList")) {
-                attributes["org.freedesktop.Telepathy.Connection.Interface.ContactList/subscribe"] = Tp::SubscriptionStateYes;
-                attributes["org.freedesktop.Telepathy.Connection.Interface.ContactList/publish"] = Tp::SubscriptionStateYes;
-                attributes["org.freedesktop.Telepathy.Connection.Interface.SimplePresence/presence"] = QVariant::fromValue(getPresence(handle));
+            if (handle != selfHandle() && interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/publish")] = Tp::SubscriptionStateYes;
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(getPresence(handle));
             }
             contactAttributes[handle] = attributes;
         }

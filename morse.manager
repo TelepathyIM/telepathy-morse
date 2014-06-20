@@ -1,0 +1,8 @@
+[ConnectionManager]
+Name = morse
+BusName = org.freedesktop.Telepathy.ConnectionManager.morse
+ObjectPath = /org/freedesktop/Telepathy/ConnectionManager/morse
+
+[Protocol telegram]
+param-account = s required
+EnglishName=Telegram

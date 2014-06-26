@@ -89,7 +89,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     setSelfHandle(addContact(m_selfPhone + QLatin1String("@telegram")));
 
-    setConnectCallback(Tp::memFun(this, &MorseConnection::connect));
+    setConnectCallback(Tp::memFun(this, &MorseConnection::doConnect));
     setInspectHandlesCallback(Tp::memFun(this, &MorseConnection::inspectHandles));
     setCreateChannelCallback(Tp::memFun(this, &MorseConnection::createChannel));
     setRequestHandlesCallback(Tp::memFun(this, &MorseConnection::requestHandles));
@@ -99,7 +99,7 @@ MorseConnection::~MorseConnection()
 {
 }
 
-void MorseConnection::connect(Tp::DBusError *error)
+void MorseConnection::doConnect(Tp::DBusError *error)
 {
     Q_UNUSED(error);
 
@@ -119,8 +119,8 @@ void MorseConnection::connect(Tp::DBusError *error)
     qDebug() << "Get auth code for " << m_selfPhone;
     m_core->initialConnection(QLatin1String("173.240.5.1"), 443);
 
-    QObject::connect(m_core, SIGNAL(dcConfigurationObtained()), this, SLOT(connectStepTwo()));
-    QObject::connect(m_core, SIGNAL(authenticated()), this, SLOT(connectSuccess()));
+    connect(m_core, SIGNAL(dcConfigurationObtained()), this, SLOT(connectStepTwo()));
+    connect(m_core, SIGNAL(authenticated()), this, SLOT(connectSuccess()));
 }
 
 void MorseConnection::connectStepTwo()

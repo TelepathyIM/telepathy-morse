@@ -16,21 +16,21 @@
 
 #include <TelepathyQt/BaseChannel>
 
-class SimpleTextChannel;
+class MorseTextChannel;
 
-typedef Tp::SharedPtr<SimpleTextChannel> SimpleTextChannelPtr;
+typedef Tp::SharedPtr<MorseTextChannel> MorseTextChannelPtr;
 
-class SimpleTextChannel : public Tp::BaseChannelTextType
+class MorseTextChannel : public Tp::BaseChannelTextType
 {
     Q_OBJECT
 public:
-    static SimpleTextChannelPtr create(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier);
-    virtual ~SimpleTextChannel();
+    static MorseTextChannelPtr create(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier);
+    virtual ~MorseTextChannel();
 
     QString sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
 
 private:
-    SimpleTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier);
+    MorseTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier);
 
     QObject *m_connection;
 

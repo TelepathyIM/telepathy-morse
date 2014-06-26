@@ -19,14 +19,14 @@
 
 class CTelegramCore;
 
-class TelegramConnection : public Tp::BaseConnection
+class MorseConnection : public Tp::BaseConnection
 {
     Q_OBJECT
 public:
-    TelegramConnection(const QDBusConnection &dbusConnection,
+    MorseConnection(const QDBusConnection &dbusConnection,
             const QString &cmName, const QString &protocolName,
             const QVariantMap &parameters);
-    ~TelegramConnection();
+    ~MorseConnection();
 
     static Tp::SimpleStatusSpecMap getSimpleStatusSpecMap();
 
@@ -48,7 +48,6 @@ public:
 
 public slots:
     void receiveMessage(const QString &sender, const QString &message);
-    void setContactList(const QStringList &identifiers);
     void setContactPresence(const QString &identifier, const QString &presence);
 
 signals:
@@ -56,6 +55,8 @@ signals:
 
 private slots:
     void connectStepTwo();
+    void connectSuccess();
+    void setContactList(const QStringList &identifiers);
 
 private:
     uint getHandle(const QString &identifier) const;
@@ -81,7 +82,6 @@ private:
     QHash<uint, uint> m_contactsSubscription;
 
     CTelegramCore *m_core;
-    Tp::DBusError *m_connectionError;
 
     QString m_selfPhone;
 };

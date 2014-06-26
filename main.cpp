@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     Tp::enableDebug(true);
     Tp::enableWarnings(true);
 
-    Tp::BaseProtocolPtr proto = Tp::BaseProtocol::create<TelegramProtocol>(QLatin1String("telegram"));
+    Tp::BaseProtocolPtr proto = Tp::BaseProtocol::create<MorseProtocol>(QLatin1String("telegram"));
     Tp::BaseConnectionManagerPtr cm = Tp::BaseConnectionManager::create(QLatin1String("morse"));
 
     proto->setEnglishName(QLatin1String("Telegram"));

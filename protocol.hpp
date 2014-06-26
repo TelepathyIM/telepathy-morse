@@ -16,16 +16,14 @@
 
 #include <TelepathyQt/BaseProtocol>
 
-class TelegramConnection;
-
-class TelegramProtocol : public Tp::BaseProtocol
+class MorseProtocol : public Tp::BaseProtocol
 {
     Q_OBJECT
-    Q_DISABLE_COPY(TelegramProtocol)
+    Q_DISABLE_COPY(MorseProtocol)
 
 public:
-    TelegramProtocol(const QDBusConnection &dbusConnection, const QString &name);
-    virtual ~TelegramProtocol();
+    MorseProtocol(const QDBusConnection &dbusConnection, const QString &name);
+    virtual ~MorseProtocol();
 
     QString connectionManagerName() const;
     Q_INVOKABLE void setConnectionManagerName(const QString &newName);
@@ -61,7 +59,7 @@ private:
     QString m_connectionManagerName;
 };
 
-inline QString TelegramProtocol::connectionManagerName() const
+inline QString MorseProtocol::connectionManagerName() const
 {
     return m_connectionManagerName;
 }

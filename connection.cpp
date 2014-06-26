@@ -24,7 +24,7 @@
 #include <QDebug>
 #include <QDateTime>
 
-Tp::SimpleStatusSpecMap TelegramConnection::getSimpleStatusSpecMap()
+Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
 {
     //Presence
     Tp::SimpleStatusSpec spAvailable;
@@ -49,15 +49,14 @@ Tp::SimpleStatusSpecMap TelegramConnection::getSimpleStatusSpecMap()
     return specs;
 }
 
-TelegramConnection::TelegramConnection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
+MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
     Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters),
-    m_core(0),
-    m_connectionError(0)
+    m_core(0)
 {
     qDebug() << Q_FUNC_INFO;
     /* Connection.Interface.Contacts */
     contactsIface = Tp::BaseConnectionContactsInterface::create();
-    contactsIface->setGetContactAttributesCallback(Tp::memFun(this, &TelegramConnection::getContactAttributes));
+    contactsIface->setGetContactAttributesCallback(Tp::memFun(this, &MorseConnection::getContactAttributes));
     contactsIface->setContactAttributeInterfaces(QStringList()
                                                  << TP_QT_IFACE_CONNECTION
                                                  << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST
@@ -66,42 +65,44 @@ TelegramConnection::TelegramConnection(const QDBusConnection &dbusConnection, co
 
     /* Connection.Interface.SimplePresence */
     simplePresenceIface = Tp::BaseConnectionSimplePresenceInterface::create();
-    simplePresenceIface->setSetPresenceCallback(Tp::memFun(this,&TelegramConnection::setPresence));
+    simplePresenceIface->setSetPresenceCallback(Tp::memFun(this,&MorseConnection::setPresence));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(simplePresenceIface));
 
     /* Connection.Interface.ContactList */
     contactListIface = Tp::BaseConnectionContactListInterface::create();
-    contactListIface->setGetContactListAttributesCallback(Tp::memFun(this, &TelegramConnection::getContactListAttributes));
-//    contactListIface->setRequestSubscriptionCallback(Tp::memFun(this, &SimpleConnection::requestSubscription));
+    contactListIface->setGetContactListAttributesCallback(Tp::memFun(this, &MorseConnection::getContactListAttributes));
+//    contactListIface->setRequestSubscriptionCallback(Tp::memFun(this, &MorseConnection::requestSubscription));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactListIface));
 
     /* Connection.Interface.Requests */
     requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
     /* Fill requestableChannelClasses */
     Tp::RequestableChannelClass text;
-    text.fixedProperties[TP_QT_IFACE_CHANNEL+".ChannelType"] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
-    text.fixedProperties[TP_QT_IFACE_CHANNEL+".TargetHandleType"]  = Tp::HandleTypeContact;
-    text.allowedProperties.append(TP_QT_IFACE_CHANNEL+".TargetHandle");
-    text.allowedProperties.append(TP_QT_IFACE_CHANNEL+".TargetID");
+    text.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
+    text.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeContact;
+    text.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
+    text.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
     requestsIface->requestableChannelClasses << text;
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(requestsIface));
 
-    m_selfPhone = parameters.value("account").toString();
+    m_selfPhone = parameters.value(QLatin1String("account")).toString();
 
-    setSelfHandle(addContact(m_selfPhone + "@telegram"));
+    setSelfHandle(addContact(m_selfPhone + QLatin1String("@telegram")));
 
-    setConnectCallback(Tp::memFun(this, &TelegramConnection::connect));
-    setInspectHandlesCallback(Tp::memFun(this, &TelegramConnection::inspectHandles));
-    setCreateChannelCallback(Tp::memFun(this, &TelegramConnection::createChannel));
-    setRequestHandlesCallback(Tp::memFun(this, &TelegramConnection::requestHandles));
+    setConnectCallback(Tp::memFun(this, &MorseConnection::connect));
+    setInspectHandlesCallback(Tp::memFun(this, &MorseConnection::inspectHandles));
+    setCreateChannelCallback(Tp::memFun(this, &MorseConnection::createChannel));
+    setRequestHandlesCallback(Tp::memFun(this, &MorseConnection::requestHandles));
 }
 
-TelegramConnection::~TelegramConnection()
+MorseConnection::~MorseConnection()
 {
 }
 
-void TelegramConnection::connect(Tp::DBusError *error)
+void MorseConnection::connect(Tp::DBusError *error)
 {
+    Q_UNUSED(error);
+
     CAppInformation appInfo;
     appInfo.setAppId(14617);
     appInfo.setAppHash(QLatin1String("e17ac360fd072f83d5d08db45ce9a121"));
@@ -116,18 +117,17 @@ void TelegramConnection::connect(Tp::DBusError *error)
     setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
 
     qDebug() << "Get auth code for " << m_selfPhone;
-    m_core->initialConnection("173.240.5.1", 443);
+    m_core->initialConnection(QLatin1String("173.240.5.1"), 443);
 
     QObject::connect(m_core, SIGNAL(dcConfigurationObtained()), this, SLOT(connectStepTwo()));
-
-    m_connectionError = error;
+    QObject::connect(m_core, SIGNAL(authenticated()), this, SLOT(connectSuccess()));
 }
 
-void TelegramConnection::connectStepTwo()
+void MorseConnection::connectStepTwo()
 {
-    Tp::DBusError *error = m_connectionError;
+    Tp::DBusError error;
 
-//    m_core->requestAuthCode(m_selfPhone);
+    m_core->requestAuthCode(m_selfPhone);
 
     qDebug() << "Opening registration";
 
@@ -140,40 +140,52 @@ void TelegramConnection::connectStepTwo()
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
 
     saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"), false, false, QString(), QString(), QString());
-    saslIface->setStartMechanismWithDataCallback( Tp::memFun(this, &TelegramConnection::startMechanismWithData));
+    saslIface->setStartMechanismWithDataCallback( Tp::memFun(this, &MorseConnection::startMechanismWithData));
 
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(saslIface));
 //    SASL_Status_Server_Succeeded
 
-    baseChannel->registerObject(error);
+    baseChannel->registerObject(&error);
 
-    if(!error->isValid()) {
+    if (!error.isValid()) {
         qDebug() << "Reg success";
         addChannel(baseChannel);
     }
-
-    //    simplePresenceIface->setStatuses(getSimpleStatusSpecMap());
-
-    //    Tp::SimpleContactPresences presences;
-    //    Tp::SimplePresence presence;
-    //    presence.status = "available";
-    //    presence.statusMessage = "";
-    //    presence.type = Tp::ConnectionPresenceTypeAvailable;
-    //    presences[selfHandle()] = presence;
-    //    simplePresenceIface->setPresences(presences);
-
-    //    setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
-
-    //    /* Set ContactList status */
-        //    contactListIface->setContactListState(Tp::ContactListStateSuccess);
 }
 
-QStringList TelegramConnection::inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error)
+void MorseConnection::startMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error)
+{
+    qDebug() << Q_FUNC_INFO << mechanism << data;
+
+    m_core->signIn(m_selfPhone, QString::fromAscii(data.constData()));
+}
+
+void MorseConnection::connectSuccess()
+{
+    simplePresenceIface->setStatuses(getSimpleStatusSpecMap());
+
+    Tp::SimpleContactPresences presences;
+    Tp::SimplePresence presence;
+    presence.status = QLatin1String("available");
+//    presence.statusMessage = "";
+    presence.type = Tp::ConnectionPresenceTypeAvailable;
+    presences[selfHandle()] = presence;
+    simplePresenceIface->setPresences(presences);
+
+    setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
+
+    /* Set ContactList status */
+    contactListIface->setContactListState(Tp::ContactListStateSuccess);
+
+    m_core->getContacts();
+}
+
+QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO;
 
     if (handleType != Tp::HandleTypeContact) {
-        error->set(TP_QT_ERROR_INVALID_ARGUMENT, "Unsupported handle type");
+        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported handle type"));
         return QStringList();
     }
 
@@ -190,14 +202,14 @@ QStringList TelegramConnection::inspectHandles(uint handleType, const Tp::UIntLi
     return result;
 }
 
-Tp::BaseChannelPtr TelegramConnection::createChannel(const QString &channelType, uint targetHandleType, uint targetHandle, Tp::DBusError *error)
+Tp::BaseChannelPtr MorseConnection::createChannel(const QString &channelType, uint targetHandleType, uint targetHandle, Tp::DBusError *error)
 {
-    qDebug() << "SimpleConnection::createChannel " << channelType
+    qDebug() << "MorseConnection::createChannel " << channelType
              << " " << targetHandleType
              << " " << targetHandle;
 
     if ((targetHandleType != Tp::HandleTypeContact) || (targetHandle == 0)) {
-          error->set(TP_QT_ERROR_INVALID_HANDLE, "createChannel error");
+          error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("createChannel error"));
           return Tp::BaseChannelPtr();
     }
 
@@ -206,7 +218,7 @@ Tp::BaseChannelPtr TelegramConnection::createChannel(const QString &channelType,
     QString identifier = m_handles.value(targetHandle);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        SimpleTextChannelPtr textType = SimpleTextChannel::create(this, baseChannel.data(), targetHandle, identifier);
+        MorseTextChannelPtr textType = MorseTextChannel::create(this, baseChannel.data(), targetHandle, identifier);
         qDebug() << "Text interface is called " << textType->interfaceName();
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textType));
     }
@@ -214,14 +226,14 @@ Tp::BaseChannelPtr TelegramConnection::createChannel(const QString &channelType,
     return baseChannel;
 }
 
-Tp::UIntList TelegramConnection::requestHandles(uint handleType, const QStringList &identifiers, Tp::DBusError *error)
+Tp::UIntList MorseConnection::requestHandles(uint handleType, const QStringList &identifiers, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << identifiers;
 
     Tp::UIntList result;
 
     if (handleType != Tp::HandleTypeContact) {
-        error->set(TP_QT_ERROR_INVALID_ARGUMENT, "SimpleConnection::requestHandles - Handle Type unknown");
+        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("MorseConnection::requestHandles - Handle Type unknown"));
         return result;
     }
 
@@ -237,7 +249,7 @@ Tp::UIntList TelegramConnection::requestHandles(uint handleType, const QStringLi
     return result;
 }
 
-Tp::ContactAttributesMap TelegramConnection::getContactListAttributes(const QStringList &interfaces, bool hold, Tp::DBusError *error)
+Tp::ContactAttributesMap MorseConnection::getContactListAttributes(const QStringList &interfaces, bool hold, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO;
 
@@ -257,7 +269,7 @@ Tp::ContactAttributesMap TelegramConnection::getContactListAttributes(const QStr
     return contactAttributes;
 }
 
-Tp::ContactAttributesMap TelegramConnection::getContactAttributes(const Tp::UIntList &handles, const QStringList &interfaces, Tp::DBusError *error)
+Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntList &handles, const QStringList &interfaces, Tp::DBusError *error)
 {
 //    Connection.Interface.Contacts
 //    http://telepathy.freedesktop.org/spec/Connection_Interface_Contacts.html#Method:GetContactAttributes
@@ -268,7 +280,7 @@ Tp::ContactAttributesMap TelegramConnection::getContactAttributes(const Tp::UInt
     foreach (const uint handle, handles) {
         if (m_handles.contains(handle)){
             QVariantMap attributes;
-            attributes["org.freedesktop.Telepathy.Connection/contact-id"] = m_handles.value(handle);
+            attributes[QLatin1String("org.freedesktop.Telepathy.Connection/contact-id")] = m_handles.value(handle);
 
             if (handle != selfHandle() && interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
@@ -281,7 +293,7 @@ Tp::ContactAttributesMap TelegramConnection::getContactAttributes(const Tp::UInt
     return contactAttributes;
 }
 
-Tp::SimplePresence TelegramConnection::getPresence(uint handle)
+Tp::SimplePresence MorseConnection::getPresence(uint handle)
 {
     if (!m_presences.contains(handle)) {
         return Tp::SimplePresence();
@@ -290,13 +302,13 @@ Tp::SimplePresence TelegramConnection::getPresence(uint handle)
     return m_presences.value(handle);
 }
 
-uint TelegramConnection::setPresence(const QString &status, const QString &message, Tp::DBusError *error)
+uint MorseConnection::setPresence(const QString &status, const QString &message, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << "not implemented";
     return 0;
 }
 
-uint TelegramConnection::ensureContact(const QString &identifier)
+uint MorseConnection::ensureContact(const QString &identifier)
 {
     uint handle = getHandle(identifier);
     if (!handle) {
@@ -305,7 +317,7 @@ uint TelegramConnection::ensureContact(const QString &identifier)
     return handle;
 }
 
-uint TelegramConnection::addContacts(const QStringList &identifiers)
+uint MorseConnection::addContacts(const QStringList &identifiers)
 {
     qDebug() << Q_FUNC_INFO;
     uint handle = 0;
@@ -321,19 +333,19 @@ uint TelegramConnection::addContacts(const QStringList &identifiers)
         newHandles << handle;
     }
 
-    setPresenceState(newHandles, "unknown");
+    setPresenceState(newHandles, QLatin1String("unknown"));
     setSubscriptionState(identifiers, newHandles, Tp::SubscriptionStateUnknown);
 
     return handle;
 }
 
-uint TelegramConnection::addContact(const QString &identifier)
+uint MorseConnection::addContact(const QString &identifier)
 {
     qDebug() << Q_FUNC_INFO;
     return addContacts(QStringList() << identifier);
 }
 
-void TelegramConnection::setPresenceState(const QList<uint> &handles, const QString &status)
+void MorseConnection::setPresenceState(const QList<uint> &handles, const QString &status)
 {
     qDebug() << Q_FUNC_INFO;
     Tp::SimpleContactPresences newPresences;
@@ -354,7 +366,7 @@ void TelegramConnection::setPresenceState(const QList<uint> &handles, const QStr
     simplePresenceIface->setPresences(newPresences);
 }
 
-void TelegramConnection::setSubscriptionState(const QStringList &identifiers, const QList<uint> &handles, uint state)
+void MorseConnection::setSubscriptionState(const QStringList &identifiers, const QList<uint> &handles, uint state)
 {
     qDebug() << Q_FUNC_INFO;
     Tp::ContactSubscriptionMap changes;
@@ -363,7 +375,7 @@ void TelegramConnection::setSubscriptionState(const QStringList &identifiers, co
     for(int i = 0; i < identifiers.size(); ++i) {
         Tp::ContactSubscriptions change;
         change.publish = Tp::SubscriptionStateYes;
-        change.publishRequest = "";
+//        change.publishRequest = "";
         change.subscribe = state;
         changes[handles[i]] = change;
         identifiersMap[handles[i]] = identifiers[i];
@@ -373,13 +385,8 @@ void TelegramConnection::setSubscriptionState(const QStringList &identifiers, co
     contactListIface->contactsChangedWithID(changes, identifiersMap, removals);
 }
 
-void TelegramConnection::startMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error)
-{
-    qDebug() << Q_FUNC_INFO;
-}
-
 /* Receive message from someone to ourself */
-void TelegramConnection::receiveMessage(const QString &sender, const QString &message)
+void MorseConnection::receiveMessage(const QString &sender, const QString &message)
 {
     uint senderHandle, targetHandle;
 
@@ -407,23 +414,22 @@ void TelegramConnection::receiveMessage(const QString &sender, const QString &me
 
     Tp::MessagePartList body;
     Tp::MessagePart text;
-    text["content-type"]            = QDBusVariant("text/plain");
-    text["content"]                 = QDBusVariant(message);
+    text[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
+    text[QLatin1String("content")]      = QDBusVariant(message);
     body << text;
 
     Tp::MessagePartList partList;
     Tp::MessagePart header;
-    header["message-received"]      = QDBusVariant(timestamp);
-    header["message-sender"]        = QDBusVariant(senderHandle);
-    header["message-sender-id"]     = QDBusVariant(sender);
-    //header["sender-nickname"]       = QDBusVariant(pushName);
-    header["message-type"]          = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
+    header[QLatin1String("message-received")]  = QDBusVariant(timestamp);
+    header[QLatin1String("message-sender")]    = QDBusVariant(senderHandle);
+    header[QLatin1String("message-sender-id")] = QDBusVariant(sender);
+    header[QLatin1String("message-type")]      = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
 
     partList << header << body;
     textChannel->addReceivedMessage(partList);
 }
 
-void TelegramConnection::setContactList(const QStringList &identifiers)
+void MorseConnection::setContactList(const QStringList &identifiers)
 {
     // Actually it don't clear previous list (not implemented yet)
     addContacts(identifiers);
@@ -441,7 +447,7 @@ void TelegramConnection::setContactList(const QStringList &identifiers)
     setSubscriptionState(identifiers, handles, Tp::SubscriptionStateYes);
 }
 
-void TelegramConnection::setContactPresence(const QString &identifier, const QString &presence)
+void MorseConnection::setContactPresence(const QString &identifier, const QString &presence)
 {
     uint handle = ensureContact(identifier);
     setPresenceState(QList<uint>() << handle, presence);
@@ -452,7 +458,7 @@ void TelegramConnection::setContactPresence(const QString &identifier, const QSt
     }
 }
 
-uint TelegramConnection::getHandle(const QString &identifier) const
+uint MorseConnection::getHandle(const QString &identifier) const
 {
     foreach (uint key, m_handles.keys()) {
         if (m_handles.value(key) == identifier) {

@@ -23,7 +23,7 @@
 #include <QLatin1String>
 #include <QVariantMap>
 
-TelegramProtocol::TelegramProtocol(const QDBusConnection &dbusConnection, const QString &name)
+MorseProtocol::MorseProtocol(const QDBusConnection &dbusConnection, const QString &name)
     : BaseProtocol(dbusConnection, name)
 {
     qDebug() << Q_FUNC_INFO;
@@ -33,71 +33,71 @@ TelegramProtocol::TelegramProtocol(const QDBusConnection &dbusConnection, const 
     setRequestableChannelClasses(Tp::RequestableChannelClassSpecList() << Tp::RequestableChannelClassSpec::textChat());
 
     // callbacks
-    setCreateConnectionCallback(memFun(this, &TelegramProtocol::createConnection));
-    setIdentifyAccountCallback(memFun(this, &TelegramProtocol::identifyAccount));
-    setNormalizeContactCallback(memFun(this, &TelegramProtocol::normalizeContact));
+    setCreateConnectionCallback(memFun(this, &MorseProtocol::createConnection));
+    setIdentifyAccountCallback(memFun(this, &MorseProtocol::identifyAccount));
+    setNormalizeContactCallback(memFun(this, &MorseProtocol::normalizeContact));
 
     addrIface = Tp::BaseProtocolAddressingInterface::create();
     addrIface->setAddressableVCardFields(QStringList() << QLatin1String("x-example-vcard-field"));
     addrIface->setAddressableUriSchemes(QStringList() << QLatin1String("example-uri-scheme"));
-    addrIface->setNormalizeVCardAddressCallback(memFun(this, &TelegramProtocol::normalizeVCardAddress));
-    addrIface->setNormalizeContactUriCallback(memFun(this, &TelegramProtocol::normalizeContactUri));
+    addrIface->setNormalizeVCardAddressCallback(memFun(this, &MorseProtocol::normalizeVCardAddress));
+    addrIface->setNormalizeContactUriCallback(memFun(this, &MorseProtocol::normalizeContactUri));
     plugInterface(Tp::AbstractProtocolInterfacePtr::dynamicCast(addrIface));
 
     presenceIface = Tp::BaseProtocolPresenceInterface::create();
-    presenceIface->setStatuses(Tp::PresenceSpecList(TelegramConnection::getSimpleStatusSpecMap()));
+    presenceIface->setStatuses(Tp::PresenceSpecList(MorseConnection::getSimpleStatusSpecMap()));
     plugInterface(Tp::AbstractProtocolInterfacePtr::dynamicCast(presenceIface));
 }
 
-TelegramProtocol::~TelegramProtocol()
+MorseProtocol::~MorseProtocol()
 {
 }
 
-void TelegramProtocol::setConnectionManagerName(const QString &newName)
+void MorseProtocol::setConnectionManagerName(const QString &newName)
 {
     m_connectionManagerName = newName;
 }
 
-void TelegramProtocol::sendMessage(QString sender, QString message)
+void MorseProtocol::sendMessage(QString sender, QString message)
 {
     emit newMessageToBeSent(sender, message);
 }
 
-void TelegramProtocol::setContactList(QStringList list)
+void MorseProtocol::setContactList(QStringList list)
 {
     emit contactsListChanged(list);
 }
 
-void TelegramProtocol::setContactPresence(const QString &identifier, const QString &presence)
+void MorseProtocol::setContactPresence(const QString &identifier, const QString &presence)
 {
     emit contactPresenceChanged(identifier, presence);
 }
 
-Tp::BaseConnectionPtr TelegramProtocol::createConnection(const QVariantMap &parameters, Tp::DBusError *error)
+Tp::BaseConnectionPtr MorseProtocol::createConnection(const QVariantMap &parameters, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << parameters;
     Q_UNUSED(error)
 
-    Tp::BaseConnectionPtr newConnection = Tp::BaseConnection::create<TelegramConnection>(m_connectionManagerName, name(), parameters);
+    Tp::BaseConnectionPtr newConnection = Tp::BaseConnection::create<MorseConnection>(m_connectionManagerName, name(), parameters);
 
     return newConnection;
 }
 
-QString TelegramProtocol::identifyAccount(const QVariantMap &parameters, Tp::DBusError *error)
+QString MorseProtocol::identifyAccount(const QVariantMap &parameters, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << parameters;
     error->set(QLatin1String("IdentifyAccount.Error.NotImplemented"), QLatin1String(""));
     return QString();
 }
 
-QString TelegramProtocol::normalizeContact(const QString &contactId, Tp::DBusError *error)
+QString MorseProtocol::normalizeContact(const QString &contactId, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << contactId;
     error->set(QLatin1String("NormalizeContact.Error.NotImplemented"), QLatin1String(""));
     return QString();
 }
 
-QString TelegramProtocol::normalizeVCardAddress(const QString &vcardField, const QString vcardAddress,
+QString MorseProtocol::normalizeVCardAddress(const QString &vcardField, const QString vcardAddress,
         Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << vcardField << vcardAddress;
@@ -105,7 +105,7 @@ QString TelegramProtocol::normalizeVCardAddress(const QString &vcardField, const
     return QString();
 }
 
-QString TelegramProtocol::normalizeContactUri(const QString &uri, Tp::DBusError *error)
+QString MorseProtocol::normalizeContactUri(const QString &uri, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << uri;
     error->set(QLatin1String("NormalizeContactUri.Error.NotImplemented"), QLatin1String(""));

@@ -23,12 +23,12 @@
 
 #include <QDebug>
 
-SimpleTextChannel::SimpleTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier)
+MorseTextChannel::MorseTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier)
     : Tp::BaseChannelTextType(baseChannel),
       m_connection(connection),
       m_identifier(identifier)
 {
-    QStringList supportedContentTypes = QStringList() << "text/plain";
+    QStringList supportedContentTypes = QStringList() << QLatin1String("text/plain");
     Tp::UIntList messageTypes = Tp::UIntList() << Tp::ChannelTextMessageTypeNormal;
 
     uint messagePartSupportFlags = 0;
@@ -42,19 +42,19 @@ SimpleTextChannel::SimpleTextChannel(QObject *connection, Tp::BaseChannel *baseC
 
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_messagesIface));
 
-    m_messagesIface->setSendMessageCallback(Tp::memFun(this, &SimpleTextChannel::sendMessageCallback));
+    m_messagesIface->setSendMessageCallback(Tp::memFun(this, &MorseTextChannel::sendMessageCallback));
 }
 
-SimpleTextChannelPtr SimpleTextChannel::create(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier)
+MorseTextChannelPtr MorseTextChannel::create(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier)
 {
-    return SimpleTextChannelPtr(new SimpleTextChannel(connection, baseChannel, targetHandle, identifier));
+    return MorseTextChannelPtr(new MorseTextChannel(connection, baseChannel, targetHandle, identifier));
 }
 
-SimpleTextChannel::~SimpleTextChannel()
+MorseTextChannel::~MorseTextChannel()
 {
 }
 
-QString SimpleTextChannel::sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error)
+QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error)
 {
     QString content;
     for (Tp::MessagePartList::const_iterator i = messageParts.begin()+1; i != messageParts.end(); ++i) {

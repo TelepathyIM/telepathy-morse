@@ -142,8 +142,9 @@ void MorseConnection::connectStepTwo()
     saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"), false, false, QString(), QString(), QString());
     saslIface->setStartMechanismWithDataCallback( Tp::memFun(this, &MorseConnection::startMechanismWithData));
 
+//    baseChannel->setUniqueName(QLatin1String("ServerSASLChannel")); // Needs new telepathy-qt version
+    baseChannel->setRequested(false);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(saslIface));
-//    SASL_Status_Server_Succeeded
 
     baseChannel->registerObject(&error);
 

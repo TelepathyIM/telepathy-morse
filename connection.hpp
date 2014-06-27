@@ -56,7 +56,7 @@ signals:
 private slots:
     void connectStepTwo();
     void connectSuccess();
-    void setContactList(const QStringList &identifiers);
+    void whenGotContactList();
 
 private:
     uint getHandle(const QString &identifier) const;

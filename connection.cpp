@@ -168,7 +168,7 @@ void MorseConnection::connectSuccess()
     Tp::SimpleContactPresences presences;
     Tp::SimplePresence presence;
     presence.status = QLatin1String("available");
-//    presence.statusMessage = "";
+    presence.statusMessage = QString();
     presence.type = Tp::ConnectionPresenceTypeAvailable;
     presences[selfHandle()] = presence;
     simplePresenceIface->setPresences(presences);
@@ -178,7 +178,9 @@ void MorseConnection::connectSuccess()
     /* Set ContactList status */
     contactListIface->setContactListState(Tp::ContactListStateSuccess);
 
-    m_core->getContacts();
+    connect(m_core, SIGNAL(gotContactList()), SLOT(whenGotContactList()));
+
+    m_core->requestContactList();
 }
 
 QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error)
@@ -281,7 +283,7 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
     foreach (const uint handle, handles) {
         if (m_handles.contains(handle)){
             QVariantMap attributes;
-            attributes[QLatin1String("org.freedesktop.Telepathy.Connection/contact-id")] = m_handles.value(handle);
+            attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = m_handles.value(handle);
 
             if (handle != selfHandle() && interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
@@ -376,7 +378,7 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
     for(int i = 0; i < identifiers.size(); ++i) {
         Tp::ContactSubscriptions change;
         change.publish = Tp::SubscriptionStateYes;
-//        change.publishRequest = "";
+        change.publishRequest = QString();
         change.subscribe = state;
         changes[handles[i]] = change;
         identifiersMap[handles[i]] = identifiers[i];
@@ -430,9 +432,11 @@ void MorseConnection::receiveMessage(const QString &sender, const QString &messa
     textChannel->addReceivedMessage(partList);
 }
 
-void MorseConnection::setContactList(const QStringList &identifiers)
+void MorseConnection::whenGotContactList()
 {
-    // Actually it don't clear previous list (not implemented yet)
+    const QStringList identifiers = m_core->contacts();
+    qDebug() << Q_FUNC_INFO << identifiers;
+
     addContacts(identifiers);
 
 //    Tp::ContactSubscriptionMap changes;

@@ -120,16 +120,20 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     m_core->initialConnection(QLatin1String("173.240.5.1"), 443);
 
     connect(m_core, SIGNAL(dcConfigurationObtained()), this, SLOT(connectStepTwo()));
+    connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
+    connect(m_core, SIGNAL(phoneCodeIsInvalid()), this, SLOT(whenPhoneCodeIsInvalid()));
     connect(m_core, SIGNAL(authenticated()), this, SLOT(connectSuccess()));
 }
 
 void MorseConnection::connectStepTwo()
 {
+    // Not actually correct. There will be attempt to restore session, which will fall-back to phone code request.
+    m_core->requestPhoneCode(m_selfPhone);
+}
+
+void MorseConnection::whenPhoneCodeRequired()
+{
     Tp::DBusError error;
-
-    m_core->requestAuthCode(m_selfPhone);
-
-    qDebug() << "Opening registration";
 
     //Registration
     Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, TP_QT_IFACE_CHANNEL_TYPE_SERVER_AUTHENTICATION,
@@ -139,7 +143,7 @@ void MorseConnection::connectStepTwo()
             = Tp::BaseChannelServerAuthenticationType::create(TP_QT_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
 
-    saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"), false, false, QString(), QString(), QString());
+    saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"), false, true, QString(), QString(), QString());
     saslIface->setStartMechanismWithDataCallback( Tp::memFun(this, &MorseConnection::startMechanismWithData));
 
 //    baseChannel->setUniqueName(QLatin1String("ServerSASLChannel")); // Needs new telepathy-qt version
@@ -149,20 +153,27 @@ void MorseConnection::connectStepTwo()
     baseChannel->registerObject(&error);
 
     if (!error.isValid()) {
-        qDebug() << "Reg success";
         addChannel(baseChannel);
     }
+}
+
+void MorseConnection::whenPhoneCodeIsInvalid()
+{
+    saslIface->setSASLStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, QVariantMap());
 }
 
 void MorseConnection::startMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << mechanism << data;
 
+    saslIface->setSASLStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
     m_core->signIn(m_selfPhone, QString::fromAscii(data.constData()));
 }
 
 void MorseConnection::connectSuccess()
 {
+    saslIface->setSASLStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
+
     simplePresenceIface->setStatuses(getSimpleStatusSpecMap());
 
     Tp::SimpleContactPresences presences;

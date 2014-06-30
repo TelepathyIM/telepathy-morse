@@ -55,6 +55,8 @@ signals:
 
 private slots:
     void connectStepTwo();
+    void whenPhoneCodeRequired();
+    void whenPhoneCodeIsInvalid();
     void connectSuccess();
     void whenGotContactList();
 

@@ -15,7 +15,6 @@
 #define MORSE_CONNECTION_HPP
 
 #include <TelepathyQt/BaseConnection>
-#include <TelepathyQt/BaseChannel>
 
 class CTelegramCore;
 
@@ -70,9 +69,12 @@ private:
 
     void startMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
 
+    Tp::ContactInfoMap getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error);
+
     Tp::BaseConnectionContactsInterfacePtr contactsIface;
     Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr contactListIface;
+    Tp::BaseConnectionContactInfoInterfacePtr contactInfoIface;
     Tp::BaseConnectionAddressingInterfacePtr addressingIface;
     Tp::BaseConnectionRequestsInterfacePtr requestsIface;
     Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface;

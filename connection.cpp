@@ -24,6 +24,8 @@
 #include <QDebug>
 #include <QDateTime>
 
+//#define SIMULATION
+
 Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
 {
     //Presence
@@ -74,6 +76,10 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 //    contactListIface->setRequestSubscriptionCallback(Tp::memFun(this, &MorseConnection::requestSubscription));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactListIface));
 
+    contactInfoIface = Tp::BaseConnectionContactInfoInterface::create();
+    contactInfoIface->setGetContactInfoCallback(Tp::memFun(this, &MorseConnection::getContactInfo));
+    plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactInfoIface));
+
     /* Connection.Interface.Requests */
     requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
     /* Fill requestableChannelClasses */
@@ -102,6 +108,10 @@ MorseConnection::~MorseConnection()
 void MorseConnection::doConnect(Tp::DBusError *error)
 {
     Q_UNUSED(error);
+
+#ifdef SIMULATION
+    return whenPhoneCodeRequired();
+#endif
 
     CAppInformation appInfo;
     appInfo.setAppId(14617);
@@ -143,7 +153,7 @@ void MorseConnection::whenPhoneCodeRequired()
             = Tp::BaseChannelServerAuthenticationType::create(TP_QT_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
 
-    saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"), false, true, QString(), QString(), QString());
+    saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"), false, true, QString(), QString(), QString(), /* maySaveResponse */ false);
     saslIface->setStartMechanismWithDataCallback( Tp::memFun(this, &MorseConnection::startMechanismWithData));
 
 //    baseChannel->setUniqueName(QLatin1String("ServerSASLChannel")); // Needs new telepathy-qt version
@@ -159,20 +169,53 @@ void MorseConnection::whenPhoneCodeRequired()
 
 void MorseConnection::whenPhoneCodeIsInvalid()
 {
-    saslIface->setSASLStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, QVariantMap());
+    saslIface->setSaslStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, QVariantMap());
 }
 
 void MorseConnection::startMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << mechanism << data;
 
-    saslIface->setSASLStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
+    saslIface->setSaslStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
+
+#ifdef SIMULATION
+    static bool failThisTime = true;
+
+    if (failThisTime) {
+        whenPhoneCodeIsInvalid();
+        failThisTime = false;
+    } else {
+        connectSuccess();
+    }
+
+    return;
+#endif
+
     m_core->signIn(m_selfPhone, QString::fromAscii(data.constData()));
+}
+
+Tp::ContactInfoMap MorseConnection::getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error)
+{
+    qDebug() << Q_FUNC_INFO << contacts;
+
+    Tp::ContactInfoMap result;
+
+    Tp::ContactInfoFieldList contactInfo;
+
+    Tp::ContactInfoField contactInfoField;
+    contactInfoField.fieldName = QLatin1String("fn");
+    contactInfoField.fieldValue.append(QLatin1String("first last"));
+
+    contactInfo.append(contactInfoField);
+
+    result.insert(contacts.first(), contactInfo);
+
+    return result;
 }
 
 void MorseConnection::connectSuccess()
 {
-    saslIface->setSASLStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
+    saslIface->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
 
     simplePresenceIface->setStatuses(getSimpleStatusSpecMap());
 
@@ -188,6 +231,11 @@ void MorseConnection::connectSuccess()
 
     /* Set ContactList status */
     contactListIface->setContactListState(Tp::ContactListStateSuccess);
+
+#ifdef SIMULATION
+    QTimer::singleShot(500, this, SLOT(whenGotContactList()));
+    return;
+#endif
 
     connect(m_core, SIGNAL(gotContactList()), SLOT(whenGotContactList()));
 
@@ -445,7 +493,12 @@ void MorseConnection::receiveMessage(const QString &sender, const QString &messa
 
 void MorseConnection::whenGotContactList()
 {
+#ifdef SIMULATION
+    const QStringList identifiers = QStringList() << QLatin1String("1234567890");
+#else
     const QStringList identifiers = m_core->contacts();
+#endif
+
     qDebug() << Q_FUNC_INFO << identifiers;
 
     addContacts(identifiers);
@@ -460,7 +513,10 @@ void MorseConnection::whenGotContactList()
         handles.append(ensureContact(identifiers.at(i)));
     }
 
+    setPresenceState(handles, QLatin1String("available"));
     setSubscriptionState(identifiers, handles, Tp::SubscriptionStateYes);
+
+//    receiveMessage(identifiers.first(), QLatin1String("Message to add contact"));
 }
 
 void MorseConnection::setContactPresence(const QString &identifier, const QString &presence)

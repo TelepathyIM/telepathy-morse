@@ -7,17 +7,17 @@ find_package(TelepathyQt4 0.9.2.1 REQUIRED)
 find_package(TelepathyQt4 0.9.2.1 REQUIRED)
 find_package(TelepathyQt4Service 0.9.2.1 REQUIRED)
 
+find_package(TelegramQt4 REQUIRED)
+
 find_package(Qt4 REQUIRED)
 
 include(GNUInstallDirs)
 
 include_directories(
     ${QT_INCLUDES}
-#    ${TELEPATHY_QT4_INCLUDE_DIR}
-    /root/devel/mainstream/ktp/telepathy-qt
-    /usr/include/telepathy-qt4
+    ${TELEPATHY_QT4_INCLUDE_DIR}
+    ${TELEGRAM_QT4_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}
-    /usr/include/telegram-qt4
 )
 
 set(morse_SOURCES
@@ -39,7 +39,7 @@ target_link_libraries(telepathy-morse
     ${QT_QTDBUS_LIBRARY}
     ${TELEPATHY_QT4_LIBRARIES}
     ${TELEPATHY_QT4_SERVICE_LIBRARIES}
-    -ltelegram-qt4
+    ${TELEGRAM_QT4_LIBRARIES}
     -lcrypto
 )
 

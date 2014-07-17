@@ -127,7 +127,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
 
     qDebug() << "Get auth code for " << m_selfPhone;
-    m_core->initialConnection(QLatin1String("173.240.5.1"), 443);
+    m_core->initConnection(QLatin1String("173.240.5.1"), 443);
 
     connect(m_core, SIGNAL(dcConfigurationObtained()), this, SLOT(connectStepTwo()));
     connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
@@ -496,7 +496,7 @@ void MorseConnection::whenGotContactList()
 #ifdef SIMULATION
     const QStringList identifiers = QStringList() << QLatin1String("1234567890");
 #else
-    const QStringList identifiers = m_core->contacts();
+    const QStringList identifiers = m_core->contactList();
 #endif
 
     qDebug() << Q_FUNC_INFO << identifiers;

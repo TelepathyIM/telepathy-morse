@@ -57,9 +57,12 @@ private slots:
     void whenPhoneCodeRequired();
     void whenPhoneCodeIsInvalid();
     void connectSuccess();
-    void whenGotContactList();
+    void whenContactListChanged();
 
 private:
+    static QByteArray getSessionData(const QString &phone);
+    static bool saveSessionData(const QString &phone, const QByteArray &data);
+
     uint getHandle(const QString &identifier) const;
     uint addContact(const QString &identifier);
     uint addContacts(const QStringList &identifiers);

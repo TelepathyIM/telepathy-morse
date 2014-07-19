@@ -26,6 +26,15 @@
 
 //#define SIMULATION
 
+#define INSECURE_SAVE
+
+#ifdef INSECURE_SAVE
+#include <QDir>
+#include <QFile>
+
+static const QString secretsDirPath = QLatin1String("morse-secrets");
+#endif
+
 Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
 {
     //Presence
@@ -126,13 +135,23 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 
     setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
 
-    qDebug() << "Get auth code for " << m_selfPhone;
-    m_core->initConnection(QLatin1String("173.240.5.1"), 443);
-
-    connect(m_core, SIGNAL(dcConfigurationObtained()), this, SLOT(connectStepTwo()));
-    connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
-    connect(m_core, SIGNAL(phoneCodeIsInvalid()), this, SLOT(whenPhoneCodeIsInvalid()));
     connect(m_core, SIGNAL(authenticated()), this, SLOT(connectSuccess()));
+
+    QByteArray sessionData;
+
+#ifdef INSECURE_SAVE
+    sessionData = getSessionData(m_selfPhone);
+#endif
+
+    if (sessionData.isEmpty()) {
+        connect(m_core, SIGNAL(connected()), this, SLOT(connectStepTwo()));
+        connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
+        connect(m_core, SIGNAL(phoneCodeIsInvalid()), this, SLOT(whenPhoneCodeIsInvalid()));
+
+        m_core->initConnection(QLatin1String("173.240.5.1"), 443);
+    } else {
+        m_core->restoreConnection(sessionData);
+    }
 }
 
 void MorseConnection::connectStepTwo()
@@ -215,7 +234,13 @@ Tp::ContactInfoMap MorseConnection::getContactInfo(const Tp::UIntList &contacts,
 
 void MorseConnection::connectSuccess()
 {
-    saslIface->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
+    if (!saslIface.isNull()) {
+        saslIface->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
+    }
+
+#ifdef INSECURE_SAVE
+    saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
+#endif
 
     simplePresenceIface->setStatuses(getSimpleStatusSpecMap());
 
@@ -237,7 +262,7 @@ void MorseConnection::connectSuccess()
     return;
 #endif
 
-    connect(m_core, SIGNAL(gotContactList()), SLOT(whenGotContactList()));
+    connect(m_core, SIGNAL(contactListChanged()), SLOT(whenContactListChanged()));
 
     m_core->requestContactList();
 }
@@ -491,7 +516,7 @@ void MorseConnection::receiveMessage(const QString &sender, const QString &messa
     textChannel->addReceivedMessage(partList);
 }
 
-void MorseConnection::whenGotContactList()
+void MorseConnection::whenContactListChanged()
 {
 #ifdef SIMULATION
     const QStringList identifiers = QStringList() << QLatin1String("1234567890");
@@ -513,10 +538,38 @@ void MorseConnection::whenGotContactList()
         handles.append(ensureContact(identifiers.at(i)));
     }
 
-    setPresenceState(handles, QLatin1String("available"));
     setSubscriptionState(identifiers, handles, Tp::SubscriptionStateYes);
+    setPresenceState(handles, QLatin1String("available"));
 
 //    receiveMessage(identifiers.first(), QLatin1String("Message to add contact"));
+}
+
+QByteArray MorseConnection::getSessionData(const QString &phone)
+{
+    QDir dir;
+    dir.mkdir(secretsDirPath);
+
+    QFile secretFile(secretsDirPath + QLatin1Char('/') + phone);
+
+    if (secretFile.open(QIODevice::ReadOnly)) {
+        return secretFile.readAll();
+    }
+
+    return QByteArray();
+}
+
+bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &data)
+{
+    QDir dir;
+    dir.mkdir(secretsDirPath);
+
+    QFile secretFile(secretsDirPath + QLatin1Char('/') + phone);
+
+    if (secretFile.open(QIODevice::WriteOnly)) {
+        return secretFile.write(data) == data.size();
+    }
+
+    return false;
 }
 
 void MorseConnection::setContactPresence(const QString &identifier, const QString &presence)

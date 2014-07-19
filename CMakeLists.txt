@@ -41,6 +41,7 @@ target_link_libraries(telepathy-morse
     ${TELEPATHY_QT4_SERVICE_LIBRARIES}
     ${TELEGRAM_QT4_LIBRARIES}
     -lcrypto
+    -lz
 )
 
 configure_file(morse.service.in org.freedesktop.Telepathy.ConnectionManager.morse.service)

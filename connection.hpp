@@ -58,6 +58,7 @@ private slots:
     void whenPhoneCodeIsInvalid();
     void connectSuccess();
     void whenContactListChanged();
+    void whenDisconnected();
 
 private:
     static QByteArray getSessionData(const QString &phone);

@@ -108,6 +108,8 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     setInspectHandlesCallback(Tp::memFun(this, &MorseConnection::inspectHandles));
     setCreateChannelCallback(Tp::memFun(this, &MorseConnection::createChannel));
     setRequestHandlesCallback(Tp::memFun(this, &MorseConnection::requestHandles));
+
+    connect(this, SIGNAL(disconnected()), SLOT(whenDisconnected()));
 }
 
 MorseConnection::~MorseConnection()
@@ -137,11 +139,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 
     connect(m_core, SIGNAL(authenticated()), this, SLOT(connectSuccess()));
 
-    QByteArray sessionData;
-
-#ifdef INSECURE_SAVE
-    sessionData = getSessionData(m_selfPhone);
-#endif
+    const QByteArray sessionData = getSessionData(m_selfPhone);
 
     if (sessionData.isEmpty()) {
         connect(m_core, SIGNAL(connected()), this, SLOT(connectStepTwo()));
@@ -238,9 +236,7 @@ void MorseConnection::connectSuccess()
         saslIface->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
     }
 
-#ifdef INSECURE_SAVE
     saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
-#endif
 
     simplePresenceIface->setStatuses(getSimpleStatusSpecMap());
 
@@ -544,8 +540,14 @@ void MorseConnection::whenContactListChanged()
 //    receiveMessage(identifiers.first(), QLatin1String("Message to add contact"));
 }
 
+void MorseConnection::whenDisconnected()
+{
+    saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
+}
+
 QByteArray MorseConnection::getSessionData(const QString &phone)
 {
+#ifdef INSECURE_SAVE
     QDir dir;
     dir.mkdir(secretsDirPath);
 
@@ -554,12 +556,14 @@ QByteArray MorseConnection::getSessionData(const QString &phone)
     if (secretFile.open(QIODevice::ReadOnly)) {
         return secretFile.readAll();
     }
+#endif
 
     return QByteArray();
 }
 
 bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &data)
 {
+#ifdef INSECURE_SAVE
     QDir dir;
     dir.mkdir(secretsDirPath);
 
@@ -568,6 +572,7 @@ bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &da
     if (secretFile.open(QIODevice::WriteOnly)) {
         return secretFile.write(data) == data.size();
     }
+#endif
 
     return false;
 }

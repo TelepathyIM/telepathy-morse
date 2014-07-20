@@ -21,12 +21,10 @@
 #include <QLatin1String>
 #include <QVariantMap>
 
-#include <QDebug>
-
-MorseTextChannel::MorseTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier)
+MorseTextChannel::MorseTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
     : Tp::BaseChannelTextType(baseChannel),
       m_connection(connection),
-      m_identifier(identifier)
+      m_phone(phone)
 {
     QStringList supportedContentTypes = QStringList() << QLatin1String("text/plain");
     Tp::UIntList messageTypes = Tp::UIntList() << Tp::ChannelTextMessageTypeNormal;
@@ -45,9 +43,9 @@ MorseTextChannel::MorseTextChannel(QObject *connection, Tp::BaseChannel *baseCha
     m_messagesIface->setSendMessageCallback(Tp::memFun(this, &MorseTextChannel::sendMessageCallback));
 }
 
-MorseTextChannelPtr MorseTextChannel::create(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier)
+MorseTextChannelPtr MorseTextChannel::create(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
 {
-    return MorseTextChannelPtr(new MorseTextChannel(connection, baseChannel, targetHandle, identifier));
+    return MorseTextChannelPtr(new MorseTextChannel(connection, baseChannel, targetHandle, phone));
 }
 
 MorseTextChannel::~MorseTextChannel()
@@ -67,7 +65,7 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
         }
     }
 
-    QMetaObject::invokeMethod(m_connection, "messageReceived", Q_ARG(QString, m_identifier), Q_ARG(QString, content));
+    emit sendMessage(m_phone, content);
 
     return QString();
 }

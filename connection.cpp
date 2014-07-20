@@ -301,9 +301,9 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QString &channelType, ui
     QString identifier = m_handles.value(targetHandle);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        MorseTextChannelPtr textType = MorseTextChannel::create(this, baseChannel.data(), targetHandle, identifier);
-        qDebug() << "Text interface is called " << textType->interfaceName();
-        baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textType));
+        MorseTextChannelPtr textChannel = MorseTextChannel::create(this, baseChannel.data(), targetHandle, identifier);
+        qDebug() << "Text interface is called " << textChannel->interfaceName();
+        baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
     }
 
     return baseChannel;

@@ -24,17 +24,20 @@ class MorseTextChannel : public Tp::BaseChannelTextType
 {
     Q_OBJECT
 public:
-    static MorseTextChannelPtr create(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier);
+    static MorseTextChannelPtr create(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone);
     virtual ~MorseTextChannel();
 
     QString sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
 
+signals:
+    void sendMessage(const QString &phone, const QString &message);
+
 private:
-    MorseTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &identifier);
+    MorseTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone);
 
     QObject *m_connection;
 
-    QString m_identifier;
+    QString m_phone;
 
     Tp::BaseChannelTextTypePtr m_channelTextType;
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;

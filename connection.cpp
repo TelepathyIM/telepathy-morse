@@ -102,7 +102,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     m_selfPhone = parameters.value(QLatin1String("account")).toString();
 
-    setSelfHandle(addContact(m_selfPhone + QLatin1String("@telegram")));
+    setSelfHandle(addContact(m_selfPhone));
 
     setConnectCallback(Tp::memFun(this, &MorseConnection::doConnect));
     setInspectHandlesCallback(Tp::memFun(this, &MorseConnection::inspectHandles));

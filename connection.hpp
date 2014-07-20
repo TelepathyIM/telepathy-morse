@@ -46,6 +46,7 @@ public:
     uint ensureContact(const QString &identifier);
 
 public slots:
+    void sendMessage(const QString &sender, const QString &message);
     void receiveMessage(const QString &sender, const QString &message);
     void setContactPresence(const QString &identifier, const QString &presence);
 

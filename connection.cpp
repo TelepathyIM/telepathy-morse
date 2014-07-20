@@ -259,6 +259,7 @@ void MorseConnection::connectSuccess()
 #endif
 
     connect(m_core, SIGNAL(contactListChanged()), SLOT(whenContactListChanged()));
+    connect(m_core, SIGNAL(messageReceived(QString,QString)), SLOT(receiveMessage(QString,QString)));
 
     m_core->requestContactList();
 }
@@ -304,6 +305,8 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QString &channelType, ui
         MorseTextChannelPtr textChannel = MorseTextChannel::create(this, baseChannel.data(), targetHandle, identifier);
         qDebug() << "Text interface is called " << textChannel->interfaceName();
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
+
+        connect(textChannel.data(), SIGNAL(sendMessage(QString,QString)), SLOT(sendMessage(QString,QString)));
     }
 
     return baseChannel;
@@ -466,6 +469,11 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
     }
     Tp::HandleIdentifierMap removals;
     contactListIface->contactsChangedWithID(changes, identifiersMap, removals);
+}
+
+void MorseConnection::sendMessage(const QString &sender, const QString &message)
+{
+    m_core->sendMessage(sender, message);
 }
 
 /* Receive message from someone to ourself */

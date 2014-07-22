@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 
     proto->setEnglishName(QLatin1String("Telegram"));
     proto->setIconName(QLatin1String("telegram"));
-    proto->setVCardField(QLatin1String("phone_number"));
+    proto->setVCardField(QLatin1String("tel"));
 
     QMetaObject::invokeMethod(proto.data(), "setConnectionManagerName", Qt::DirectConnection, Q_ARG(QString, cm->name()));
 

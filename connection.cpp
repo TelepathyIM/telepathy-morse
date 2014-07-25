@@ -38,15 +38,20 @@ static const QString secretsDirPath = QLatin1String("morse-secrets");
 Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
 {
     //Presence
-    Tp::SimpleStatusSpec spAvailable;
-    spAvailable.type = Tp::ConnectionPresenceTypeAvailable;
-    spAvailable.maySetOnSelf = false;
-    spAvailable.canHaveMessage = true;
-
     Tp::SimpleStatusSpec spOffline;
     spOffline.type = Tp::ConnectionPresenceTypeOffline;
-    spOffline.maySetOnSelf = false;
+    spOffline.maySetOnSelf = true;
     spOffline.canHaveMessage = false;
+
+    Tp::SimpleStatusSpec spAvailable;
+    spAvailable.type = Tp::ConnectionPresenceTypeAvailable;
+    spAvailable.maySetOnSelf = true;
+    spAvailable.canHaveMessage = true;
+
+    Tp::SimpleStatusSpec spHidden;
+    spHidden.type = Tp::ConnectionPresenceTypeHidden;
+    spAvailable.maySetOnSelf = true;
+    spAvailable.canHaveMessage = true;
 
     Tp::SimpleStatusSpec spUnknown;
     spUnknown.type = Tp::ConnectionPresenceTypeUnknown;
@@ -54,8 +59,9 @@ Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
     spUnknown.canHaveMessage = false;
 
     Tp::SimpleStatusSpecMap specs;
-    specs.insert(QLatin1String("available"), spAvailable);
     specs.insert(QLatin1String("offline"), spOffline);
+    specs.insert(QLatin1String("available"), spAvailable);
+    specs.insert(QLatin1String("hidden"), spHidden);
     specs.insert(QLatin1String("unknown"), spUnknown);
     return specs;
 }
@@ -399,7 +405,12 @@ Tp::SimplePresence MorseConnection::getPresence(uint handle)
 
 uint MorseConnection::setPresence(const QString &status, const QString &message, Tp::DBusError *error)
 {
-    qDebug() << Q_FUNC_INFO << "not implemented";
+    qDebug() << Q_FUNC_INFO << status;
+
+    if (m_core->isAuthenticated()) {
+        m_core->setOnlineStatus(status == QLatin1String("available"));
+    }
+
     return 0;
 }
 
@@ -575,6 +586,10 @@ void MorseConnection::whenContactListChanged()
 
 void MorseConnection::whenDisconnected()
 {
+    qDebug() << Q_FUNC_INFO;
+
+    m_core->setOnlineStatus(false); // TODO: Real disconnect
+
     saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
 }
 

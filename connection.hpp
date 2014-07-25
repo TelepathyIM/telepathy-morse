@@ -48,7 +48,7 @@ public:
 public slots:
     void sendMessage(const QString &sender, const QString &message);
     void receiveMessage(const QString &sender, const QString &message);
-    void setContactPresence(const QString &identifier, const QString &presence);
+    void updateContactPresence(const QString &identifier);
 
 signals:
     void messageReceived(const QString &sender, const QString &message);
@@ -69,7 +69,7 @@ private:
     uint addContact(const QString &identifier);
     uint addContacts(const QStringList &identifiers);
 
-    void setPresenceState(const QList<uint> &handles, const QString &status);
+    void updateContactsState(const QStringList &identifiers);
     void setSubscriptionState(const QStringList &identifiers, const QList<uint> &handles, uint state);
 
     void startMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);

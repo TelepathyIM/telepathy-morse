@@ -260,6 +260,7 @@ void MorseConnection::connectSuccess()
 
     connect(m_core, SIGNAL(contactListChanged()), SLOT(whenContactListChanged()));
     connect(m_core, SIGNAL(messageReceived(QString,QString)), SLOT(receiveMessage(QString,QString)));
+    connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)), SLOT(updateContactPresence(QString)));
 
     m_core->requestContactList();
 }
@@ -427,7 +428,7 @@ uint MorseConnection::addContacts(const QStringList &identifiers)
         newHandles << handle;
     }
 
-    setPresenceState(newHandles, QLatin1String("unknown"));
+    updateContactsState(identifiers);
     setSubscriptionState(identifiers, newHandles, Tp::SubscriptionStateUnknown);
 
     return handle;
@@ -439,21 +440,37 @@ uint MorseConnection::addContact(const QString &identifier)
     return addContacts(QStringList() << identifier);
 }
 
-void MorseConnection::setPresenceState(const QList<uint> &handles, const QString &status)
+void MorseConnection::updateContactsState(const QStringList &identifiers)
 {
     qDebug() << Q_FUNC_INFO;
     Tp::SimpleContactPresences newPresences;
-    const static Tp::SimpleStatusSpecMap statusSpecMap = getSimpleStatusSpecMap();
-    foreach (uint handle, handles) {
-        uint type = 0;
-        if (statusSpecMap.contains(status)) {
-            type = statusSpecMap.value(status).type;
+    foreach (const QString &phone, identifiers) {
+        uint handle = ensureContact(phone);
+
+        TelegramNamespace::ContactStatus st = TelegramNamespace::ContactStatusUnknown;
+
+        if (m_core) {
+            st = m_core->contactStatus(phone);
         }
 
         Tp::SimplePresence presence;
-        presence.status = status;
-//        presence.statusMessage;
-        presence.type = type;
+
+        switch (st) {
+        case TelegramNamespace::ContactStatusOnline:
+            presence.status = QLatin1String("available");
+            presence.type = Tp::ConnectionPresenceTypeAvailable;
+            break;
+        case TelegramNamespace::ContactStatusOffline:
+            presence.status = QLatin1String("offline");
+            presence.type = Tp::ConnectionPresenceTypeOffline;
+            break;
+        default:
+        case TelegramNamespace::ContactStatusUnknown:
+            presence.status = QLatin1String("unknown");
+            presence.type = Tp::ConnectionPresenceTypeUnknown;
+            break;
+        }
+
         m_presences[handle] = presence;
         newPresences[handle] = presence;
     }
@@ -551,7 +568,7 @@ void MorseConnection::whenContactListChanged()
     }
 
     setSubscriptionState(identifiers, handles, Tp::SubscriptionStateYes);
-    setPresenceState(handles, QLatin1String("available"));
+    updateContactsState(identifiers);
 
 //    receiveMessage(identifiers.first(), QLatin1String("Message to add contact"));
 }
@@ -593,15 +610,10 @@ bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &da
     return false;
 }
 
-void MorseConnection::setContactPresence(const QString &identifier, const QString &presence)
+void MorseConnection::updateContactPresence(const QString &identifier)
 {
-    uint handle = ensureContact(identifier);
-    setPresenceState(QList<uint>() << handle, presence);
-
-    // Let it be here until proper subscription implementation
-    if (handle != selfHandle()) {
-        setSubscriptionState(QStringList() << identifier, QList<uint>() << handle, Tp::SubscriptionStateYes);
-    }
+    qDebug() << "Update presence for " << identifier;
+    updateContactsState(QStringList() << identifier);
 }
 
 uint MorseConnection::getHandle(const QString &identifier) const

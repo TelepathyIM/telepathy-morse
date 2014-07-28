@@ -275,6 +275,11 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
 {
     qDebug() << Q_FUNC_INFO;
 
+    if ((!m_core) || (!m_core->isAuthenticated())) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        return QStringList();
+    }
+
     if (handleType != Tp::HandleTypeContact) {
         error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported handle type"));
         return QStringList();
@@ -284,6 +289,7 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
 
     foreach (uint handle, handles) {
         if (!m_handles.contains(handle)) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
             return QStringList();
         }
 

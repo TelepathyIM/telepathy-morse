@@ -89,6 +89,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     contactListIface = Tp::BaseConnectionContactListInterface::create();
     contactListIface->setGetContactListAttributesCallback(Tp::memFun(this, &MorseConnection::getContactListAttributes));
     contactListIface->setRequestSubscriptionCallback(Tp::memFun(this, &MorseConnection::requestSubscription));
+    contactListIface->setRemoveContactsCallback(Tp::memFun(this, &MorseConnection::removeContacts));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactListIface));
 
     contactInfoIface = Tp::BaseConnectionContactInfoInterface::create();
@@ -419,6 +420,25 @@ void MorseConnection::requestSubscription(const Tp::UIntList &handles, const QSt
     }
 
     m_core->addContacts(phoneNumbers);
+}
+
+void MorseConnection::removeContacts(const Tp::UIntList &handles, Tp::DBusError *error)
+{
+    const QStringList phoneNumbers = inspectHandles(Tp::HandleTypeContact, handles, error);
+
+    if (error->isValid()) {
+        return;
+    }
+
+    if (phoneNumbers.isEmpty()) {
+        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
+    }
+
+    if (!m_core || !m_core->isAuthenticated()) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+    }
+
+    m_core->deleteContacts(phoneNumbers);
 }
 
 Tp::SimplePresence MorseConnection::getPresence(uint handle)

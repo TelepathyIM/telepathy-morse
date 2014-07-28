@@ -88,7 +88,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     /* Connection.Interface.ContactList */
     contactListIface = Tp::BaseConnectionContactListInterface::create();
     contactListIface->setGetContactListAttributesCallback(Tp::memFun(this, &MorseConnection::getContactListAttributes));
-//    contactListIface->setRequestSubscriptionCallback(Tp::memFun(this, &MorseConnection::requestSubscription));
+    contactListIface->setRequestSubscriptionCallback(Tp::memFun(this, &MorseConnection::requestSubscription));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactListIface));
 
     contactInfoIface = Tp::BaseConnectionContactInfoInterface::create();
@@ -350,7 +350,7 @@ Tp::UIntList MorseConnection::requestHandles(uint handleType, const QStringList 
 
 Tp::ContactAttributesMap MorseConnection::getContactListAttributes(const QStringList &interfaces, bool hold, Tp::DBusError *error)
 {
-    qDebug() << Q_FUNC_INFO;
+    qDebug() << Q_FUNC_INFO << interfaces;
 
     Tp::ContactAttributesMap contactAttributes;
 
@@ -376,9 +376,8 @@ Tp::ContactAttributesMap MorseConnection::getContactListAttributes(const QString
 
 Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntList &handles, const QStringList &interfaces, Tp::DBusError *error)
 {
-//    Connection.Interface.Contacts
 //    http://telepathy.freedesktop.org/spec/Connection_Interface_Contacts.html#Method:GetContactAttributes
-    qDebug() << Q_FUNC_INFO << handles;
+    qDebug() << Q_FUNC_INFO << handles << interfaces;
 
     Tp::ContactAttributesMap contactAttributes;
 
@@ -398,6 +397,28 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
         }
     }
     return contactAttributes;
+}
+
+void MorseConnection::requestSubscription(const Tp::UIntList &handles, const QString &message, Tp::DBusError *error)
+{
+//    http://telepathy.freedesktop.org/spec/Connection_Interface_Contact_List.html#Method:RequestSubscription
+
+    Q_UNUSED(message);
+    const QStringList phoneNumbers = inspectHandles(Tp::HandleTypeContact, handles, error);
+
+    if (error->isValid()) {
+        return;
+    }
+
+    if (phoneNumbers.isEmpty()) {
+        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
+    }
+
+    if (!m_core || !m_core->isAuthenticated()) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+    }
+
+    m_core->addContacts(phoneNumbers);
 }
 
 Tp::SimplePresence MorseConnection::getPresence(uint handle)

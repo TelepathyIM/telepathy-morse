@@ -82,7 +82,6 @@ private:
     Tp::BaseConnectionContactsInterfacePtr contactsIface;
     Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr contactListIface;
-    Tp::BaseConnectionContactInfoInterfacePtr contactInfoIface;
     Tp::BaseConnectionAddressingInterfacePtr addressingIface;
     Tp::BaseConnectionRequestsInterfacePtr requestsIface;
     Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface;

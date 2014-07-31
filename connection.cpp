@@ -92,10 +92,6 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     contactListIface->setRemoveContactsCallback(Tp::memFun(this, &MorseConnection::removeContacts));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactListIface));
 
-    contactInfoIface = Tp::BaseConnectionContactInfoInterface::create();
-    contactInfoIface->setGetContactInfoCallback(Tp::memFun(this, &MorseConnection::getContactInfo));
-    plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactInfoIface));
-
     /* Connection.Interface.Requests */
     requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
     /* Fill requestableChannelClasses */

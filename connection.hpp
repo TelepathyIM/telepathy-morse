@@ -43,6 +43,11 @@ public:
     void requestSubscription(const Tp::UIntList &handles, const QString &message, Tp::DBusError *error);
     void removeContacts(const Tp::UIntList &handles, Tp::DBusError *error);
 
+    Tp::AliasMap getAliases(const Tp::UIntList &handles, Tp::DBusError *error = 0);
+    void setAliases(const Tp::AliasMap &aliases, Tp::DBusError *error);
+
+    QString getAlias(uint handle);
+
     Tp::SimplePresence getPresence(uint handle);
     uint setPresence(const QString &status, const QString &message, Tp::DBusError *error);
 
@@ -82,6 +87,7 @@ private:
     Tp::BaseConnectionContactsInterfacePtr contactsIface;
     Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr contactListIface;
+    Tp::BaseConnectionAliasingInterfacePtr aliasingIface;
     Tp::BaseConnectionAddressingInterfacePtr addressingIface;
     Tp::BaseConnectionRequestsInterfacePtr requestsIface;
     Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface;

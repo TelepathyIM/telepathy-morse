@@ -79,7 +79,8 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     contactsIface->setContactAttributeInterfaces(QStringList()
                                                  << TP_QT_IFACE_CONNECTION
                                                  << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST
-                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE);
+                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE
+                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING);
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactsIface));
 
     /* Connection.Interface.SimplePresence */
@@ -97,6 +98,11 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     contactListIface->setRequestSubscriptionCallback(Tp::memFun(this, &MorseConnection::requestSubscription));
     contactListIface->setRemoveContactsCallback(Tp::memFun(this, &MorseConnection::removeContacts));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactListIface));
+
+    aliasingIface = Tp::BaseConnectionAliasingInterface::create();
+    aliasingIface->setGetAliasesCallback(Tp::memFun(this, &MorseConnection::getAliases));
+    aliasingIface->setSetAliasesCallback(Tp::memFun(this, &MorseConnection::setAliases));
+    plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(aliasingIface));
 
     /* Connection.Interface.Requests */
     requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
@@ -379,9 +385,15 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/publish")] = Tp::SubscriptionStateYes;
             }
+
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(getPresence(handle));
             }
+
+            if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING)) {
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(getAlias(handle));
+            }
+
             contactAttributes[handle] = attributes;
         }
     }
@@ -427,6 +439,36 @@ void MorseConnection::removeContacts(const Tp::UIntList &handles, Tp::DBusError 
     }
 
     m_core->deleteContacts(phoneNumbers);
+}
+
+Tp::AliasMap MorseConnection::getAliases(const Tp::UIntList &handles, Tp::DBusError *error)
+{
+    qDebug() << Q_FUNC_INFO << handles;
+
+    Tp::AliasMap aliases;
+
+    foreach (uint handle, handles) {
+        aliases[handle] = getAlias(handle);
+    }
+
+    return aliases;
+}
+
+void MorseConnection::setAliases(const Tp::AliasMap &aliases, Tp::DBusError *error)
+{
+    qDebug() << Q_FUNC_INFO << aliases;
+    error->set(TP_QT_ERROR_NOT_IMPLEMENTED, QLatin1String("Not implemented"));
+}
+
+QString MorseConnection::getAlias(uint handle)
+{
+    const QString phone = m_handles.value(handle);
+
+    if (phone.isEmpty()) {
+        return QString();
+    }
+
+    return m_core->contactFirstName(phone) + QLatin1Char(' ') + m_core->contactLastName(phone);
 }
 
 Tp::SimplePresence MorseConnection::getPresence(uint handle)
@@ -617,8 +659,6 @@ void MorseConnection::whenContactListChanged()
 
     setSubscriptionState(identifiers, handles, Tp::SubscriptionStateYes);
     updateContactsState(identifiers);
-
-//    receiveMessage(identifiers.first(), QLatin1String("Message to add contact"));
 
     contactListIface->setContactListState(Tp::ContactListStateSuccess);
 }

@@ -253,9 +253,6 @@ void MorseConnection::connectSuccess()
 
     setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
 
-    /* Set ContactList status */
-    contactListIface->setContactListState(Tp::ContactListStateSuccess);
-
 #ifdef SIMULATION
     QTimer::singleShot(500, this, SLOT(whenGotContactList()));
     return;
@@ -265,6 +262,7 @@ void MorseConnection::connectSuccess()
     connect(m_core, SIGNAL(messageReceived(QString,QString)), SLOT(receiveMessage(QString,QString)));
     connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)), SLOT(updateContactPresence(QString)));
 
+    contactListIface->setContactListState(Tp::ContactListStateWaiting);
     m_core->requestContactList();
 }
 
@@ -625,6 +623,8 @@ void MorseConnection::whenContactListChanged()
     updateContactsState(identifiers);
 
 //    receiveMessage(identifiers.first(), QLatin1String("Message to add contact"));
+
+    contactListIface->setContactListState(Tp::ContactListStateSuccess);
 }
 
 void MorseConnection::whenDisconnected()

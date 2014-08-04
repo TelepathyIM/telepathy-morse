@@ -88,6 +88,8 @@ private:
 
     Tp::SimpleContactPresences m_presences;
 
+    QString m_wantedPresence;
+
     QMap<uint, QString> m_handles;
     /* Maps a contact handle to its subscription state */
     QHash<uint, uint> m_contactsSubscription;

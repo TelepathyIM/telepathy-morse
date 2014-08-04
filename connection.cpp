@@ -35,6 +35,8 @@
 static const QString secretsDirPath = QLatin1String("morse-secrets");
 #endif
 
+static const QString c_onlineSimpleStatusKey = QLatin1String("available");
+
 Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
 {
     //Presence
@@ -82,6 +84,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     /* Connection.Interface.SimplePresence */
     simplePresenceIface = Tp::BaseConnectionSimplePresenceInterface::create();
+    simplePresenceIface->setStatuses(getSimpleStatusSpecMap());
     simplePresenceIface->setSetPresenceCallback(Tp::memFun(this,&MorseConnection::setPresence));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(simplePresenceIface));
 
@@ -244,13 +247,16 @@ void MorseConnection::connectSuccess()
 
     saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
 
-    simplePresenceIface->setStatuses(getSimpleStatusSpecMap());
-
     Tp::SimpleContactPresences presences;
     Tp::SimplePresence presence;
-    presence.status = QLatin1String("available");
+
+    if (m_wantedPresence.isNull()) {
+        m_wantedPresence = c_onlineSimpleStatusKey;
+    }
+
+    presence.status = m_wantedPresence;
     presence.statusMessage = QString();
-    presence.type = Tp::ConnectionPresenceTypeAvailable;
+    presence.type = simplePresenceIface->statuses().value(m_wantedPresence).type;
     presences[selfHandle()] = presence;
     simplePresenceIface->setPresences(presences);
 
@@ -267,6 +273,7 @@ void MorseConnection::connectSuccess()
 
     contactListIface->setContactListState(Tp::ContactListStateWaiting);
     m_core->requestContactList();
+    m_core->setOnlineStatus(m_wantedPresence == c_onlineSimpleStatusKey);
 }
 
 QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error)
@@ -451,8 +458,10 @@ uint MorseConnection::setPresence(const QString &status, const QString &message,
 {
     qDebug() << Q_FUNC_INFO << status;
 
-    if (m_core->isAuthenticated()) {
-        m_core->setOnlineStatus(status == QLatin1String("available"));
+    m_wantedPresence = status;
+
+    if (m_core && m_core->isAuthenticated()) {
+        m_core->setOnlineStatus(status == c_onlineSimpleStatusKey);
     }
 
     return 0;

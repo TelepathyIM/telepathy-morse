@@ -87,6 +87,9 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     /* Connection.Interface.ContactList */
     contactListIface = Tp::BaseConnectionContactListInterface::create();
+    contactListIface->setContactListPersists(true);
+    contactListIface->setCanChangeContactList(true);
+    contactListIface->setDownloadAtConnection(true);
     contactListIface->setGetContactListAttributesCallback(Tp::memFun(this, &MorseConnection::getContactListAttributes));
     contactListIface->setRequestSubscriptionCallback(Tp::memFun(this, &MorseConnection::requestSubscription));
     contactListIface->setRemoveContactsCallback(Tp::memFun(this, &MorseConnection::removeContacts));

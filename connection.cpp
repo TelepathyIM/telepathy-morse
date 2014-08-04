@@ -355,28 +355,12 @@ Tp::UIntList MorseConnection::requestHandles(uint handleType, const QStringList 
 
 Tp::ContactAttributesMap MorseConnection::getContactListAttributes(const QStringList &interfaces, bool hold, Tp::DBusError *error)
 {
-    qDebug() << Q_FUNC_INFO << interfaces;
+    Q_UNUSED(hold);
 
-    Tp::ContactAttributesMap contactAttributes;
+    Tp::UIntList handles = m_handles.keys();
+    handles.removeOne(selfHandle());
 
-    foreach (const uint handle, m_handles.keys()) {
-        if (handle == selfHandle()) {
-            continue;
-        }
-        QVariantMap attributes;
-        attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = m_handles.value(handle);
-
-        if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
-            attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
-            attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/publish")] = Tp::SubscriptionStateYes;
-        }
-
-        if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
-            attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(getPresence(handle));
-        }
-        contactAttributes[handle] = attributes;
-    }
-    return contactAttributes;
+    return getContactAttributes(handles, interfaces, error);
 }
 
 Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntList &handles, const QStringList &interfaces, Tp::DBusError *error)

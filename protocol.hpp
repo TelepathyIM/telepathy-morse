@@ -25,9 +25,6 @@ public:
     MorseProtocol(const QDBusConnection &dbusConnection, const QString &name);
     virtual ~MorseProtocol();
 
-    QString connectionManagerName() const;
-    Q_INVOKABLE void setConnectionManagerName(const QString &newName);
-
 private:
     Tp::BaseConnectionPtr createConnection(const QVariantMap &parameters, Tp::DBusError *error);
     QString identifyAccount(const QVariantMap &parameters, Tp::DBusError *error);
@@ -42,12 +39,6 @@ private:
     Tp::BaseProtocolAvatarsInterfacePtr avatarsIface;
     Tp::BaseProtocolPresenceInterfacePtr presenceIface;
 
-    QString m_connectionManagerName;
 };
-
-inline QString MorseProtocol::connectionManagerName() const
-{
-    return m_connectionManagerName;
-}
 
 #endif // MORSE_PROTOCOL_HPP

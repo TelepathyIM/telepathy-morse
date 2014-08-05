@@ -58,7 +58,7 @@ Tp::BaseConnectionPtr MorseProtocol::createConnection(const QVariantMap &paramet
     qDebug() << Q_FUNC_INFO << parameters;
     Q_UNUSED(error)
 
-    Tp::BaseConnectionPtr newConnection = Tp::BaseConnection::create<MorseConnection>(m_connectionManagerName, name(), parameters);
+    Tp::BaseConnectionPtr newConnection = Tp::BaseConnection::create<MorseConnection>(QLatin1String("morse"), name(), parameters);
 
     return newConnection;
 }

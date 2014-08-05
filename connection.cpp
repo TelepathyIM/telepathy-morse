@@ -269,7 +269,7 @@ void MorseConnection::connectSuccess()
     setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
 
 #ifdef SIMULATION
-    QTimer::singleShot(500, this, SLOT(whenGotContactList()));
+    QTimer::singleShot(500, this, SLOT(whenContactListChanged()));
     return;
 #endif
 

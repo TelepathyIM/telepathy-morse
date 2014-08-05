@@ -28,20 +28,6 @@ public:
     QString connectionManagerName() const;
     Q_INVOKABLE void setConnectionManagerName(const QString &newName);
 
-public slots:
-    void sendMessage(QString sender, QString message);
-    void setContactList(QStringList list);
-    void setContactPresence(const QString &identifier, const QString &presence);
-
-signals:
-    void messageReceived(QString sender, QString message);
-
-    void newMessageToBeSent(QString sender, QString message);
-    void contactsListChanged(QStringList list);
-    void vCardListChanged(QStringList list);
-
-    void contactPresenceChanged(const QString &identifier, const QString &presence);
-
 private:
     Tp::BaseConnectionPtr createConnection(const QVariantMap &parameters, Tp::DBusError *error);
     QString identifyAccount(const QVariantMap &parameters, Tp::DBusError *error);

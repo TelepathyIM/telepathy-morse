@@ -53,26 +53,6 @@ MorseProtocol::~MorseProtocol()
 {
 }
 
-void MorseProtocol::setConnectionManagerName(const QString &newName)
-{
-    m_connectionManagerName = newName;
-}
-
-void MorseProtocol::sendMessage(QString sender, QString message)
-{
-    emit newMessageToBeSent(sender, message);
-}
-
-void MorseProtocol::setContactList(QStringList list)
-{
-    emit contactsListChanged(list);
-}
-
-void MorseProtocol::setContactPresence(const QString &identifier, const QString &presence)
-{
-    emit contactPresenceChanged(identifier, presence);
-}
-
 Tp::BaseConnectionPtr MorseProtocol::createConnection(const QVariantMap &parameters, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << parameters;

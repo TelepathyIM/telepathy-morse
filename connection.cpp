@@ -670,6 +670,7 @@ void MorseConnection::whenDisconnected()
     m_core->setOnlineStatus(false); // TODO: Real disconnect
 
     saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
+    setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonRequested);
 }
 
 QByteArray MorseConnection::getSessionData(const QString &phone)

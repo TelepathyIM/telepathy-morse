@@ -37,6 +37,8 @@ set_target_properties(telepathy-morse PROPERTIES AUTOMOC TRUE)
 target_link_libraries(telepathy-morse
     ${QT_QTCORE_LIBRARY}
     ${QT_QTDBUS_LIBRARY}
+    ${QT_QTNETWORK_LIBRARY}
+    ${QT_QTGUI_LIBRARY}
     ${TELEPATHY_QT4_LIBRARIES}
     ${TELEPATHY_QT4_SERVICE_LIBRARIES}
     ${TELEGRAM_QT4_LIBRARIES}

@@ -29,11 +29,18 @@
 #define INSECURE_SAVE
 
 #ifdef INSECURE_SAVE
+
+#if QT_VERSION >= 0x050000
+#include <QStandardPaths>
+#else
+#include <QDesktopServices>
+#endif // QT_VERSION >= 0x050000
+
 #include <QDir>
 #include <QFile>
 
-static const QString secretsDirPath = QLatin1String("morse-secrets");
-#endif
+static const QString secretsDirPath = QLatin1String("/secrets/");
+#endif // INSECURE_SAVE
 
 static const QString c_onlineSimpleStatusKey = QLatin1String("available");
 
@@ -676,15 +683,17 @@ void MorseConnection::whenDisconnected()
 QByteArray MorseConnection::getSessionData(const QString &phone)
 {
 #ifdef INSECURE_SAVE
-    QDir dir;
-    dir.mkdir(secretsDirPath);
 
-    QFile secretFile(secretsDirPath + QLatin1Char('/') + phone);
+#if QT_VERSION >= 0x050000
+    QFile secretFile(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + secretsDirPath + phone);
+#else // QT_VERSION >= 0x050000
+    QFile secretFile(QDesktopServices::storageLocation(QDesktopServices::CacheLocation) + secretsDirPath + phone);
+#endif // QT_VERSION >= 0x050000
 
     if (secretFile.open(QIODevice::ReadOnly)) {
         return secretFile.readAll();
     }
-#endif
+#endif // INSECURE_SAVE
 
     return QByteArray();
 }
@@ -693,14 +702,18 @@ bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &da
 {
 #ifdef INSECURE_SAVE
     QDir dir;
-    dir.mkdir(secretsDirPath);
+#if QT_VERSION >= 0x050000
+    dir.mkpath(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + secretsDirPath);
+#else // QT_VERSION >= 0x050000
+    dir.mkpath(QDesktopServices::storageLocation(QDesktopServices::CacheLocation) + secretsDirPath);
 
-    QFile secretFile(secretsDirPath + QLatin1Char('/') + phone);
+    QFile secretFile(QDesktopServices::storageLocation(QDesktopServices::CacheLocation) + secretsDirPath + phone);
+#endif // QT_VERSION >= 0x050000
 
     if (secretFile.open(QIODevice::WriteOnly)) {
         return secretFile.write(data) == data.size();
     }
-#endif
+#endif // INSECURE_SAVE
 
     return false;
 }

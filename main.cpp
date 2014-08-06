@@ -9,6 +9,7 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
+    app.setApplicationName(QLatin1String("telepathy-morse"));
 
     Tp::registerTypes();
     Tp::enableDebug(true);

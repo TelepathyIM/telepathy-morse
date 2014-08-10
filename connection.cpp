@@ -355,13 +355,8 @@ Tp::UIntList MorseConnection::requestHandles(uint handleType, const QStringList 
     }
 
     foreach(const QString &identify, identifiers) {
-         uint handle = m_handles.key(identify, 0);
-         if (handle) {
-             result.append(handle);
-         } else {
-             result.append(addContact(identify));
-         }
-     }
+        result.append(ensureContact(identify));
+    }
 
     return result;
 }
@@ -511,7 +506,7 @@ uint MorseConnection::ensureContact(const QString &identifier)
 
 uint MorseConnection::addContacts(const QStringList &identifiers)
 {
-    qDebug() << Q_FUNC_INFO;
+    qDebug() << Q_FUNC_INFO << identifiers;
     uint handle = 0;
 
     if (!m_handles.isEmpty()) {
@@ -651,8 +646,6 @@ void MorseConnection::whenContactListChanged()
 #endif
 
     qDebug() << Q_FUNC_INFO << identifiers;
-
-    addContacts(identifiers);
 
 //    Tp::ContactSubscriptionMap changes;
 //    Tp::HandleIdentifierMap identifiers;

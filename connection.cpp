@@ -334,10 +334,11 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QString &channelType, ui
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
         MorseTextChannelPtr textChannel = MorseTextChannel::create(this, baseChannel.data(), targetHandle, identifier);
-        qDebug() << "Text interface is called " << textChannel->interfaceName();
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
 
         connect(textChannel.data(), SIGNAL(sendMessage(QString,QString)), SLOT(sendMessage(QString,QString)));
+        connect(textChannel.data(), SIGNAL(localChatStateComposingChanged(QString,bool)), m_core, SLOT(setTyping(QString,bool)));
+        connect(m_core, SIGNAL(contactTypingStatusChanged(QString,bool)), textChannel.data(), SLOT(whenContactChatStateComposingChanged(QString,bool)));
     }
 
     return baseChannel;

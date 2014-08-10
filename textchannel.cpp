@@ -24,7 +24,8 @@
 MorseTextChannel::MorseTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
     : Tp::BaseChannelTextType(baseChannel),
       m_connection(connection),
-      m_phone(phone)
+      m_phone(phone),
+      m_contactHandle(targetHandle)
 {
     QStringList supportedContentTypes = QStringList() << QLatin1String("text/plain");
     Tp::UIntList messageTypes = Tp::UIntList() << Tp::ChannelTextMessageTypeNormal;
@@ -39,8 +40,11 @@ MorseTextChannel::MorseTextChannel(QObject *connection, Tp::BaseChannel *baseCha
                                                                deliveryReportingSupport);
 
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_messagesIface));
-
     m_messagesIface->setSendMessageCallback(Tp::memFun(this, &MorseTextChannel::sendMessageCallback));
+
+    m_chatStateIface = Tp::BaseChannelChatStateInterface::create();
+    m_chatStateIface->setSetChatStateCallback(Tp::memFun(this, &MorseTextChannel::setChatState));
+    baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_chatStateIface));
 }
 
 MorseTextChannelPtr MorseTextChannel::create(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
@@ -68,4 +72,24 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
     emit sendMessage(m_phone, content);
 
     return QString();
+}
+
+void MorseTextChannel::whenContactChatStateComposingChanged(const QString &phone, bool composing)
+{
+    if (phone != m_phone) {
+        return;
+    }
+
+    if (composing) {
+        m_chatStateIface->chatStateChanged(m_contactHandle, Tp::ChannelChatStateComposing);
+    } else {
+        m_chatStateIface->chatStateChanged(m_contactHandle, Tp::ChannelChatStateActive);
+    }
+}
+
+void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
+{
+    Q_UNUSED(error);
+
+    emit localChatStateComposingChanged(m_phone, state == Tp::ChannelChatStateComposing);
 }

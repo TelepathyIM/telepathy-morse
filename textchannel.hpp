@@ -29,8 +29,15 @@ public:
 
     QString sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
 
+public slots:
+    void whenContactChatStateComposingChanged(const QString &phone, bool composing);
+
 signals:
     void sendMessage(const QString &phone, const QString &message);
+    void localChatStateComposingChanged(const QString &phone, bool composing);
+
+protected:
+    void setChatState(uint state, Tp::DBusError *error);
 
 private:
     MorseTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone);
@@ -38,9 +45,11 @@ private:
     QObject *m_connection;
 
     QString m_phone;
+    uint m_contactHandle;
 
     Tp::BaseChannelTextTypePtr m_channelTextType;
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;
+    Tp::BaseChannelChatStateInterfacePtr m_chatStateIface;
 
 };
 

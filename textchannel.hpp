@@ -14,7 +14,11 @@
 #ifndef MORSE_TEXTCHANNEL_HPP
 #define MORSE_TEXTCHANNEL_HPP
 
+#include <QPointer>
+
 #include <TelepathyQt/BaseChannel>
+
+#include "CTelegramCore.hpp"
 
 class MorseTextChannel;
 
@@ -24,7 +28,7 @@ class MorseTextChannel : public Tp::BaseChannelTextType
 {
     Q_OBJECT
 public:
-    static MorseTextChannelPtr create(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone);
+    static MorseTextChannelPtr create(CTelegramCore *core, QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone);
     virtual ~MorseTextChannel();
 
     QString sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
@@ -32,16 +36,13 @@ public:
 public slots:
     void whenContactChatStateComposingChanged(const QString &phone, bool composing);
 
-signals:
-    void sendMessage(const QString &phone, const QString &message);
-    void localChatStateComposingChanged(const QString &phone, bool composing);
-
 protected:
     void setChatState(uint state, Tp::DBusError *error);
 
 private:
-    MorseTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone);
+    MorseTextChannel(CTelegramCore *core, QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone);
 
+    QPointer<CTelegramCore> m_core;
     QObject *m_connection;
 
     QString m_phone;

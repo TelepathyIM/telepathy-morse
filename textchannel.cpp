@@ -21,12 +21,14 @@
 #include <QLatin1String>
 #include <QVariantMap>
 
-MorseTextChannel::MorseTextChannel(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
+MorseTextChannel::MorseTextChannel(CTelegramCore *core, QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
     : Tp::BaseChannelTextType(baseChannel),
       m_connection(connection),
       m_phone(phone),
       m_contactHandle(targetHandle)
 {
+    m_core = core;
+
     QStringList supportedContentTypes = QStringList() << QLatin1String("text/plain");
     Tp::UIntList messageTypes = Tp::UIntList() << Tp::ChannelTextMessageTypeNormal;
 
@@ -45,11 +47,13 @@ MorseTextChannel::MorseTextChannel(QObject *connection, Tp::BaseChannel *baseCha
     m_chatStateIface = Tp::BaseChannelChatStateInterface::create();
     m_chatStateIface->setSetChatStateCallback(Tp::memFun(this, &MorseTextChannel::setChatState));
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_chatStateIface));
+
+    connect(m_core.data(), SIGNAL(contactTypingStatusChanged(QString,bool)), SLOT(whenContactChatStateComposingChanged(QString,bool)));
 }
 
-MorseTextChannelPtr MorseTextChannel::create(QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
+MorseTextChannelPtr MorseTextChannel::create(CTelegramCore *core, QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
 {
-    return MorseTextChannelPtr(new MorseTextChannel(connection, baseChannel, targetHandle, phone));
+    return MorseTextChannelPtr(new MorseTextChannel(core, connection, baseChannel, targetHandle, phone));
 }
 
 MorseTextChannel::~MorseTextChannel()
@@ -69,13 +73,12 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
         }
     }
 
-    emit sendMessage(m_phone, content);
-
-    return QString();
+    return QString::number(m_core->sendMessage(m_phone, content));
 }
 
 void MorseTextChannel::whenContactChatStateComposingChanged(const QString &phone, bool composing)
 {
+    // We are connected to broadcast signal, so have to select only needed calls
     if (phone != m_phone) {
         return;
     }
@@ -91,5 +94,5 @@ void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
 {
     Q_UNUSED(error);
 
-    emit localChatStateComposingChanged(m_phone, state == Tp::ChannelChatStateComposing);
+    m_core->setTyping(m_phone, state == Tp::ChannelChatStateComposing);
 }

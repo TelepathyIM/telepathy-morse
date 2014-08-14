@@ -281,7 +281,7 @@ void MorseConnection::connectSuccess()
 #endif
 
     connect(m_core, SIGNAL(contactListChanged()), SLOT(whenContactListChanged()));
-    connect(m_core, SIGNAL(messageReceived(QString,QString)), SLOT(receiveMessage(QString,QString)));
+    connect(m_core, SIGNAL(messageReceived(QString,QString,quint32)), SLOT(receiveMessage(QString,QString)));
     connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)), SLOT(updateContactPresence(QString)));
 
     contactListIface->setContactListState(Tp::ContactListStateWaiting);
@@ -333,12 +333,8 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QString &channelType, ui
     QString identifier = m_handles.value(targetHandle);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        MorseTextChannelPtr textChannel = MorseTextChannel::create(this, baseChannel.data(), targetHandle, identifier);
+        MorseTextChannelPtr textChannel = MorseTextChannel::create(m_core, this, baseChannel.data(), targetHandle, identifier);
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
-
-        connect(textChannel.data(), SIGNAL(sendMessage(QString,QString)), SLOT(sendMessage(QString,QString)));
-        connect(textChannel.data(), SIGNAL(localChatStateComposingChanged(QString,bool)), m_core, SLOT(setTyping(QString,bool)));
-        connect(m_core, SIGNAL(contactTypingStatusChanged(QString,bool)), textChannel.data(), SLOT(whenContactChatStateComposingChanged(QString,bool)));
     }
 
     return baseChannel;
@@ -587,11 +583,6 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
     }
     Tp::HandleIdentifierMap removals;
     contactListIface->contactsChangedWithID(changes, identifiersMap, removals);
-}
-
-void MorseConnection::sendMessage(const QString &sender, const QString &message)
-{
-    m_core->sendMessage(sender, message);
 }
 
 /* Receive message from someone to ourself */

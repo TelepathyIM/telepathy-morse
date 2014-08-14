@@ -22,7 +22,6 @@
 #include <TelepathyQt/BaseChannel>
 
 #include <QDebug>
-#include <QDateTime>
 
 //#define SIMULATION
 
@@ -588,46 +587,30 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
 /* Receive message from someone to ourself */
 void MorseConnection::receiveMessage(const QString &sender, const QString &message, quint32 messageId)
 {
-    uint senderHandle, targetHandle;
+    uint initiatorHandle, targetHandle;
 
     Tp::HandleType handleType = Tp::HandleTypeContact;
-    senderHandle = targetHandle = ensureContact(sender);
+    initiatorHandle = targetHandle = ensureContact(sender);
 
     //TODO: initiator should be group creator
     Tp::DBusError error;
     bool yours;
     Tp::BaseChannelPtr channel = ensureChannel(TP_QT_IFACE_CHANNEL_TYPE_TEXT, handleType, targetHandle, yours,
-                                           senderHandle,
-                                           false, &error);
+                                           initiatorHandle,
+                                           /* suppressHandler */ false, &error);
     if (error.isValid()) {
         qWarning() << "ensureChannel failed:" << error.name() << " " << error.message();
         return;
     }
 
-    Tp::BaseChannelTextTypePtr textChannel = Tp::BaseChannelTextTypePtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_TEXT));
+    MorseTextChannelPtr textChannel = MorseTextChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_TEXT));
+
     if (!textChannel) {
-        qDebug() << "Error, channel is not a textChannel??";
+        qDebug() << "Error, channel is not a morseTextChannel?";
         return;
     }
 
-    uint timestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
-
-    Tp::MessagePartList body;
-    Tp::MessagePart text;
-    text[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
-    text[QLatin1String("content")]      = QDBusVariant(message);
-    body << text;
-
-    Tp::MessagePartList partList;
-    Tp::MessagePart header;
-    header[QLatin1String("message-token")]     = QDBusVariant(QString::number(messageId));
-    header[QLatin1String("message-received")]  = QDBusVariant(timestamp);
-    header[QLatin1String("message-sender")]    = QDBusVariant(senderHandle);
-    header[QLatin1String("message-sender-id")] = QDBusVariant(sender);
-    header[QLatin1String("message-type")]      = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
-
-    partList << header << body;
-    textChannel->addReceivedMessage(partList);
+    textChannel->whenMessageReceived(message, messageId);
 }
 
 void MorseConnection::whenContactListChanged()

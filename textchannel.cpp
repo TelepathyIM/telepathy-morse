@@ -20,6 +20,7 @@
 
 #include <QLatin1String>
 #include <QVariantMap>
+#include <QDateTime>
 
 MorseTextChannel::MorseTextChannel(CTelegramCore *core, QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
     : Tp::BaseChannelTextType(baseChannel),
@@ -95,6 +96,28 @@ void MorseTextChannel::whenContactChatStateComposingChanged(const QString &phone
     } else {
         m_chatStateIface->chatStateChanged(m_contactHandle, Tp::ChannelChatStateActive);
     }
+}
+
+void MorseTextChannel::whenMessageReceived(const QString &message, quint32 messageId)
+{
+    uint timestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
+
+    Tp::MessagePartList body;
+    Tp::MessagePart text;
+    text[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
+    text[QLatin1String("content")]      = QDBusVariant(message);
+    body << text;
+
+    Tp::MessagePartList partList;
+    Tp::MessagePart header;
+    header[QLatin1String("message-token")]     = QDBusVariant(QString::number(messageId));
+    header[QLatin1String("message-received")]  = QDBusVariant(timestamp);
+    header[QLatin1String("message-sender")]    = QDBusVariant(m_contactHandle);
+    header[QLatin1String("message-sender-id")] = QDBusVariant(m_phone);
+    header[QLatin1String("message-type")]      = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
+
+    partList << header << body;
+    addReceivedMessage(partList);
 }
 
 void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)

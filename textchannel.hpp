@@ -38,6 +38,8 @@ public:
 public slots:
     void whenContactChatStateComposingChanged(const QString &phone, bool composing);
 
+    void whenMessageReceived(const QString &message, quint32 messageId);
+
 protected:
     void setChatState(uint state, Tp::DBusError *error);
 

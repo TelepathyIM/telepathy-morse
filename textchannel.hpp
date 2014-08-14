@@ -33,6 +33,8 @@ public:
 
     QString sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
 
+    void messageAcknowledgedCallback(const QString &messageId);
+
 public slots:
     void whenContactChatStateComposingChanged(const QString &phone, bool composing);
 

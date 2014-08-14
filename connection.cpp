@@ -281,7 +281,7 @@ void MorseConnection::connectSuccess()
 #endif
 
     connect(m_core, SIGNAL(contactListChanged()), SLOT(whenContactListChanged()));
-    connect(m_core, SIGNAL(messageReceived(QString,QString,quint32)), SLOT(receiveMessage(QString,QString)));
+    connect(m_core, SIGNAL(messageReceived(QString,QString,quint32)), SLOT(receiveMessage(QString,QString,quint32)));
     connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)), SLOT(updateContactPresence(QString)));
 
     contactListIface->setContactListState(Tp::ContactListStateWaiting);
@@ -586,7 +586,7 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
 }
 
 /* Receive message from someone to ourself */
-void MorseConnection::receiveMessage(const QString &sender, const QString &message)
+void MorseConnection::receiveMessage(const QString &sender, const QString &message, quint32 messageId)
 {
     uint senderHandle, targetHandle;
 
@@ -620,6 +620,7 @@ void MorseConnection::receiveMessage(const QString &sender, const QString &messa
 
     Tp::MessagePartList partList;
     Tp::MessagePart header;
+    header[QLatin1String("message-token")]     = QDBusVariant(QString::number(messageId));
     header[QLatin1String("message-received")]  = QDBusVariant(timestamp);
     header[QLatin1String("message-sender")]    = QDBusVariant(senderHandle);
     header[QLatin1String("message-sender-id")] = QDBusVariant(sender);

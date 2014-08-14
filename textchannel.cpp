@@ -35,6 +35,8 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, QObject *connection, Tp:
     uint messagePartSupportFlags = 0;
     uint deliveryReportingSupport = 0;
 
+    setMessageAcknowledgedCallback(Tp::memFun(this, &MorseTextChannel::messageAcknowledgedCallback));
+
     m_messagesIface = Tp::BaseChannelMessagesInterface::create(this,
                                                                supportedContentTypes,
                                                                messageTypes,
@@ -74,6 +76,11 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
     }
 
     return QString::number(m_core->sendMessage(m_phone, content));
+}
+
+void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)
+{
+    m_core->setMessageRead(m_phone, messageId.toUInt());
 }
 
 void MorseTextChannel::whenContactChatStateComposingChanged(const QString &phone, bool composing)

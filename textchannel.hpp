@@ -37,8 +37,10 @@ public:
 
 public slots:
     void whenContactChatStateComposingChanged(const QString &phone, bool composing);
-
     void whenMessageReceived(const QString &message, quint32 messageId);
+
+protected slots:
+    void sentMessageDeliveryStatusChanged(const QString &phone, quint64 messageId, TelegramNamespace::MessageDeliveryStatus status);
 
 protected:
     void setChatState(uint state, Tp::DBusError *error);

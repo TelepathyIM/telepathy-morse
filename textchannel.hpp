@@ -18,7 +18,7 @@
 
 #include <TelepathyQt/BaseChannel>
 
-#include "CTelegramCore.hpp"
+#include <TelegramQt/CTelegramCore>
 
 class MorseTextChannel;
 

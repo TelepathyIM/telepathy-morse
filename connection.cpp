@@ -229,7 +229,7 @@ void MorseConnection::startMechanismWithData(const QString &mechanism, const QBy
     return;
 #endif
 
-    m_core->signIn(m_selfPhone, QString::fromAscii(data.constData()));
+    m_core->signIn(m_selfPhone, QString::fromLatin1(data.constData()));
 }
 
 Tp::ContactInfoMap MorseConnection::getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error)
@@ -673,9 +673,9 @@ bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &da
     QDir dir;
 #if QT_VERSION >= 0x050000
     dir.mkpath(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + secretsDirPath);
+    QFile secretFile(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + secretsDirPath + phone);
 #else // QT_VERSION >= 0x050000
     dir.mkpath(QDesktopServices::storageLocation(QDesktopServices::CacheLocation) + secretsDirPath);
-
     QFile secretFile(QDesktopServices::storageLocation(QDesktopServices::CacheLocation) + secretsDirPath + phone);
 #endif // QT_VERSION >= 0x050000
 

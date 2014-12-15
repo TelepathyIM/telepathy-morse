@@ -167,20 +167,23 @@ void MorseConnection::doConnect(Tp::DBusError *error)
         connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
         connect(m_core, SIGNAL(phoneCodeIsInvalid()), this, SLOT(whenPhoneCodeIsInvalid()));
 
+        qDebug() << "init connection...";
         m_core->initConnection(QLatin1String("173.240.5.1"), 443);
     } else {
+        qDebug() << "restore connection...";
         m_core->restoreConnection(sessionData);
     }
 }
 
 void MorseConnection::connectStepTwo()
 {
-    // Not actually correct. There will be attempt to restore session, which will fall-back to phone code request.
     m_core->requestPhoneCode(m_selfPhone);
 }
 
 void MorseConnection::whenPhoneCodeRequired()
 {
+    qDebug() << Q_FUNC_INFO;
+
     Tp::DBusError error;
 
     //Registration
@@ -194,7 +197,6 @@ void MorseConnection::whenPhoneCodeRequired()
     saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"), false, true, QString(), QString(), QString(), /* maySaveResponse */ false);
     saslIface->setStartMechanismWithDataCallback( Tp::memFun(this, &MorseConnection::startMechanismWithData));
 
-//    baseChannel->setUniqueName(QLatin1String("ServerSASLChannel")); // Needs new telepathy-qt version
     baseChannel->setRequested(false);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(saslIface));
 
@@ -207,6 +209,7 @@ void MorseConnection::whenPhoneCodeRequired()
 
 void MorseConnection::whenPhoneCodeIsInvalid()
 {
+    qDebug() << Q_FUNC_INFO;
     saslIface->setSaslStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, QVariantMap());
 }
 
@@ -253,6 +256,7 @@ Tp::ContactInfoMap MorseConnection::getContactInfo(const Tp::UIntList &contacts,
 
 void MorseConnection::connectSuccess()
 {
+    qDebug() << Q_FUNC_INFO;
     if (!saslIface.isNull()) {
         saslIface->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
     }

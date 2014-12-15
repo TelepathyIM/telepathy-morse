@@ -76,7 +76,8 @@ Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
 
 MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
     Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters),
-    m_core(0)
+    m_core(0),
+    m_authReconnectionsCount(0)
 {
     qDebug() << Q_FUNC_INFO;
     /* Connection.Interface.Contacts */
@@ -153,20 +154,22 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     appInfo.setOsInfo(QLatin1String("GNU/Linux"));
     appInfo.setLanguageCode(QLatin1String("en"));
 
+    m_authReconnectionsCount = 0;
     m_core = new CTelegramCore(this);
     m_core->setAppInformation(&appInfo);
 
     setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
 
-    connect(m_core, SIGNAL(authenticated()), this, SLOT(connectSuccess()));
+    connect(m_core, SIGNAL(connected()), this, SLOT(whenConnected()));
+    connect(m_core, SIGNAL(authenticated()), this, SLOT(whenAuthenticated()));
+    connect(m_core, SIGNAL(initializated()), this, SLOT(whenConnectionReady()));
+    connect(m_core, SIGNAL(authorizationErrorReceived()), this, SLOT(whenAuthErrorReceived()));
+    connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
+    connect(m_core, SIGNAL(phoneCodeIsInvalid()), this, SLOT(whenPhoneCodeIsInvalid()));
 
     const QByteArray sessionData = getSessionData(m_selfPhone);
 
     if (sessionData.isEmpty()) {
-        connect(m_core, SIGNAL(connected()), this, SLOT(connectStepTwo()));
-        connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
-        connect(m_core, SIGNAL(phoneCodeIsInvalid()), this, SLOT(whenPhoneCodeIsInvalid()));
-
         qDebug() << "init connection...";
         m_core->initConnection(QLatin1String("173.240.5.1"), 443);
     } else {
@@ -175,9 +178,57 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     }
 }
 
-void MorseConnection::connectStepTwo()
+void MorseConnection::whenConnected()
 {
-    m_core->requestPhoneCode(m_selfPhone);
+    if (!m_core->isAuthenticated()) {
+        m_core->requestPhoneCode(m_selfPhone);
+    }
+}
+
+void MorseConnection::whenAuthenticated()
+{
+    qDebug() << Q_FUNC_INFO;
+
+    if (!saslIface.isNull()) {
+        saslIface->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
+    }
+
+    Tp::SimpleContactPresences presences;
+    Tp::SimplePresence presence;
+
+    if (m_wantedPresence.isNull()) {
+        m_wantedPresence = c_onlineSimpleStatusKey;
+    }
+
+    presence.status = m_wantedPresence;
+    presence.statusMessage = QString();
+    presence.type = simplePresenceIface->statuses().value(m_wantedPresence).type;
+    presences[selfHandle()] = presence;
+    simplePresenceIface->setPresences(presences);
+
+    connect(m_core, SIGNAL(messageReceived(QString,QString,quint32)), SLOT(receiveMessage(QString,QString,quint32)), Qt::QueuedConnection);
+    connect(m_core, SIGNAL(contactListChanged()), SLOT(whenContactListChanged()), Qt::QueuedConnection);
+    connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)), SLOT(updateContactPresence(QString)), Qt::QueuedConnection);
+
+
+    setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
+//    contactListIface->setContactListState(Tp::ContactListStateWaiting);
+    contactListIface->setContactListState(Tp::ContactListStateSuccess);
+}
+
+void MorseConnection::whenAuthErrorReceived()
+{
+    qDebug() << Q_FUNC_INFO;
+
+    if (!m_authReconnectionsCount) {
+        setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
+        ++m_authReconnectionsCount;
+        qDebug() << "Auth error received. Trying to re-init connection without session data..." << m_authReconnectionsCount << " attempt.";
+        m_core->closeConnection();
+        m_core->initConnection(QLatin1String("173.240.5.1"), 443);
+    } else {
+        setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonAuthenticationFailed);
+    }
 }
 
 void MorseConnection::whenPhoneCodeRequired()
@@ -226,7 +277,7 @@ void MorseConnection::startMechanismWithData(const QString &mechanism, const QBy
         whenPhoneCodeIsInvalid();
         failThisTime = false;
     } else {
-        connectSuccess();
+        whenConnectionReady();
     }
 
     return;
@@ -254,42 +305,19 @@ Tp::ContactInfoMap MorseConnection::getContactInfo(const Tp::UIntList &contacts,
     return result;
 }
 
-void MorseConnection::connectSuccess()
+void MorseConnection::whenConnectionReady()
 {
     qDebug() << Q_FUNC_INFO;
-    if (!saslIface.isNull()) {
-        saslIface->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
-    }
 
     saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
 
-    Tp::SimpleContactPresences presences;
-    Tp::SimplePresence presence;
-
-    if (m_wantedPresence.isNull()) {
-        m_wantedPresence = c_onlineSimpleStatusKey;
-    }
-
-    presence.status = m_wantedPresence;
-    presence.statusMessage = QString();
-    presence.type = simplePresenceIface->statuses().value(m_wantedPresence).type;
-    presences[selfHandle()] = presence;
-    simplePresenceIface->setPresences(presences);
-
-    setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
+    m_core->setOnlineStatus(m_wantedPresence == c_onlineSimpleStatusKey);
+    whenContactListChanged();
 
 #ifdef SIMULATION
     QTimer::singleShot(500, this, SLOT(whenContactListChanged()));
     return;
 #endif
-
-    connect(m_core, SIGNAL(contactListChanged()), SLOT(whenContactListChanged()));
-    connect(m_core, SIGNAL(messageReceived(QString,QString,quint32)), SLOT(receiveMessage(QString,QString,quint32)));
-    connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)), SLOT(updateContactPresence(QString)));
-
-    contactListIface->setContactListState(Tp::ContactListStateWaiting);
-    m_core->requestContactList();
-    m_core->setOnlineStatus(m_wantedPresence == c_onlineSimpleStatusKey);
 }
 
 QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error)

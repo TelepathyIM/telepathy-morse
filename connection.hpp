@@ -61,10 +61,12 @@ signals:
     void messageReceived(const QString &sender, const QString &message);
 
 private slots:
-    void connectStepTwo();
+    void whenConnected();
+    void whenAuthenticated();
+    void whenAuthErrorReceived();
     void whenPhoneCodeRequired();
     void whenPhoneCodeIsInvalid();
-    void connectSuccess();
+    void whenConnectionReady();
     void whenContactListChanged();
     void whenDisconnected();
 
@@ -100,6 +102,8 @@ private:
     QHash<uint, uint> m_contactsSubscription;
 
     CTelegramCore *m_core;
+
+    int m_authReconnectionsCount;
 
     QString m_selfPhone;
 };

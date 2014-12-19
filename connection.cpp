@@ -87,7 +87,8 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
                                                  << TP_QT_IFACE_CONNECTION
                                                  << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST
                                                  << TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE
-                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING);
+                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING
+                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS);
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactsIface));
 
     /* Connection.Interface.SimplePresence */
@@ -106,10 +107,21 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     contactListIface->setRemoveContactsCallback(Tp::memFun(this, &MorseConnection::removeContacts));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactListIface));
 
+    /* Connection.Interface.Aliasing */
     aliasingIface = Tp::BaseConnectionAliasingInterface::create();
     aliasingIface->setGetAliasesCallback(Tp::memFun(this, &MorseConnection::getAliases));
     aliasingIface->setSetAliasesCallback(Tp::memFun(this, &MorseConnection::setAliases));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(aliasingIface));
+
+    /* Connection.Interface.Avatars */
+    avatarsIface = Tp::BaseConnectionAvatarsInterface::create();
+    avatarsIface->setAvatarDetails(Tp::AvatarSpec(/* supportedMimeTypes */ QStringList() << QLatin1String("image/jpeg"),
+                                                  /* minHeight */ 0, /* maxHeight */ 160, /* recommendedHeight */ 160,
+                                                  /* minWidth */ 0, /* maxWidth */ 160, /* recommendedWidth */ 160,
+                                                  /* maxBytes */ 10240));
+    avatarsIface->setGetKnownAvatarTokensCallback(Tp::memFun(this, &MorseConnection::getKnownAvatarTokens));
+    avatarsIface->setRequestAvatarsCallback(Tp::memFun(this, &MorseConnection::requestAvatars));
+    plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(avatarsIface));
 
     /* Connection.Interface.Requests */
     requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
@@ -166,6 +178,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     connect(m_core, SIGNAL(authorizationErrorReceived()), this, SLOT(whenAuthErrorReceived()));
     connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
     connect(m_core, SIGNAL(phoneCodeIsInvalid()), this, SLOT(whenPhoneCodeIsInvalid()));
+    connect(m_core, SIGNAL(avatarReceived(QString,QByteArray,QString,QString)), this, SLOT(whenAvatarReceived(QString,QByteArray,QString,QString)));
 
     const QByteArray sessionData = getSessionData(m_selfPhone);
 
@@ -402,14 +415,15 @@ Tp::ContactAttributesMap MorseConnection::getContactListAttributes(const QString
 Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntList &handles, const QStringList &interfaces, Tp::DBusError *error)
 {
 //    http://telepathy.freedesktop.org/spec/Connection_Interface_Contacts.html#Method:GetContactAttributes
-    qDebug() << Q_FUNC_INFO << handles << interfaces;
+//    qDebug() << Q_FUNC_INFO << handles << interfaces;
 
     Tp::ContactAttributesMap contactAttributes;
 
     foreach (const uint handle, handles) {
         if (m_handles.contains(handle)){
             QVariantMap attributes;
-            attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = m_handles.value(handle);
+            const QString identifier = m_handles.value(handle);
+            attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = identifier;
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
@@ -422,6 +436,12 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(getAlias(handle));
+            }
+
+            if (m_core && m_core->isAuthenticated()) {
+                if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
+                    attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_core->contactAvatarToken(identifier));
+                }
             }
 
             contactAttributes[handle] = attributes;
@@ -679,6 +699,59 @@ void MorseConnection::whenDisconnected()
 
     saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
     setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonRequested);
+}
+
+/* Connection.Interface.Avatars */
+void MorseConnection::whenAvatarReceived(const QString &contact, const QByteArray &data, const QString &mimeType, const QString &token)
+{
+    avatarsIface->avatarRetrieved(ensureContact(contact), token , data, mimeType);
+}
+
+Tp::AvatarTokenMap MorseConnection::getKnownAvatarTokens(const Tp::UIntList &contacts, Tp::DBusError *error)
+{
+    const QStringList identifiers = inspectHandles(Tp::HandleTypeContact, contacts, error);
+
+    if (error->isValid()) {
+        return Tp::AvatarTokenMap();
+    }
+
+    if (identifiers.isEmpty()) {
+        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Invalid handle(s)"));
+        return Tp::AvatarTokenMap();
+    }
+
+    if (!m_core || !m_core->isAuthenticated()) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        return Tp::AvatarTokenMap();
+    }
+
+    Tp::AvatarTokenMap result;
+    for (int i = 0; i < contacts.count(); ++i) {
+        result.insert(contacts.at(i), m_core->contactAvatarToken(identifiers.at(i)));
+    }
+
+    return result;
+}
+
+void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError *error)
+{
+    const QStringList identifiers = inspectHandles(Tp::HandleTypeContact, contacts, error);
+
+    if (error->isValid()) {
+        return;
+    }
+
+    if (identifiers.isEmpty()) {
+        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
+    }
+
+    if (!m_core || !m_core->isAuthenticated()) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+    }
+
+    foreach (const QString &identifier, identifiers) {
+        m_core->requestContactAvatar(identifier);
+    }
 }
 
 QByteArray MorseConnection::getSessionData(const QString &phone)

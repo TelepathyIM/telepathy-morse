@@ -70,6 +70,9 @@ private slots:
     void whenContactListChanged();
     void whenDisconnected();
 
+    /* Connection.Interface.Avatars */
+    void whenAvatarReceived(const QString &contact, const QByteArray &data, const QString &mimeType, const QString &token);
+
 private:
     static QByteArray getSessionData(const QString &phone);
     static bool saveSessionData(const QString &phone, const QByteArray &data);
@@ -85,10 +88,15 @@ private:
 
     Tp::ContactInfoMap getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error);
 
+    /* Connection.Interface.Avatars */
+    Tp::AvatarTokenMap getKnownAvatarTokens(const Tp::UIntList &contacts, Tp::DBusError *error);
+    void requestAvatars(const Tp::UIntList &contacts, Tp::DBusError *error);
+
     Tp::BaseConnectionContactsInterfacePtr contactsIface;
     Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr contactListIface;
     Tp::BaseConnectionAliasingInterfacePtr aliasingIface;
+    Tp::BaseConnectionAvatarsInterfacePtr avatarsIface;
     Tp::BaseConnectionAddressingInterfacePtr addressingIface;
     Tp::BaseConnectionRequestsInterfacePtr requestsIface;
     Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface;

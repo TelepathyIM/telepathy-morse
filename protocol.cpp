@@ -44,6 +44,13 @@ MorseProtocol::MorseProtocol(const QDBusConnection &dbusConnection, const QStrin
     addrIface->setNormalizeContactUriCallback(memFun(this, &MorseProtocol::normalizeContactUri));
     plugInterface(Tp::AbstractProtocolInterfacePtr::dynamicCast(addrIface));
 
+    avatarsIface = Tp::BaseProtocolAvatarsInterface::create();
+    avatarsIface->setAvatarDetails(Tp::AvatarSpec(/* supportedMimeTypes */ QStringList() << QLatin1String("image/jpeg"),
+                                                  /* minHeight */ 0, /* maxHeight */ 160, /* recommendedHeight */ 160,
+                                                  /* minWidth */ 0, /* maxWidth */ 160, /* recommendedWidth */ 160,
+                                                  /* maxBytes */ 10240));
+    plugInterface(Tp::AbstractProtocolInterfacePtr::dynamicCast(avatarsIface));
+
     presenceIface = Tp::BaseProtocolPresenceInterface::create();
     presenceIface->setStatuses(Tp::PresenceSpecList(MorseConnection::getSimpleStatusSpecMap()));
     plugInterface(Tp::AbstractProtocolInterfacePtr::dynamicCast(presenceIface));

@@ -20,6 +20,8 @@
 
 #include <TelegramQt/CTelegramCore>
 
+class QTimer;
+
 class MorseTextChannel;
 
 typedef Tp::SharedPtr<MorseTextChannel> MorseTextChannelPtr;
@@ -41,6 +43,7 @@ public slots:
 
 protected slots:
     void sentMessageDeliveryStatusChanged(const QString &phone, quint64 messageId, TelegramNamespace::MessageDeliveryStatus status);
+    void reactivateLocalTyping();
 
 protected:
     void setChatState(uint state, Tp::DBusError *error);
@@ -57,6 +60,8 @@ private:
     Tp::BaseChannelTextTypePtr m_channelTextType;
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;
     Tp::BaseChannelChatStateInterfacePtr m_chatStateIface;
+
+    QTimer *m_localTypingTimer;
 
 };
 

@@ -21,12 +21,14 @@
 #include <QLatin1String>
 #include <QVariantMap>
 #include <QDateTime>
+#include <QTimer>
 
 MorseTextChannel::MorseTextChannel(CTelegramCore *core, QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
     : Tp::BaseChannelTextType(baseChannel),
       m_connection(connection),
       m_phone(phone),
-      m_contactHandle(targetHandle)
+      m_contactHandle(targetHandle),
+      m_localTypingTimer(0)
 {
     m_core = core;
 
@@ -165,9 +167,26 @@ void MorseTextChannel::sentMessageDeliveryStatusChanged(const QString &phone, qu
     m_messagesIface->messageSent(partList, flags, token);
 }
 
+void MorseTextChannel::reactivateLocalTyping()
+{
+    m_core->setTyping(m_phone, true);
+}
+
 void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
 {
     Q_UNUSED(error);
 
+    if (!m_localTypingTimer) {
+        m_localTypingTimer = new QTimer(this);
+        m_localTypingTimer->setInterval(CTelegramCore::localTypingRecommendedRepeatInterval());
+        connect(m_localTypingTimer, SIGNAL(timeout()), this, SLOT(reactivateLocalTyping()));
+    }
+
     m_core->setTyping(m_phone, state == Tp::ChannelChatStateComposing);
+
+    if (state == Tp::ChannelChatStateComposing) {
+        m_localTypingTimer->start();
+    } else {
+        m_localTypingTimer->stop();
+    }
 }

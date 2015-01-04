@@ -113,6 +113,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     aliasingIface->setSetAliasesCallback(Tp::memFun(this, &MorseConnection::setAliases));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(aliasingIface));
 
+#ifndef NO_AVATARS
     /* Connection.Interface.Avatars */
     avatarsIface = Tp::BaseConnectionAvatarsInterface::create();
     avatarsIface->setAvatarDetails(Tp::AvatarSpec(/* supportedMimeTypes */ QStringList() << QLatin1String("image/jpeg"),
@@ -122,6 +123,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     avatarsIface->setGetKnownAvatarTokensCallback(Tp::memFun(this, &MorseConnection::getKnownAvatarTokens));
     avatarsIface->setRequestAvatarsCallback(Tp::memFun(this, &MorseConnection::requestAvatars));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(avatarsIface));
+#endif
 
     /* Connection.Interface.Requests */
     requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
@@ -699,7 +701,14 @@ void MorseConnection::whenDisconnected()
 /* Connection.Interface.Avatars */
 void MorseConnection::whenAvatarReceived(const QString &contact, const QByteArray &data, const QString &mimeType, const QString &token)
 {
+#ifdef NO_AVATARS
+    Q_UNUSED(contact)
+    Q_UNUSED(data)
+    Q_UNUSED(mimeType)
+    Q_UNUSED(token)
+#else
     avatarsIface->avatarRetrieved(ensureContact(contact), token , data, mimeType);
+#endif
 }
 
 Tp::AvatarTokenMap MorseConnection::getKnownAvatarTokens(const Tp::UIntList &contacts, Tp::DBusError *error)

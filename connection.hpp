@@ -16,6 +16,10 @@
 
 #include <TelepathyQt/BaseConnection>
 
+#ifndef TP_QT_VERSION
+#define NO_AVATARS
+#endif
+
 class CTelegramCore;
 
 class MorseConnection : public Tp::BaseConnection
@@ -96,7 +100,9 @@ private:
     Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr contactListIface;
     Tp::BaseConnectionAliasingInterfacePtr aliasingIface;
+#ifndef NO_AVATARS
     Tp::BaseConnectionAvatarsInterfacePtr avatarsIface;
+#endif
     Tp::BaseConnectionAddressingInterfacePtr addressingIface;
     Tp::BaseConnectionRequestsInterfacePtr requestsIface;
     Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface;

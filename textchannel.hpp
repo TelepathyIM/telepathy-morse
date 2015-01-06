@@ -30,7 +30,7 @@ class MorseTextChannel : public Tp::BaseChannelTextType
 {
     Q_OBJECT
 public:
-    static MorseTextChannelPtr create(CTelegramCore *core, QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone);
+    static MorseTextChannelPtr create(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone, uint selfHandle, const QString &selfPhone);
     virtual ~MorseTextChannel();
 
     QString sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
@@ -39,7 +39,7 @@ public:
 
 public slots:
     void whenContactChatStateComposingChanged(const QString &phone, bool composing);
-    void whenMessageReceived(const QString &message, quint32 messageId);
+    void whenMessageReceived(const QString &message, quint32 messageId, quint32 flags, uint timestamp);
 
 protected slots:
     void sentMessageDeliveryStatusChanged(const QString &phone, quint64 messageId, TelegramNamespace::MessageDeliveryStatus status);
@@ -49,13 +49,14 @@ protected:
     void setChatState(uint state, Tp::DBusError *error);
 
 private:
-    MorseTextChannel(CTelegramCore *core, QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone);
+    MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone, uint selfHandle, const QString &selfPhone);
 
     QPointer<CTelegramCore> m_core;
-    QObject *m_connection;
 
     QString m_phone;
     uint m_contactHandle;
+    QString m_selfPhone;
+    uint m_selfHandle;
 
     Tp::BaseChannelTextTypePtr m_channelTextType;
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;

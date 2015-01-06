@@ -23,11 +23,12 @@
 #include <QDateTime>
 #include <QTimer>
 
-MorseTextChannel::MorseTextChannel(CTelegramCore *core, QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
+MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone, uint selfHandle, const QString &selfPhone)
     : Tp::BaseChannelTextType(baseChannel),
-      m_connection(connection),
       m_phone(phone),
       m_contactHandle(targetHandle),
+      m_selfPhone(selfPhone),
+      m_selfHandle(selfHandle),
       m_localTypingTimer(0)
 {
     m_core = core;
@@ -58,9 +59,9 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, QObject *connection, Tp:
             SLOT(sentMessageDeliveryStatusChanged(QString,quint64,TelegramNamespace::MessageDeliveryStatus)));
 }
 
-MorseTextChannelPtr MorseTextChannel::create(CTelegramCore *core, QObject *connection, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone)
+MorseTextChannelPtr MorseTextChannel::create(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone, uint selfHandle, const QString &selfPhone)
 {
-    return MorseTextChannelPtr(new MorseTextChannel(core, connection, baseChannel, targetHandle, phone));
+    return MorseTextChannelPtr(new MorseTextChannel(core, baseChannel, targetHandle, phone, selfHandle, selfPhone));
 }
 
 MorseTextChannel::~MorseTextChannel()
@@ -102,10 +103,8 @@ void MorseTextChannel::whenContactChatStateComposingChanged(const QString &phone
     }
 }
 
-void MorseTextChannel::whenMessageReceived(const QString &message, quint32 messageId)
+void MorseTextChannel::whenMessageReceived(const QString &message, quint32 messageId, quint32 flags, uint timestamp)
 {
-    uint timestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
-
     Tp::MessagePartList body;
     Tp::MessagePart text;
     text[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
@@ -114,14 +113,26 @@ void MorseTextChannel::whenMessageReceived(const QString &message, quint32 messa
 
     Tp::MessagePartList partList;
     Tp::MessagePart header;
-    header[QLatin1String("message-token")]     = QDBusVariant(QString::number(messageId));
-    header[QLatin1String("message-received")]  = QDBusVariant(timestamp);
-    header[QLatin1String("message-sender")]    = QDBusVariant(m_contactHandle);
-    header[QLatin1String("message-sender-id")] = QDBusVariant(m_phone);
-    header[QLatin1String("message-type")]      = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
 
-    partList << header << body;
-    addReceivedMessage(partList);
+    const QString token = QString::number(messageId);
+    header[QLatin1String("message-token")] = QDBusVariant(token);
+    header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
+    header[QLatin1String("message-sent")]  = QDBusVariant(timestamp);
+
+    if (flags & TelegramNamespace::MessageFlagOut) {
+        header[QLatin1String("message-sender")]    = QDBusVariant(m_selfHandle);
+        header[QLatin1String("message-sender-id")] = QDBusVariant(m_selfPhone);
+        partList << header << body;
+        m_messagesIface->messageSent(partList, 0, token);
+    } else {
+        uint currentTimestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
+
+        header[QLatin1String("message-received")]  = QDBusVariant(currentTimestamp);
+        header[QLatin1String("message-sender")]    = QDBusVariant(m_contactHandle);
+        header[QLatin1String("message-sender-id")] = QDBusVariant(m_phone);
+        partList << header << body;
+        addReceivedMessage(partList);
+    }
 }
 
 void MorseTextChannel::sentMessageDeliveryStatusChanged(const QString &phone, quint64 messageId, TelegramNamespace::MessageDeliveryStatus status)

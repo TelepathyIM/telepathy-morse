@@ -171,6 +171,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     m_authReconnectionsCount = 0;
     m_core = new CTelegramCore(this);
     m_core->setAppInformation(&appInfo);
+    m_core->setMessageReceivingFilterFlags(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagUnread);
 
     setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
 
@@ -209,7 +210,7 @@ void MorseConnection::whenAuthenticated()
     }
 
     connect(m_core, SIGNAL(contactListChanged()), SLOT(whenContactListChanged()), Qt::UniqueConnection);
-    connect(m_core, SIGNAL(messageReceived(QString,QString,quint32)), SLOT(receiveMessage(QString,QString,quint32)), Qt::UniqueConnection);
+    connect(m_core, SIGNAL(messageReceived(QString,QString,quint32,quint32,quint32)), SLOT(receiveMessage(QString,QString,quint32,quint32,quint32)), Qt::UniqueConnection);
     connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)), SLOT(updateContactPresence(QString)), Qt::UniqueConnection);
 
     setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
@@ -374,7 +375,7 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QString &channelType, ui
     QString identifier = m_handles.value(targetHandle);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        MorseTextChannelPtr textChannel = MorseTextChannel::create(m_core, this, baseChannel.data(), targetHandle, identifier);
+        MorseTextChannelPtr textChannel = MorseTextChannel::create(m_core, baseChannel.data(), targetHandle, identifier, selfHandle(), m_selfPhone);
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
     }
 
@@ -633,8 +634,8 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
     contactListIface->contactsChangedWithID(changes, identifiersMap, removals);
 }
 
-/* Receive message from someone to ourself */
-void MorseConnection::receiveMessage(const QString &sender, const QString &message, quint32 messageId)
+/* Receive message from outside (telegram server) */
+void MorseConnection::receiveMessage(const QString &sender, const QString &message, quint32 messageId, quint32 flags, quint32 timestamp)
 {
     uint initiatorHandle, targetHandle;
 
@@ -659,7 +660,7 @@ void MorseConnection::receiveMessage(const QString &sender, const QString &messa
         return;
     }
 
-    textChannel->whenMessageReceived(message, messageId);
+    textChannel->whenMessageReceived(message, messageId, flags, timestamp);
 }
 
 void MorseConnection::whenContactListChanged()

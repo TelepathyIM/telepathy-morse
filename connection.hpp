@@ -58,7 +58,7 @@ public:
     uint ensureContact(const QString &identifier);
 
 public slots:
-    void receiveMessage(const QString &sender, const QString &message, quint32 messageId);
+    void receiveMessage(const QString &sender, const QString &message, quint32 messageId, quint32 flags, quint32 timestamp);
     void updateContactPresence(const QString &identifier);
 
 signals:

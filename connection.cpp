@@ -150,6 +150,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
 MorseConnection::~MorseConnection()
 {
+    qDebug() << Q_FUNC_INFO;
 }
 
 void MorseConnection::doConnect(Tp::DBusError *error)
@@ -705,9 +706,9 @@ void MorseConnection::whenConnectionStatusChanged(int newStatus)
     qDebug() << Q_FUNC_INFO << newStatus;
     switch (newStatus) {
     case 0:
-        m_core->setOnlineStatus(false); // TODO: Real disconnect
         saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
         setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNetworkError);
+        emit disconnected();
         break;
     default:
         break;

@@ -1,4 +1,5 @@
 #include <QCoreApplication>
+#include <QDebug>
 
 #include <TelepathyQt/BaseConnectionManager>
 #include <TelepathyQt/Constants>
@@ -10,6 +11,8 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
     app.setApplicationName(QLatin1String("telepathy-morse"));
+
+    qDebug() << "Telepathy-morse is starting...";
 
     Tp::registerTypes();
     Tp::enableDebug(true);

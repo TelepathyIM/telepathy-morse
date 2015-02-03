@@ -150,7 +150,6 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
 MorseConnection::~MorseConnection()
 {
-    qDebug() << Q_FUNC_INFO;
 }
 
 void MorseConnection::doConnect(Tp::DBusError *error)
@@ -211,6 +210,19 @@ void MorseConnection::whenAuthenticated()
         saslIface->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
     }
 
+    Tp::SimpleContactPresences presences;
+    Tp::SimplePresence presence;
+
+    if (m_wantedPresence.isNull()) {
+        m_wantedPresence = c_onlineSimpleStatusKey;
+    }
+
+    presence.status = m_wantedPresence;
+    presence.statusMessage = QString();
+    presence.type = simplePresenceIface->statuses().value(m_wantedPresence).type;
+    presences[selfHandle()] = presence;
+    simplePresenceIface->setPresences(presences);
+
     connect(m_core, SIGNAL(contactListChanged()), SLOT(whenContactListChanged()), Qt::UniqueConnection);
     connect(m_core, SIGNAL(messageReceived(QString,QString,quint32,quint32,quint32)), SLOT(receiveMessage(QString,QString,quint32,quint32,quint32)), Qt::UniqueConnection);
     connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)), SLOT(updateContactPresence(QString)), Qt::UniqueConnection);
@@ -221,6 +233,8 @@ void MorseConnection::whenAuthenticated()
 
 void MorseConnection::whenAuthErrorReceived()
 {
+    qDebug() << Q_FUNC_INFO;
+
     if (!m_authReconnectionsCount) {
         setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
         ++m_authReconnectionsCount;
@@ -312,20 +326,8 @@ void MorseConnection::whenConnectionReady()
 
     saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
 
-    Tp::SimpleContactPresences presences;
-    Tp::SimplePresence presence;
-
-    if (m_wantedPresence.isNull()) {
-        m_wantedPresence = c_onlineSimpleStatusKey;
-    }
-
-    presence.status = m_wantedPresence;
-    presence.statusMessage = QString();
-    presence.type = simplePresenceIface->statuses().value(m_wantedPresence).type;
-    presences[selfHandle()] = presence;
-    simplePresenceIface->setPresences(presences);
-
     m_core->setOnlineStatus(m_wantedPresence == c_onlineSimpleStatusKey);
+    whenContactListChanged();
 
 #ifdef SIMULATION
     QTimer::singleShot(500, this, SLOT(whenContactListChanged()));

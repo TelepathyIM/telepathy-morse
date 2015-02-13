@@ -362,11 +362,12 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
     return result;
 }
 
-Tp::BaseChannelPtr MorseConnection::createChannel(const QString &channelType, uint targetHandleType, uint targetHandle, Tp::DBusError *error)
+Tp::BaseChannelPtr MorseConnection::createChannel(const QString &channelType, uint targetHandleType, uint targetHandle, const QVariantMap &request, Tp::DBusError *error)
 {
     qDebug() << "MorseConnection::createChannel " << channelType
              << " " << targetHandleType
-             << " " << targetHandle;
+             << " " << targetHandle
+             << " " << request;
 
     if ((targetHandleType != Tp::HandleTypeContact) || (targetHandle == 0)) {
           error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("createChannel error"));
@@ -650,7 +651,7 @@ void MorseConnection::receiveMessage(const QString &sender, const QString &messa
     bool yours;
     Tp::BaseChannelPtr channel = ensureChannel(TP_QT_IFACE_CHANNEL_TYPE_TEXT, handleType, targetHandle, yours,
                                            initiatorHandle,
-                                           /* suppressHandler */ false, &error);
+                                           /* suppressHandler */ false, QVariantMap(), &error);
     if (error.isValid()) {
         qWarning() << "ensureChannel failed:" << error.name() << " " << error.message();
         return;

@@ -37,7 +37,7 @@ public:
 
     QStringList inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error);
     Tp::BaseChannelPtr createChannel(const QString &channelType, uint targetHandleType,
-                                         uint targetHandle, Tp::DBusError *error);
+                                         uint targetHandle, const QVariantMap &request, Tp::DBusError *error);
 
     Tp::UIntList requestHandles(uint handleType, const QStringList &identifiers, Tp::DBusError *error);
 

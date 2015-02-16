@@ -16,6 +16,8 @@
 
 #include <TelepathyQt/BaseConnection>
 
+#include <TelegramQt/TelegramNamespace>
+
 class CTelegramCore;
 
 class MorseConnection : public Tp::BaseConnection
@@ -54,7 +56,7 @@ public:
     uint ensureContact(const QString &identifier);
 
 public slots:
-    void receiveMessage(const QString &sender, const QString &message, quint32 messageId, quint32 flags, quint32 timestamp);
+    void receiveMessage(const QString &identifier, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp);
     void updateContactPresence(const QString &identifier);
 
 signals:

@@ -169,7 +169,8 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     m_authReconnectionsCount = 0;
     m_core = new CTelegramCore(this);
     m_core->setAppInformation(&appInfo);
-    m_core->setMessageReceivingFilterFlags(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagUnread);
+    m_core->setMessageReceivingFilterFlags(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagRead);
+    m_core->setAcceptableMessageTypes(TelegramNamespace::MessageTypeText);
 
     setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
 
@@ -185,7 +186,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 
     if (sessionData.isEmpty()) {
         qDebug() << "init connection...";
-        m_core->initConnection(QLatin1String("173.240.5.1"), 443);
+        m_core->initConnection(QLatin1String("149.154.175.50"), 443);
     } else {
         qDebug() << "restore connection...";
         m_core->restoreConnection(sessionData);
@@ -221,7 +222,8 @@ void MorseConnection::whenAuthenticated()
     simplePresenceIface->setPresences(presences);
 
     connect(m_core, SIGNAL(contactListChanged()), SLOT(whenContactListChanged()), Qt::UniqueConnection);
-    connect(m_core, SIGNAL(messageReceived(QString,QString,quint32,quint32,quint32)), SLOT(receiveMessage(QString,QString,quint32,quint32,quint32)), Qt::UniqueConnection);
+    connect(m_core, SIGNAL(messageReceived(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)),
+            SLOT(receiveMessage(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)), Qt::UniqueConnection);
     connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)), SLOT(updateContactPresence(QString)), Qt::UniqueConnection);
 
     setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
@@ -324,6 +326,7 @@ void MorseConnection::whenConnectionReady()
     saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
 
     m_core->setOnlineStatus(m_wantedPresence == c_onlineSimpleStatusKey);
+    m_core->setMessageReceivingFilterFlags(TelegramNamespace::MessageFlagNone);
     whenContactListChanged();
 
 #ifdef SIMULATION
@@ -637,12 +640,16 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
 }
 
 /* Receive message from outside (telegram server) */
-void MorseConnection::receiveMessage(const QString &sender, const QString &message, quint32 messageId, quint32 flags, quint32 timestamp)
+void MorseConnection::receiveMessage(const QString &identifier, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp)
 {
+    if (type != TelegramNamespace::MessageTypeText) {
+        return;
+    }
+
     uint initiatorHandle, targetHandle;
 
     Tp::HandleType handleType = Tp::HandleTypeContact;
-    initiatorHandle = targetHandle = ensureContact(sender);
+    initiatorHandle = targetHandle = ensureContact(identifier);
 
     //TODO: initiator should be group creator
     Tp::DBusError error;
@@ -705,7 +712,6 @@ void MorseConnection::whenDisconnected()
 void MorseConnection::whenAvatarReceived(const QString &contact, const QByteArray &data, const QString &mimeType, const QString &token)
 {
     avatarsIface->avatarRetrieved(ensureContact(contact), token , data, mimeType);
-#endif
 }
 
 Tp::AvatarTokenMap MorseConnection::getKnownAvatarTokens(const Tp::UIntList &contacts, Tp::DBusError *error)

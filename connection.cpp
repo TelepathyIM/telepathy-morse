@@ -174,9 +174,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 
     setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
 
-    connect(m_core, SIGNAL(connected()), this, SLOT(whenConnected()));
-    connect(m_core, SIGNAL(authenticated()), this, SLOT(whenAuthenticated()));
-    connect(m_core, SIGNAL(initializated()), this, SLOT(whenConnectionReady()));
+    connect(m_core, SIGNAL(connectionStateChanged(TelegramNamespace::ConnectionState)), this, SLOT(whenConnectionStateChanged(TelegramNamespace::ConnectionState)));
     connect(m_core, SIGNAL(authorizationErrorReceived()), this, SLOT(whenAuthErrorReceived()));
     connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
     connect(m_core, SIGNAL(phoneCodeIsInvalid()), this, SLOT(whenPhoneCodeIsInvalid()));
@@ -193,10 +191,25 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     }
 }
 
-void MorseConnection::whenConnected()
+void MorseConnection::whenConnectionStateChanged(TelegramNamespace::ConnectionState state)
 {
-    if (!m_core->isAuthenticated()) {
+    switch (state) {
+    case TelegramNamespace::ConnectionStateAuthRequired:
         m_core->requestPhoneCode(m_selfPhone);
+        break;
+    case TelegramNamespace::ConnectionStateAuthenticated:
+        whenAuthenticated();
+        break;
+    case TelegramNamespace::ConnectionStateReady:
+        whenConnectionReady();
+        break;
+    case TelegramNamespace::ConnectionStateDisconnected:
+        saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
+        setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNetworkError);
+        emit disconnected();
+        break;
+    default:
+        break;
     }
 }
 
@@ -339,7 +352,7 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
 {
     qDebug() << Q_FUNC_INFO;
 
-    if ((!m_core) || (!m_core->isAuthenticated())) {
+    if (!coreIsReady()) {
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
         return QStringList();
     }
@@ -441,7 +454,7 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(getAlias(handle));
             }
 
-            if (m_core && m_core->isAuthenticated()) {
+            if (coreIsReady()) {
                 if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
                     attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_core->contactAvatarToken(identifier));
                 }
@@ -468,7 +481,7 @@ void MorseConnection::requestSubscription(const Tp::UIntList &handles, const QSt
         error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
     }
 
-    if (!m_core || !m_core->isAuthenticated()) {
+    if (!coreIsReady()) {
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
     }
 
@@ -487,7 +500,7 @@ void MorseConnection::removeContacts(const Tp::UIntList &handles, Tp::DBusError 
         error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
     }
 
-    if (!m_core || !m_core->isAuthenticated()) {
+    if (!coreIsReady()) {
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
     }
 
@@ -536,10 +549,12 @@ Tp::SimplePresence MorseConnection::getPresence(uint handle)
 uint MorseConnection::setPresence(const QString &status, const QString &message, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << status;
+    Q_UNUSED(message)
+    Q_UNUSED(error)
 
     m_wantedPresence = status;
 
-    if (m_core && m_core->isAuthenticated()) {
+    if (coreIsAuthenticated()) {
         m_core->setOnlineStatus(status == c_onlineSimpleStatusKey);
     }
 
@@ -727,7 +742,7 @@ Tp::AvatarTokenMap MorseConnection::getKnownAvatarTokens(const Tp::UIntList &con
         return Tp::AvatarTokenMap();
     }
 
-    if (!m_core || !m_core->isAuthenticated()) {
+    if (!coreIsReady()) {
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
         return Tp::AvatarTokenMap();
     }
@@ -752,13 +767,23 @@ void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError
         error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
     }
 
-    if (!m_core || !m_core->isAuthenticated()) {
+    if (!coreIsReady()) {
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
     }
 
     foreach (const QString &identifier, identifiers) {
         m_core->requestContactAvatar(identifier);
     }
+}
+
+bool MorseConnection::coreIsReady()
+{
+    return m_core && (m_core->connectionState() == TelegramNamespace::ConnectionStateReady);
+}
+
+bool MorseConnection::coreIsAuthenticated()
+{
+    return m_core && (m_core->connectionState() >= TelegramNamespace::ConnectionStateAuthenticated);
 }
 
 QByteArray MorseConnection::getSessionData(const QString &phone)

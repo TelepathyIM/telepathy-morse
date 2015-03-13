@@ -63,7 +63,7 @@ signals:
     void messageReceived(const QString &sender, const QString &message);
 
 private slots:
-    void whenConnected();
+    void whenConnectionStateChanged(TelegramNamespace::ConnectionState state);
     void whenAuthenticated();
     void whenAuthErrorReceived();
     void whenPhoneCodeRequired();
@@ -93,6 +93,9 @@ private:
     /* Connection.Interface.Avatars */
     Tp::AvatarTokenMap getKnownAvatarTokens(const Tp::UIntList &contacts, Tp::DBusError *error);
     void requestAvatars(const Tp::UIntList &contacts, Tp::DBusError *error);
+
+    bool coreIsReady();
+    bool coreIsAuthenticated();
 
     Tp::BaseConnectionContactsInterfacePtr contactsIface;
     Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;

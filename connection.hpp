@@ -71,6 +71,7 @@ private slots:
     void whenConnectionReady();
     void whenContactListChanged();
     void whenDisconnected();
+    void whenConnectionStatusChanged(int newStatus);
 
     /* Connection.Interface.Avatars */
     void whenAvatarReceived(const QString &contact, const QByteArray &data, const QString &mimeType, const QString &token);

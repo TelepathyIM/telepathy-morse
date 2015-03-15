@@ -179,6 +179,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
     connect(m_core, SIGNAL(phoneCodeIsInvalid()), this, SLOT(whenPhoneCodeIsInvalid()));
     connect(m_core, SIGNAL(avatarReceived(QString,QByteArray,QString,QString)), this, SLOT(whenAvatarReceived(QString,QByteArray,QString,QString)));
+    connect(m_core, SIGNAL(connectionStatusChanged(int)), this, SLOT(whenConnectionStatusChanged(int)));
 
     const QByteArray sessionData = getSessionData(m_selfPhone);
 
@@ -721,6 +722,20 @@ void MorseConnection::whenDisconnected()
 
     saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
     setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonRequested);
+}
+
+void MorseConnection::whenConnectionStatusChanged(int newStatus)
+{
+    qDebug() << Q_FUNC_INFO << newStatus;
+    switch (newStatus) {
+    case 0:
+        saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
+        setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNetworkError);
+        emit disconnected();
+        break;
+    default:
+        break;
+    }
 }
 
 /* Connection.Interface.Avatars */

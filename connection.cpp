@@ -352,11 +352,6 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
 {
     qDebug() << Q_FUNC_INFO;
 
-    if (!coreIsReady()) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
-        return QStringList();
-    }
-
     if (handleType != Tp::HandleTypeContact) {
         error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported handle type"));
         return QStringList();

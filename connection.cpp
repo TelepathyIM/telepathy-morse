@@ -449,10 +449,8 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(getAlias(handle));
             }
 
-            if (coreIsReady()) {
-                if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
-                    attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_core->contactAvatarToken(identifier));
-                }
+            if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_core->contactAvatarToken(identifier));
             }
 
             contactAttributes[handle] = attributes;

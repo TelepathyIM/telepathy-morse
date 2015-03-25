@@ -166,7 +166,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     m_core->setMessageReceivingFilterFlags(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagRead);
     m_core->setAcceptableMessageTypes(TelegramNamespace::MessageTypeText);
 
-    setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
+    setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonNoneSpecified);
 
     connect(m_core, SIGNAL(connectionStateChanged(TelegramNamespace::ConnectionState)), this, SLOT(whenConnectionStateChanged(TelegramNamespace::ConnectionState)));
     connect(m_core, SIGNAL(authorizationErrorReceived()), this, SLOT(whenAuthErrorReceived()));
@@ -245,7 +245,7 @@ void MorseConnection::whenAuthErrorReceived()
     qDebug() << Q_FUNC_INFO;
 
     if (!m_authReconnectionsCount) {
-        setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
+        setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonAuthenticationFailed);
         ++m_authReconnectionsCount;
         qDebug() << "Auth error received. Trying to re-init connection without session data..." << m_authReconnectionsCount << " attempt.";
         m_core->closeConnection();

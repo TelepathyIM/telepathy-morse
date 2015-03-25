@@ -67,7 +67,7 @@ private slots:
     void whenAuthenticated();
     void whenAuthErrorReceived();
     void whenPhoneCodeRequired();
-    void whenPhoneCodeIsInvalid();
+    void whenAuthSignErrorReceived(TelegramNamespace::AuthSignError errorCode, const QString &errorMessage);
     void whenConnectionReady();
     void whenContactListChanged();
     void whenDisconnected();

@@ -177,7 +177,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     connect(m_core, SIGNAL(connectionStateChanged(TelegramNamespace::ConnectionState)), this, SLOT(whenConnectionStateChanged(TelegramNamespace::ConnectionState)));
     connect(m_core, SIGNAL(authorizationErrorReceived()), this, SLOT(whenAuthErrorReceived()));
     connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
-    connect(m_core, SIGNAL(phoneCodeIsInvalid()), this, SLOT(whenPhoneCodeIsInvalid()));
+    connect(m_core, SIGNAL(authSignErrorReceived(TelegramNamespace::AuthSignError,QString)), this, SLOT(whenAuthSignErrorReceived(TelegramNamespace::AuthSignError,QString)));
     connect(m_core, SIGNAL(avatarReceived(QString,QByteArray,QString,QString)), this, SLOT(whenAvatarReceived(QString,QByteArray,QString,QString)));
 
     const QByteArray sessionData = getSessionData(m_selfPhone);
@@ -193,6 +193,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 
 void MorseConnection::whenConnectionStateChanged(TelegramNamespace::ConnectionState state)
 {
+    qDebug() << Q_FUNC_INFO << state;
     switch (state) {
     case TelegramNamespace::ConnectionStateAuthRequired:
         m_core->requestPhoneCode(m_selfPhone);
@@ -204,9 +205,11 @@ void MorseConnection::whenConnectionStateChanged(TelegramNamespace::ConnectionSt
         whenConnectionReady();
         break;
     case TelegramNamespace::ConnectionStateDisconnected:
-        saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
-        setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNetworkError);
-        emit disconnected();
+        if (status() == Tp::ConnectionStatusConnected) {
+            saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
+            setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNetworkError);
+            emit disconnected();
+        }
         break;
     default:
         break;
@@ -272,7 +275,14 @@ void MorseConnection::whenPhoneCodeRequired()
             = Tp::BaseChannelServerAuthenticationType::create(TP_QT_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
 
-    saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"), false, true, QString(), QString(), QString(), /* maySaveResponse */ false);
+    saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"),
+                                                                   /* hasInitialData */ false,
+                                                                   /* canTryAgain */ true,
+                                                                   /* authorizationIdentity */ m_selfPhone,
+                                                                   /* defaultUsername */ QString(),
+                                                                   /* defaultRealm */ QString(),
+                                                                   /* maySaveResponse */ false);
+
     saslIface->setStartMechanismWithDataCallback( Tp::memFun(this, &MorseConnection::startMechanismWithData));
 
     baseChannel->setRequested(false);
@@ -285,10 +295,19 @@ void MorseConnection::whenPhoneCodeRequired()
     }
 }
 
-void MorseConnection::whenPhoneCodeIsInvalid()
+void MorseConnection::whenAuthSignErrorReceived(TelegramNamespace::AuthSignError errorCode, const QString &errorMessage)
 {
-    qDebug() << Q_FUNC_INFO;
-    saslIface->setSaslStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, QVariantMap());
+    qDebug() << Q_FUNC_INFO << errorCode << errorMessage;
+
+    QVariantMap details;
+    details[QLatin1String("server-message")] = errorMessage;
+
+    switch (errorCode) {
+        break;
+    default:
+        saslIface->setSaslStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, details);
+        break;
+    }
 }
 
 void MorseConnection::startMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error)
@@ -666,14 +685,14 @@ void MorseConnection::receiveMessage(const QString &identifier, const QString &m
                                            initiatorHandle,
                                            /* suppressHandler */ false, QVariantMap(), &error);
     if (error.isValid()) {
-        qWarning() << "ensureChannel failed:" << error.name() << " " << error.message();
+        qWarning() << Q_FUNC_INFO << "ensureChannel failed:" << error.name() << " " << error.message();
         return;
     }
 
     MorseTextChannelPtr textChannel = MorseTextChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_TEXT));
 
     if (!textChannel) {
-        qDebug() << "Error, channel is not a morseTextChannel?";
+        qDebug() << Q_FUNC_INFO << "Error, channel is not a morseTextChannel?";
         return;
     }
 

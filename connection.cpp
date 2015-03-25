@@ -23,8 +23,6 @@
 
 #include <QDebug>
 
-//#define SIMULATION
-
 #define INSECURE_SAVE
 
 #ifdef INSECURE_SAVE
@@ -153,10 +151,6 @@ MorseConnection::~MorseConnection()
 void MorseConnection::doConnect(Tp::DBusError *error)
 {
     Q_UNUSED(error);
-
-#ifdef SIMULATION
-    return whenPhoneCodeRequired();
-#endif
 
     CAppInformation appInfo;
     appInfo.setAppId(14617);
@@ -316,19 +310,6 @@ void MorseConnection::startMechanismWithData(const QString &mechanism, const QBy
 
     saslIface->setSaslStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
 
-#ifdef SIMULATION
-    static bool failThisTime = true;
-
-    if (failThisTime) {
-        whenPhoneCodeIsInvalid();
-        failThisTime = false;
-    } else {
-        whenConnectionReady();
-    }
-
-    return;
-#endif
-
     m_core->signIn(m_selfPhone, QString::fromLatin1(data.constData()));
 }
 
@@ -337,9 +318,7 @@ Tp::ContactInfoMap MorseConnection::getContactInfo(const Tp::UIntList &contacts,
     qDebug() << Q_FUNC_INFO << contacts;
 
     Tp::ContactInfoMap result;
-
     Tp::ContactInfoFieldList contactInfo;
-
     Tp::ContactInfoField contactInfoField;
     contactInfoField.fieldName = QLatin1String("fn");
     contactInfoField.fieldValue.append(QLatin1String("first last"));
@@ -360,11 +339,6 @@ void MorseConnection::whenConnectionReady()
     m_core->setOnlineStatus(m_wantedPresence == c_onlineSimpleStatusKey);
     m_core->setMessageReceivingFilterFlags(TelegramNamespace::MessageFlagNone);
     whenContactListChanged();
-
-#ifdef SIMULATION
-    QTimer::singleShot(500, this, SLOT(whenContactListChanged()));
-    return;
-#endif
 }
 
 QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error)
@@ -701,11 +675,7 @@ void MorseConnection::receiveMessage(const QString &identifier, const QString &m
 
 void MorseConnection::whenContactListChanged()
 {
-#ifdef SIMULATION
-    const QStringList identifiers = QStringList() << QLatin1String("1234567890");
-#else
     const QStringList identifiers = m_core->contactList();
-#endif
 
     qDebug() << Q_FUNC_INFO << identifiers;
 

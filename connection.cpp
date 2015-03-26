@@ -52,12 +52,12 @@ Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
     Tp::SimpleStatusSpec spAvailable;
     spAvailable.type = Tp::ConnectionPresenceTypeAvailable;
     spAvailable.maySetOnSelf = true;
-    spAvailable.canHaveMessage = true;
+    spAvailable.canHaveMessage = false;
 
     Tp::SimpleStatusSpec spHidden;
     spHidden.type = Tp::ConnectionPresenceTypeHidden;
     spHidden.maySetOnSelf = true;
-    spHidden.canHaveMessage = true;
+    spHidden.canHaveMessage = false;
 
     Tp::SimpleStatusSpec spUnknown;
     spUnknown.type = Tp::ConnectionPresenceTypeUnknown;

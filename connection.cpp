@@ -367,8 +367,13 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
     return result;
 }
 
-Tp::BaseChannelPtr MorseConnection::createChannel(const QString &channelType, uint targetHandleType, uint targetHandle, const QVariantMap &request, Tp::DBusError *error)
+Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp::DBusError *error)
 {
+    const QString channelType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")).toString();
+    uint targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
+    uint targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
+    uint initiatorHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")).toUInt();
+
     qDebug() << "MorseConnection::createChannel " << channelType
              << " " << targetHandleType
              << " " << targetHandle
@@ -380,6 +385,7 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QString &channelType, ui
     }
 
     Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, targetHandle, targetHandleType);
+    baseChannel->setInitiatorHandle(initiatorHandle);
 
     QString identifier = m_handles.value(targetHandle);
 
@@ -658,9 +664,14 @@ void MorseConnection::receiveMessage(const QString &identifier, const QString &m
     //TODO: initiator should be group creator
     Tp::DBusError error;
     bool yours;
-    Tp::BaseChannelPtr channel = ensureChannel(TP_QT_IFACE_CHANNEL_TYPE_TEXT, handleType, targetHandle, yours,
-                                           initiatorHandle,
-                                           /* suppressHandler */ false, QVariantMap(), &error);
+
+    QVariantMap request;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = handleType;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = initiatorHandle;
+
+    Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
     if (error.isValid()) {
         qWarning() << Q_FUNC_INFO << "ensureChannel failed:" << error.name() << " " << error.message();
         return;

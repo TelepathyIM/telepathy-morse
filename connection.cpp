@@ -146,6 +146,9 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
 MorseConnection::~MorseConnection()
 {
+    if (m_core) {
+        m_core->deleteLater();
+    }
 }
 
 void MorseConnection::doConnect(Tp::DBusError *error)
@@ -161,7 +164,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     appInfo.setLanguageCode(QLatin1String("en"));
 
     m_authReconnectionsCount = 0;
-    m_core = new CTelegramCore(this);
+    m_core = new CTelegramCore(0);
     m_core->setAppInformation(&appInfo);
     m_core->setMessageReceivingFilterFlags(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagRead);
     m_core->setAcceptableMessageTypes(TelegramNamespace::MessageTypeText);

@@ -88,6 +88,7 @@ private:
     uint addContacts(const QStringList &identifiers);
 
     void updateContactsState(const QStringList &identifiers);
+    void updateSelfContactState(Tp::ConnectionStatus status);
     void setSubscriptionState(const QStringList &identifiers, const QList<uint> &handles, uint state);
 
     void startMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);

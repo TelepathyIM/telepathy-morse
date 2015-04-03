@@ -200,11 +200,13 @@ void MorseConnection::whenConnectionStateChanged(TelegramNamespace::ConnectionSt
         break;
     case TelegramNamespace::ConnectionStateReady:
         whenConnectionReady();
+        updateSelfContactState(Tp::ConnectionStatusConnected);
         break;
     case TelegramNamespace::ConnectionStateDisconnected:
         if (status() == Tp::ConnectionStatusConnected) {
             saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
             setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNetworkError);
+            updateSelfContactState(Tp::ConnectionStatusDisconnected);
             emit disconnected();
         }
         break;
@@ -600,6 +602,10 @@ void MorseConnection::updateContactsState(const QStringList &identifiers)
     foreach (const QString &phone, identifiers) {
         uint handle = ensureContact(phone);
 
+        if (handle == selfHandle()) {
+            continue;
+        }
+        
         TelegramNamespace::ContactStatus st = TelegramNamespace::ContactStatusUnknown;
 
         if (m_core) {
@@ -629,6 +635,24 @@ void MorseConnection::updateContactsState(const QStringList &identifiers)
     }
     simplePresenceIface->setPresences(newPresences);
 }
+
+
+void MorseConnection::updateSelfContactState(Tp::ConnectionStatus status)
+{
+    Tp::SimpleContactPresences newPresences;
+    Tp::SimplePresence presence;
+    if (status == Tp::ConnectionStatusConnected) {
+        presence.status = QLatin1String("available");
+        presence.type = Tp::ConnectionPresenceTypeAvailable;
+    } else {
+        presence.status = QLatin1String("offline");
+        presence.type = Tp::ConnectionPresenceTypeOffline;
+    }
+    
+    m_presences[selfHandle()] = presence;
+    newPresences[selfHandle()] = presence;
+    simplePresenceIface->setPresences(newPresences);
+}   
 
 void MorseConnection::setSubscriptionState(const QStringList &identifiers, const QList<uint> &handles, uint state)
 {

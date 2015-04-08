@@ -371,8 +371,26 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
 {
     const QString channelType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")).toString();
     uint targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
-    uint targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
-    uint initiatorHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")).toUInt();
+    uint targetHandle = 0;
+    uint initiatorHandle = 0;
+
+    if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")) &&
+            request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle"))
+            ){
+        targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
+        initiatorHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")).toUInt();
+    }
+    else if (targetHandleType == Tp::HandleTypeContact &&
+                request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")))
+    {
+        targetHandle = ensureContact(request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString());
+        initiatorHandle = selfHandle();
+    }
+    else
+    {
+        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("createChannel error"));
+        return Tp::BaseChannelPtr();
+    }
 
     qDebug() << "MorseConnection::createChannel " << channelType
              << " " << targetHandleType

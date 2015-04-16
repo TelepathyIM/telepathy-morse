@@ -569,14 +569,20 @@ uint MorseConnection::addContacts(const QStringList &identifiers)
     }
 
     QList<uint> newHandles;
+    QStringList newIdentifiers;
     foreach(const QString &identifier, identifiers) {
+        if (getHandle(identifier)) {
+            continue;
+        }
+
         ++handle;
         m_handles.insert(handle, identifier);
         newHandles << handle;
+        newIdentifiers << identifier;
     }
 
-    updateContactsState(identifiers);
-    setSubscriptionState(identifiers, newHandles, Tp::SubscriptionStateUnknown);
+    updateContactsState(newIdentifiers);
+    setSubscriptionState(newIdentifiers, newHandles, Tp::SubscriptionStateUnknown);
 
     return handle;
 }

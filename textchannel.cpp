@@ -71,12 +71,11 @@ MorseTextChannel::~MorseTextChannel()
 QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error)
 {
     QString content;
-    for (Tp::MessagePartList::const_iterator i = messageParts.begin()+1; i != messageParts.end(); ++i) {
-        if(i->count(QLatin1String("content-type"))
-            && i->value(QLatin1String("content-type")).variant().toString() == QLatin1String("text/plain")
-            && i->count(QLatin1String("content")))
-        {
-            content = i->value(QLatin1String("content")).variant().toString();
+    foreach (const Tp::MessagePart &part, messageParts) {
+        if (part.contains(QLatin1String("content-type"))
+                && part.value(QLatin1String("content-type")).variant().toString() == QLatin1String("text/plain")
+                && part.contains(QLatin1String("content"))) {
+            content = part.value(QLatin1String("content")).variant().toString();
             break;
         }
     }

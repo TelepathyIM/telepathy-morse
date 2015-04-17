@@ -370,8 +370,19 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
 {
     const QString channelType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")).toString();
     uint targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
-    uint targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
-    uint initiatorHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")).toUInt();
+    uint targetHandle = 0;
+    QString targetID;
+
+    if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"))) {
+        targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
+        targetID = m_handles.value(targetHandle);
+    } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
+        targetID = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString();
+        targetHandle = ensureContact(targetID);
+    }
+
+    // Looks like there is no any case for InitiatorID other than selfID
+    uint initiatorHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle"), selfHandle()).toUInt();
 
     qDebug() << "MorseConnection::createChannel " << channelType
              << " " << targetHandleType
@@ -386,10 +397,8 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
     Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, Tp::HandleTypeContact, targetHandle);
     baseChannel->setInitiatorHandle(initiatorHandle);
 
-    QString identifier = m_handles.value(targetHandle);
-
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        MorseTextChannelPtr textChannel = MorseTextChannel::create(m_core, baseChannel.data(), targetHandle, identifier, selfHandle(), m_selfPhone);
+        MorseTextChannelPtr textChannel = MorseTextChannel::create(m_core, baseChannel.data(), targetHandle, targetID, selfHandle(), m_selfPhone);
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
     }
 

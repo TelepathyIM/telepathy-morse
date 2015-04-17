@@ -389,9 +389,18 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
              << " " << targetHandle
              << " " << request;
 
-    if ((targetHandleType != Tp::HandleTypeContact) || (targetHandle == 0)) {
-          error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("createChannel error"));
-          return Tp::BaseChannelPtr();
+    if ((targetHandleType != Tp::HandleTypeContact) || (!targetHandle)) {
+        if (error) {
+            error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported target handle"));
+        }
+        return Tp::BaseChannelPtr();
+    }
+
+    if (!m_handles.contains(targetHandle)) {
+        if (error) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Target handle is unknown."));
+        }
+        return Tp::BaseChannelPtr();
     }
 
     Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, Tp::HandleTypeContact, targetHandle);

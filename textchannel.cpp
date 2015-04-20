@@ -23,12 +23,12 @@
 #include <QDateTime>
 #include <QTimer>
 
-MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone, uint selfHandle, const QString &selfPhone)
+MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfID)
     : Tp::BaseChannelTextType(baseChannel),
-      m_phone(phone),
-      m_contactHandle(targetHandle),
-      m_selfPhone(selfPhone),
+      m_targetHandle(baseChannel->targetHandle()),
       m_selfHandle(selfHandle),
+      m_targetID(baseChannel->targetID()),
+      m_selfID(selfID),
       m_localTypingTimer(0)
 {
     m_core = core;
@@ -59,9 +59,9 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
             SLOT(sentMessageDeliveryStatusChanged(QString,quint64,TelegramNamespace::MessageDeliveryStatus)));
 }
 
-MorseTextChannelPtr MorseTextChannel::create(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &phone, uint selfHandle, const QString &selfPhone)
+MorseTextChannelPtr MorseTextChannel::create(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfID)
 {
-    return MorseTextChannelPtr(new MorseTextChannel(core, baseChannel, targetHandle, phone, selfHandle, selfPhone));
+    return MorseTextChannelPtr(new MorseTextChannel(core, baseChannel, selfHandle, selfID));
 }
 
 MorseTextChannel::~MorseTextChannel()
@@ -80,30 +80,36 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
         }
     }
 
-    return QString::number(m_core->sendMessage(m_phone, content));
+    return QString::number(m_core->sendMessage(m_targetID, content));
 }
 
 void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)
 {
-    m_core->setMessageRead(m_phone, messageId.toUInt());
+    m_core->setMessageRead(m_targetID, messageId.toUInt());
 }
 
 void MorseTextChannel::whenContactChatStateComposingChanged(const QString &phone, bool composing)
 {
     // We are connected to broadcast signal, so have to select only needed calls
-    if (phone != m_phone) {
+    if (phone != m_targetID) {
         return;
     }
 
     if (composing) {
-        m_chatStateIface->chatStateChanged(m_contactHandle, Tp::ChannelChatStateComposing);
+        m_chatStateIface->chatStateChanged(m_targetHandle, Tp::ChannelChatStateComposing);
     } else {
-        m_chatStateIface->chatStateChanged(m_contactHandle, Tp::ChannelChatStateActive);
+        m_chatStateIface->chatStateChanged(m_targetHandle, Tp::ChannelChatStateActive);
     }
 }
 
 void MorseTextChannel::whenMessageReceived(const QString &message, quint32 messageId, quint32 flags, uint timestamp)
 {
+    processReceivedMessage(m_targetHandle, m_targetID, message, messageId, flags, timestamp);
+}
+
+void MorseTextChannel::processReceivedMessage(uint contactHandle, QString contactID, const QString &message, quint32 messageId, quint32 flags, uint timestamp)
+{
+    qDebug() << Q_FUNC_INFO << message;
     Tp::MessagePartList body;
     Tp::MessagePart text;
     text[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
@@ -120,24 +126,82 @@ void MorseTextChannel::whenMessageReceived(const QString &message, quint32 messa
 
     if (flags & TelegramNamespace::MessageFlagOut) {
         header[QLatin1String("message-sender")]    = QDBusVariant(m_selfHandle);
-        header[QLatin1String("message-sender-id")] = QDBusVariant(m_selfPhone);
+        header[QLatin1String("message-sender-id")] = QDBusVariant(m_selfID);
         partList << header << body;
         m_messagesIface->messageSent(partList, 0, token);
     } else {
         uint currentTimestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
 
         header[QLatin1String("message-received")]  = QDBusVariant(currentTimestamp);
-        header[QLatin1String("message-sender")]    = QDBusVariant(m_contactHandle);
-        header[QLatin1String("message-sender-id")] = QDBusVariant(m_phone);
+        header[QLatin1String("message-sender")]    = QDBusVariant(contactHandle);
+        header[QLatin1String("message-sender-id")] = QDBusVariant(contactID);
         partList << header << body;
         addReceivedMessage(partList);
+    }
+}
+
+void MorseTextChannel::updateChatParticipants(const Tp::UIntList &handles, const QStringList &identifiers)
+{
+    qDebug() << Q_FUNC_INFO << identifiers;
+
+    if (handles.count() != identifiers.count()) {
+        return;
+    }
+
+    // Process removed participants
+    {
+        Tp::UIntList removedHandles;
+
+        foreach (uint handle, m_participantHandles.keys()) {
+            if (!handles.contains(handle)) {
+                removedHandles << handle;
+            }
+        }
+
+        if (!removedHandles.isEmpty()) {
+            foreach (uint handle, removedHandles) {
+                m_participantHandles.remove(handle);
+            }
+
+            m_groupIface->removeMembers(removedHandles);
+        }
+    }
+
+    // Process added participants
+    {
+        const Tp::UIntList previousHandles = m_participantHandles.keys();
+        Tp::UIntList addedHandles;
+
+        for (int i = 0; i < handles.count(); ++i) {
+            uint handle = handles.at(i);
+            if (!previousHandles.contains(handle)) {
+                m_participantHandles.insert(handle, identifiers.at(i));
+            }
+            addedHandles << handle;
+        }
+
+        if (!addedHandles.isEmpty()) {
+            QStringList addedIDs;
+            foreach (uint handle, addedHandles) {
+                addedIDs << m_participantHandles.value(handle);
+            }
+
+            m_groupIface->addMembers(addedHandles, addedIDs);
+        }
+    }
+}
+
+void MorseTextChannel::whenChatDetailsChanged(const QString &chatID, const Tp::UIntList &handles, const QStringList &identifiers)
+{
+    if (m_targetID == chatID) {
+        updateChatParticipants(handles, identifiers);
     }
 }
 
 void MorseTextChannel::sentMessageDeliveryStatusChanged(const QString &phone, quint64 messageId, TelegramNamespace::MessageDeliveryStatus status)
 {
     // We are connected to broadcast signal, so have to select only needed calls
-    if (phone != m_phone) {
+    if (phone != m_targetID) {
         return;
     }
 
@@ -160,8 +224,8 @@ void MorseTextChannel::sentMessageDeliveryStatusChanged(const QString &phone, qu
 
     Tp::MessagePart header;
     header[QLatin1String("message-token")]     = QDBusVariant(token);
-    header[QLatin1String("message-sender")]    = QDBusVariant(m_contactHandle);
-    header[QLatin1String("message-sender-id")] = QDBusVariant(m_phone);
+    header[QLatin1String("message-sender")]    = QDBusVariant(m_targetHandle);
+    header[QLatin1String("message-sender-id")] = QDBusVariant(m_targetID);
     header[QLatin1String("message-type")]      = QDBusVariant(Tp::ChannelTextMessageTypeDeliveryReport);
     header[QLatin1String("delivery-status")]   = QDBusVariant(statusFlag);
     header[QLatin1String("delivery-token")]    = QDBusVariant(token);
@@ -179,7 +243,7 @@ void MorseTextChannel::sentMessageDeliveryStatusChanged(const QString &phone, qu
 
 void MorseTextChannel::reactivateLocalTyping()
 {
-    m_core->setTyping(m_phone, true);
+    m_core->setTyping(m_targetID, true);
 }
 
 void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
@@ -192,7 +256,7 @@ void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
         connect(m_localTypingTimer, SIGNAL(timeout()), this, SLOT(reactivateLocalTyping()));
     }
 
-    m_core->setTyping(m_phone, state == Tp::ChannelChatStateComposing);
+    m_core->setTyping(m_targetID, state == Tp::ChannelChatStateComposing);
 
     if (state == Tp::ChannelChatStateComposing) {
         m_localTypingTimer->start();

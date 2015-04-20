@@ -409,11 +409,12 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
         return Tp::BaseChannelPtr();
     }
 
-    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, Tp::HandleTypeContact, targetHandle);
+    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, Tp::HandleType(targetHandleType), targetHandle);
+    baseChannel->setTargetID(targetID);
     baseChannel->setInitiatorHandle(initiatorHandle);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        MorseTextChannelPtr textChannel = MorseTextChannel::create(m_core, baseChannel.data(), targetHandle, targetID, selfHandle(), m_selfPhone);
+        MorseTextChannelPtr textChannel = MorseTextChannel::create(m_core, baseChannel.data(), selfHandle(), m_selfPhone);
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
     }
 
@@ -687,7 +688,6 @@ void MorseConnection::receiveMessage(const QString &identifier, const QString &m
 
     uint initiatorHandle, targetHandle;
 
-    Tp::HandleType handleType = Tp::HandleTypeContact;
     initiatorHandle = targetHandle = ensureContact(identifier);
 
     //TODO: initiator should be group creator
@@ -697,7 +697,7 @@ void MorseConnection::receiveMessage(const QString &identifier, const QString &m
     QVariantMap request;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = handleType;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = Tp::HandleTypeContact;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = initiatorHandle;
 
     Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
@@ -857,11 +857,6 @@ void MorseConnection::updateContactPresence(const QString &identifier)
 
 uint MorseConnection::getHandle(const QString &identifier) const
 {
-    foreach (uint key, m_handles.keys()) {
-        if (m_handles.value(key) == identifier) {
-            return key;
-        }
-    }
-
-    return 0;
+    return m_handles.key(identifier, 0);
 }
+

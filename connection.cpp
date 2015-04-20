@@ -171,11 +171,22 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 
     setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonNoneSpecified);
 
-    connect(m_core, SIGNAL(connectionStateChanged(TelegramNamespace::ConnectionState)), this, SLOT(whenConnectionStateChanged(TelegramNamespace::ConnectionState)));
-    connect(m_core, SIGNAL(authorizationErrorReceived()), this, SLOT(whenAuthErrorReceived()));
-    connect(m_core, SIGNAL(phoneCodeRequired()), this, SLOT(whenPhoneCodeRequired()));
-    connect(m_core, SIGNAL(authSignErrorReceived(TelegramNamespace::AuthSignError,QString)), this, SLOT(whenAuthSignErrorReceived(TelegramNamespace::AuthSignError,QString)));
-    connect(m_core, SIGNAL(avatarReceived(QString,QByteArray,QString,QString)), this, SLOT(whenAvatarReceived(QString,QByteArray,QString,QString)));
+    connect(m_core, SIGNAL(connectionStateChanged(TelegramNamespace::ConnectionState)),
+            this, SLOT(whenConnectionStateChanged(TelegramNamespace::ConnectionState)));
+    connect(m_core, SIGNAL(authorizationErrorReceived()),
+            this, SLOT(whenAuthErrorReceived()));
+    connect(m_core, SIGNAL(phoneCodeRequired()),
+            this, SLOT(whenPhoneCodeRequired()));
+    connect(m_core, SIGNAL(authSignErrorReceived(TelegramNamespace::AuthSignError,QString)),
+            this, SLOT(whenAuthSignErrorReceived(TelegramNamespace::AuthSignError,QString)));
+    connect(m_core, SIGNAL(avatarReceived(QString,QByteArray,QString,QString)),
+            this, SLOT(whenAvatarReceived(QString,QByteArray,QString,QString)));
+    connect(m_core, SIGNAL(contactListChanged()),
+            this, SLOT(whenContactListChanged()));
+    connect(m_core, SIGNAL(messageReceived(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)),
+            this, SLOT(receiveMessage(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)));
+    connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)),
+            this, SLOT(updateContactPresence(QString)));
 
     const QByteArray sessionData = getSessionData(m_selfPhone);
 
@@ -233,11 +244,6 @@ void MorseConnection::whenAuthenticated()
     presence.type = simplePresenceIface->statuses().value(m_wantedPresence).type;
     presences[selfHandle()] = presence;
     simplePresenceIface->setPresences(presences);
-
-    connect(m_core, SIGNAL(contactListChanged()), SLOT(whenContactListChanged()), Qt::UniqueConnection);
-    connect(m_core, SIGNAL(messageReceived(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)),
-            SLOT(receiveMessage(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)), Qt::UniqueConnection);
-    connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)), SLOT(updateContactPresence(QString)), Qt::UniqueConnection);
 
     setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
     contactListIface->setContactListState(Tp::ContactListStateWaiting);

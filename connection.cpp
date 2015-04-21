@@ -351,22 +351,32 @@ void MorseConnection::whenConnectionReady()
 
 QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error)
 {
-    qDebug() << Q_FUNC_INFO;
+    qDebug() << Q_FUNC_INFO << handleType << handles;
 
-    if (handleType != Tp::HandleTypeContact) {
-        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported handle type"));
+    switch (handleType) {
+    case Tp::HandleTypeContact:
+        break;
+    default:
+        if (error) {
+            error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported handle type"));
+        }
         return QStringList();
+        break;
     }
 
     QStringList result;
 
+    const QMap<uint, QString> handlesContainer = m_handles;
+
     foreach (uint handle, handles) {
-        if (!m_handles.contains(handle)) {
-            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+        if (!handlesContainer.contains(handle)) {
+            if (error) {
+                error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+            }
             return QStringList();
         }
 
-        result.append(m_handles.value(handle));
+        result.append(handlesContainer.value(handle));
     }
 
     return result;
@@ -379,30 +389,46 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
     uint targetHandle = 0;
     QString targetID;
 
-    if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"))) {
-        targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
-        targetID = m_handles.value(targetHandle);
-    } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
-        targetID = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString();
-        targetHandle = ensureContact(targetID);
+    switch (targetHandleType) {
+    case Tp::HandleTypeContact:
+        if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"))) {
+            targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
+            targetID = m_handles.value(targetHandle);
+        } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
+            targetID = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString();
+            targetHandle = ensureContact(targetID);
+        }
+        break;
+    default:
+        break;
     }
 
     // Looks like there is no any case for InitiatorID other than selfID
-    uint initiatorHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle"), selfHandle()).toUInt();
+    uint initiatorHandle = 0;
+
+    if (targetHandleType == Tp::HandleTypeContact) {
+        initiatorHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle"), selfHandle()).toUInt();
+    }
 
     qDebug() << "MorseConnection::createChannel " << channelType
              << " " << targetHandleType
              << " " << targetHandle
              << " " << request;
 
-    if ((targetHandleType != Tp::HandleTypeContact) || (!targetHandle)) {
+    switch (targetHandleType) {
+    case Tp::HandleTypeContact:
+        break;
+    default:
         if (error) {
-            error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported target handle"));
+            error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unknown target handle type"));
         }
         return Tp::BaseChannelPtr();
+        break;
     }
 
-    if (!m_handles.contains(targetHandle)) {
+    if (!targetHandle
+            || ((targetHandleType == Tp::HandleTypeContact) && !m_handles.contains(targetHandle))
+            ) {
         if (error) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Target handle is unknown."));
         }

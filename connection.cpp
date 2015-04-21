@@ -399,6 +399,11 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
 Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp::DBusError *error)
 {
     const QString channelType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")).toString();
+
+    if (channelType == TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST) {
+        return createRoomListChannel();
+    }
+
     uint targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
     uint targetHandle = 0;
     QString targetID;
@@ -901,6 +906,45 @@ void MorseConnection::whenAvatarReceived(const QString &contact, const QByteArra
     avatarsIface->avatarRetrieved(ensureContact(contact), token , data, mimeType);
 }
 
+void MorseConnection::whenGotRooms()
+{
+    qDebug() << Q_FUNC_INFO;
+    Tp::RoomInfoList rooms;
+
+    foreach (quint32 chatId, m_core->chatList()) {
+        Tp::RoomInfo roomInfo;
+        TelegramNamespace::GroupChat chatInfo;
+
+        const QString chatID = QString(QLatin1String("chat%1")).arg(chatId);
+        roomInfo.channelType = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
+        roomInfo.handle = ensureChat(chatID);
+        roomInfo.info[QLatin1String("handle-name")] = chatID;
+
+        if (m_core->getChatInfo(&chatInfo, chatId)) {
+            roomInfo.info[QLatin1String("name")] = chatInfo.title;
+            roomInfo.info[QLatin1String("members")] = chatInfo.participantsCount;
+        }
+
+        rooms << roomInfo;
+    }
+
+    roomListChannel->gotRooms(rooms);
+    roomListChannel->setListingRooms(false);
+}
+
+Tp::BaseChannelPtr MorseConnection::createRoomListChannel()
+{
+    qDebug() << Q_FUNC_INFO;
+    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST);
+
+    roomListChannel = Tp::BaseChannelRoomListType::create();
+    roomListChannel->setListRoomsCallback(Tp::memFun(this, &MorseConnection::roomListStartListing));
+    roomListChannel->setStopListingCallback(Tp::memFun(this, &MorseConnection::roomListStopListing));
+    baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(roomListChannel));
+
+    return baseChannel;
+}
+
 Tp::AvatarTokenMap MorseConnection::getKnownAvatarTokens(const Tp::UIntList &contacts, Tp::DBusError *error)
 {
     const QStringList identifiers = inspectHandles(Tp::HandleTypeContact, contacts, error);
@@ -946,6 +990,20 @@ void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError
     foreach (const QString &identifier, identifiers) {
         m_core->requestContactAvatar(identifier);
     }
+}
+
+void MorseConnection::roomListStartListing(Tp::DBusError *error)
+{
+    Q_UNUSED(error)
+
+    QTimer::singleShot(0, this, SLOT(whenGotRooms()));
+    roomListChannel->setListingRooms(true);
+}
+
+void MorseConnection::roomListStopListing(Tp::DBusError *error)
+{
+    Q_UNUSED(error)
+    roomListChannel->setListingRooms(false);
 }
 
 bool MorseConnection::coreIsReady()

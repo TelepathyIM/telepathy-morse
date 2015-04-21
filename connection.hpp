@@ -78,6 +78,12 @@ private slots:
     /* Connection.Interface.Avatars */
     void whenAvatarReceived(const QString &contact, const QByteArray &data, const QString &mimeType, const QString &token);
 
+    /* Channel.Type.RoomList */
+    void whenGotRooms();
+
+protected:
+    Tp::BaseChannelPtr createRoomListChannel();
+
 private:
     static QByteArray getSessionData(const QString &phone);
     static bool saveSessionData(const QString &phone, const QByteArray &data);
@@ -99,6 +105,10 @@ private:
     Tp::AvatarTokenMap getKnownAvatarTokens(const Tp::UIntList &contacts, Tp::DBusError *error);
     void requestAvatars(const Tp::UIntList &contacts, Tp::DBusError *error);
 
+    /* Channel.Type.RoomList */
+    void roomListStartListing(Tp::DBusError *error);
+    void roomListStopListing(Tp::DBusError *error);
+
     bool coreIsReady();
     bool coreIsAuthenticated();
 
@@ -110,6 +120,7 @@ private:
     Tp::BaseConnectionAddressingInterfacePtr addressingIface;
     Tp::BaseConnectionRequestsInterfacePtr requestsIface;
     Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface;
+    Tp::BaseChannelRoomListTypePtr roomListChannel;
 
     Tp::SimpleContactPresences m_presences;
 

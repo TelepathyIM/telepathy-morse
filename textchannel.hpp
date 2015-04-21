@@ -40,6 +40,10 @@ public:
 public slots:
     void whenContactChatStateComposingChanged(const QString &phone, bool composing);
     void whenMessageReceived(const QString &message, quint32 messageId, quint32 flags, uint timestamp);
+    void whenChatMessageReceived(uint senderHandle, const QString &message, quint32 messageId, quint32 flags, uint timestamp);
+    void updateChatParticipants(const Tp::UIntList &handles, const QStringList &identifiers);
+
+    void whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles, const QStringList &identifiers);
 
 protected slots:
     void sentMessageDeliveryStatusChanged(const QString &phone, quint64 messageId, TelegramNamespace::MessageDeliveryStatus status);
@@ -54,6 +58,8 @@ private:
 
     QPointer<CTelegramCore> m_core;
 
+    QMap<uint, QString> m_participantHandles;
+
     uint m_targetHandle;
     uint m_selfHandle;
     QString m_targetID;
@@ -62,6 +68,9 @@ private:
     Tp::BaseChannelTextTypePtr m_channelTextType;
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;
     Tp::BaseChannelChatStateInterfacePtr m_chatStateIface;
+    Tp::BaseChannelGroupInterfacePtr m_groupIface;
+    Tp::BaseChannelRoomInterfacePtr m_roomIface;
+    Tp::BaseChannelRoomConfigInterfacePtr m_roomConfigIface;
 
     QTimer *m_localTypingTimer;
 

@@ -53,13 +53,17 @@ public:
     uint setPresence(const QString &status, const QString &message, Tp::DBusError *error);
 
     uint ensureContact(const QString &identifier);
+    uint ensureChat(const QString &identifier);
 
 public slots:
     void receiveMessage(const QString &identifier, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp);
+    void whenChatMessageReceived(quint32 chatId, const QString &contact, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp);
+    void whenChatChanged(quint32 chatId);
     void updateContactPresence(const QString &identifier);
 
 signals:
     void messageReceived(const QString &sender, const QString &message);
+    void chatDetailsChanged(quint32 chatId, const Tp::UIntList &handles, const QStringList &identifiers);
 
 private slots:
     void whenConnectionStateChanged(TelegramNamespace::ConnectionState state);
@@ -79,6 +83,7 @@ private:
     static bool saveSessionData(const QString &phone, const QByteArray &data);
 
     uint getHandle(const QString &identifier) const;
+    uint getChatHandle(const QString &identifier) const;
     uint addContact(const QString &identifier);
     uint addContacts(const QStringList &identifiers);
 
@@ -110,6 +115,7 @@ private:
     QString m_wantedPresence;
 
     QMap<uint, QString> m_handles;
+    QMap<uint, QString> m_chatHandles;
     /* Maps a contact handle to its subscription state */
     QHash<uint, uint> m_contactsSubscription;
 

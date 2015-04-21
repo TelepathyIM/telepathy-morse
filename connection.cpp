@@ -185,6 +185,10 @@ void MorseConnection::doConnect(Tp::DBusError *error)
             this, SLOT(whenContactListChanged()));
     connect(m_core, SIGNAL(messageReceived(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)),
             this, SLOT(receiveMessage(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)));
+    connect(m_core, SIGNAL(chatMessageReceived(quint32,QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)),
+            this, SLOT(whenChatMessageReceived(quint32,QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)));
+    connect(m_core, SIGNAL(chatChanged(quint32)),
+            this, SLOT(whenChatChanged(quint32)));
     connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)),
             this, SLOT(updateContactPresence(QString)));
 
@@ -355,6 +359,7 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
 
     switch (handleType) {
     case Tp::HandleTypeContact:
+    case Tp::HandleTypeRoom:
         break;
     default:
         if (error) {
@@ -366,7 +371,7 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
 
     QStringList result;
 
-    const QMap<uint, QString> handlesContainer = m_handles;
+    const QMap<uint, QString> handlesContainer = handleType == Tp::HandleTypeContact ? m_handles : m_chatHandles;
 
     foreach (uint handle, handles) {
         if (!handlesContainer.contains(handle)) {
@@ -399,6 +404,14 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
             targetHandle = ensureContact(targetID);
         }
         break;
+    case Tp::HandleTypeRoom:
+        if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"))) {
+            targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
+            targetID = m_chatHandles.value(targetHandle);
+        } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
+            targetID = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString();
+            targetHandle = ensureChat(targetID);
+        }
     default:
         break;
     }
@@ -417,6 +430,7 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
 
     switch (targetHandleType) {
     case Tp::HandleTypeContact:
+    case Tp::HandleTypeRoom:
         break;
     default:
         if (error) {
@@ -428,6 +442,7 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
 
     if (!targetHandle
             || ((targetHandleType == Tp::HandleTypeContact) && !m_handles.contains(targetHandle))
+            || ((targetHandleType == Tp::HandleTypeRoom) && !m_chatHandles.contains(targetHandle))
             ) {
         if (error) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Target handle is unknown."));
@@ -442,6 +457,18 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
         MorseTextChannelPtr textChannel = MorseTextChannel::create(m_core, baseChannel.data(), selfHandle(), m_selfPhone);
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
+
+        if (targetHandleType == Tp::HandleTypeRoom) {
+            quint32 chatId = targetID.section(QLatin1String("chat"), 1).toUInt();
+
+            QStringList participants;
+            if (m_core->getChatParticipants(&participants, chatId) && !participants.isEmpty()) {
+                textChannel->whenChatDetailsChanged(chatId, requestHandles(Tp::HandleTypeContact, participants, 0), participants);
+            }
+
+            connect(this, SIGNAL(chatDetailsChanged(quint32,Tp::UIntList,QStringList)),
+                    textChannel.data(), SLOT(whenChatDetailsChanged(quint32,Tp::UIntList,QStringList)));
+        }
     }
 
     return baseChannel;
@@ -615,6 +642,21 @@ uint MorseConnection::ensureContact(const QString &identifier)
     return handle;
 }
 
+uint MorseConnection::ensureChat(const QString &identifier)
+{
+    uint handle = getChatHandle(identifier);
+    if (!handle) {
+        if (m_chatHandles.isEmpty()) {
+            handle = 1;
+        } else {
+            handle = m_chatHandles.keys().last() + 1;
+        }
+
+        m_chatHandles.insert(handle, identifier);
+    }
+    return handle;
+}
+
 uint MorseConnection::addContacts(const QStringList &identifiers)
 {
     qDebug() << Q_FUNC_INFO << identifiers;
@@ -740,6 +782,55 @@ void MorseConnection::receiveMessage(const QString &identifier, const QString &m
     }
 
     textChannel->whenMessageReceived(message, messageId, flags, timestamp);
+}
+
+void MorseConnection::whenChatMessageReceived(quint32 chatId, const QString &contact, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp)
+{
+    if (type != TelegramNamespace::MessageTypeText) {
+        return;
+    }
+
+    const QString identifier = QString(QLatin1String("chat%1")).arg(chatId);
+
+    uint initiatorHandle, targetHandle, contactHandle;
+
+    targetHandle = ensureChat(identifier);
+    contactHandle = ensureContact(contact);
+
+    initiatorHandle = contactHandle; // For now
+
+    //TODO: initiator should be group creator
+    Tp::DBusError error;
+    bool yours;
+
+    QVariantMap request;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = Tp::HandleTypeRoom;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = initiatorHandle;
+
+    Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
+    if (error.isValid()) {
+        qWarning() << Q_FUNC_INFO << "ensureChannel failed:" << error.name() << " " << error.message();
+        return;
+    }
+
+    MorseTextChannelPtr textChannel = MorseTextChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_TEXT));
+
+    if (!textChannel) {
+        qDebug() << Q_FUNC_INFO << "Error, channel is not a morseTextChannel?";
+        return;
+    }
+
+    textChannel->whenChatMessageReceived(contactHandle, message, messageId, flags, timestamp);
+}
+
+void MorseConnection::whenChatChanged(quint32 chatId)
+{
+    QStringList participants;
+    if (m_core->getChatParticipants(&participants, chatId) && !participants.isEmpty()) {
+        emit chatDetailsChanged(chatId, requestHandles(Tp::HandleTypeContact, participants, 0), participants);
+    }
 }
 
 void MorseConnection::whenContactListChanged()
@@ -884,5 +975,10 @@ void MorseConnection::updateContactPresence(const QString &identifier)
 uint MorseConnection::getHandle(const QString &identifier) const
 {
     return m_handles.key(identifier, 0);
+}
+
+uint MorseConnection::getChatHandle(const QString &identifier) const
+{
+    return m_chatHandles.key(identifier, 0);
 }
 

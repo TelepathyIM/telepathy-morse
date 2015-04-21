@@ -54,6 +54,17 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
     m_chatStateIface->setSetChatStateCallback(Tp::memFun(this, &MorseTextChannel::setChatState));
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_chatStateIface));
 
+    if (baseChannel->targetHandleType() == Tp::HandleTypeRoom) {
+        m_groupIface = Tp::BaseChannelGroupInterface::create(Tp::ChannelGroupFlagCanAdd, selfHandle); //Tp::ChannelGroupFlagChannelSpecificHandles
+        baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_groupIface));
+
+        m_roomIface = Tp::BaseChannelRoomInterface::create(m_targetID, QString(), QString(), 0, QDateTime());
+        baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_roomIface));
+
+        m_roomConfigIface = Tp::BaseChannelRoomConfigInterface::create();
+        baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_roomConfigIface));
+    }
+
     connect(m_core.data(), SIGNAL(contactTypingStatusChanged(QString,bool)), SLOT(whenContactChatStateComposingChanged(QString,bool)));
     connect(m_core.data(), SIGNAL(sentMessageStatusChanged(QString,quint64,TelegramNamespace::MessageDeliveryStatus)),
             SLOT(sentMessageDeliveryStatusChanged(QString,quint64,TelegramNamespace::MessageDeliveryStatus)));
@@ -107,6 +118,11 @@ void MorseTextChannel::whenMessageReceived(const QString &message, quint32 messa
     processReceivedMessage(m_targetHandle, m_targetID, message, messageId, flags, timestamp);
 }
 
+void MorseTextChannel::whenChatMessageReceived(uint senderHandle, const QString &message, quint32 messageId, quint32 flags, uint timestamp)
+{
+    processReceivedMessage(senderHandle, m_participantHandles.value(senderHandle), message, messageId, flags, timestamp);
+}
+
 void MorseTextChannel::processReceivedMessage(uint contactHandle, QString contactID, const QString &message, quint32 messageId, quint32 flags, uint timestamp)
 {
     qDebug() << Q_FUNC_INFO << message;
@@ -134,7 +150,11 @@ void MorseTextChannel::processReceivedMessage(uint contactHandle, QString contac
 
         header[QLatin1String("message-received")]  = QDBusVariant(currentTimestamp);
         header[QLatin1String("message-sender")]    = QDBusVariant(contactHandle);
-        header[QLatin1String("message-sender-id")] = QDBusVariant(contactID);
+
+        if (!contactID.isEmpty()) {
+            header[QLatin1String("message-sender-id")] = QDBusVariant(contactID);
+        }
+
         partList << header << body;
         addReceivedMessage(partList);
     }
@@ -191,10 +211,19 @@ void MorseTextChannel::updateChatParticipants(const Tp::UIntList &handles, const
     }
 }
 
-void MorseTextChannel::whenChatDetailsChanged(const QString &chatID, const Tp::UIntList &handles, const QStringList &identifiers)
+void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles, const QStringList &identifiers)
 {
+    qDebug() << Q_FUNC_INFO << chatId;
+    const QString chatID = QString(QLatin1String("chat%1")).arg(chatId);
+
     if (m_targetID == chatID) {
         updateChatParticipants(handles, identifiers);
+
+        TelegramNamespace::GroupChat info;
+        if (m_core->getChatInfo(&info, chatId)) {
+            m_roomConfigIface->setTitle(info.title);
+            m_roomConfigIface->setConfigurationRetrieved(true);
+        }
     }
 }
 

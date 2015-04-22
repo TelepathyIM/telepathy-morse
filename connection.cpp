@@ -136,7 +136,11 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     groupChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
     groupChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
 
-    requestsIface->requestableChannelClasses << personalChat << groupChat;
+    Tp::RequestableChannelClass chatList;
+    chatList.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST;
+    chatList.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeNone;
+
+    requestsIface->requestableChannelClasses << personalChat << groupChat << chatList;
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(requestsIface));
 
     m_selfPhone = parameters.value(QLatin1String("account")).toString();

@@ -923,6 +923,9 @@ void MorseConnection::whenGotRooms()
         roomInfo.channelType = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
         roomInfo.handle = ensureChat(chatID);
         roomInfo.info[QLatin1String("handle-name")] = chatID;
+        roomInfo.info[QLatin1String("members-only")] = true;
+        roomInfo.info[QLatin1String("invite-only")] = true;
+        roomInfo.info[QLatin1String("password")] = false;
 
         if (m_core->getChatInfo(&chatInfo, chatId)) {
             roomInfo.info[QLatin1String("name")] = chatInfo.title;

@@ -195,7 +195,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     connect(m_core, SIGNAL(contactListChanged()),
             this, SLOT(whenContactListChanged()));
     connect(m_core, SIGNAL(messageReceived(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)),
-            this, SLOT(receiveMessage(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)));
+            this, SLOT(whenMessageReceived(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)));
     connect(m_core, SIGNAL(chatMessageReceived(quint32,QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)),
             this, SLOT(whenChatMessageReceived(quint32,QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)));
     connect(m_core, SIGNAL(chatChanged(quint32)),
@@ -787,7 +787,7 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
 }
 
 /* Receive message from outside (telegram server) */
-void MorseConnection::receiveMessage(const QString &identifier, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp)
+void MorseConnection::whenMessageReceived(const QString &identifier, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp)
 {
     if (type != TelegramNamespace::MessageTypeText) {
         return;

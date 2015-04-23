@@ -56,7 +56,7 @@ public:
     uint ensureChat(const QString &identifier);
 
 public slots:
-    void receiveMessage(const QString &identifier, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp);
+    void whenMessageReceived(const QString &identifier, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp);
     void whenChatMessageReceived(quint32 chatId, const QString &contact, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp);
     void whenChatChanged(quint32 chatId);
     void updateContactPresence(const QString &identifier);

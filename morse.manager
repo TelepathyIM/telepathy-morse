@@ -6,3 +6,22 @@ ObjectPath = /org/freedesktop/Telepathy/ConnectionManager/morse
 [Protocol telegram]
 param-account = s required
 EnglishName=Telegram
+RequestableChannelClasses=text-1on1;text-multi;roomlist;
+Interfaces=org.freedesktop.Telepathy.Protocol.Interface.Presence;org.freedesktop.Telepathy.Protocol.Interface.Addressing;
+ConnectionInterfaces=org.freedesktop.Telepathy.Connection.Interface.Requests;org.freedesktop.Telepathy.Connection.Interface.Contacts;org.freedesktop.Telepathy.Connection.Interface.Aliasing;org.freedesktop.Telepathy.Connection.Interface.SimplePresence;org.freedesktop.Telepathy.Connection.Interface.Avatars;org.freedesktop.Telepathy.Connection.Interface.ContactList;
+AuthenticationTypes=org.freedesktop.Telepathy.Channel.Interface.SASLAuthentication;
+
+[text-1on1]
+org.freedesktop.Telepathy.Channel.ChannelType s=org.freedesktop.Telepathy.Channel.Type.Text
+org.freedesktop.Telepathy.Channel.TargetHandleType u=1
+allowed=org.freedesktop.Telepathy.Channel.TargetHandle;org.freedesktop.Telepathy.Channel.TargetID;
+
+[text-multi]
+org.freedesktop.Telepathy.Channel.ChannelType s=org.freedesktop.Telepathy.Channel.Type.Text
+org.freedesktop.Telepathy.Channel.TargetHandleType u=2
+allowed=org.freedesktop.Telepathy.Channel.TargetHandle;org.freedesktop.Telepathy.Channel.TargetID;
+
+[roomlist]
+org.freedesktop.Telepathy.Channel.ChannelType s=org.freedesktop.Telepathy.Channel.Type.RoomList
+org.freedesktop.Telepathy.Channel.TargetHandleType u=0
+allowed=org.freedesktop.Telepathy.Channel.Type.RoomList.Server;

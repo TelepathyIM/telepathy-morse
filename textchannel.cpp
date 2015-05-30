@@ -252,7 +252,6 @@ void MorseTextChannel::sentMessageDeliveryStatusChanged(const QString &phone, qu
     Tp::MessagePartList partList;
 
     Tp::MessagePart header;
-    header[QLatin1String("message-token")]     = QDBusVariant(token);
     header[QLatin1String("message-sender")]    = QDBusVariant(m_targetHandle);
     header[QLatin1String("message-sender-id")] = QDBusVariant(m_targetID);
     header[QLatin1String("message-type")]      = QDBusVariant(Tp::ChannelTextMessageTypeDeliveryReport);
@@ -260,14 +259,7 @@ void MorseTextChannel::sentMessageDeliveryStatusChanged(const QString &phone, qu
     header[QLatin1String("delivery-token")]    = QDBusVariant(token);
     partList << header;
 
-    uint flags = 0;
-
-    // MessageSendingFlagReportDelivery for DeliveryStatusAccepted?
-    if (statusFlag == Tp::DeliveryStatusRead) {
-        flags = Tp::MessageSendingFlagReportRead;
-    }
-
-    m_messagesIface->messageSent(partList, flags, token);
+    addReceivedMessage(partList);
 }
 
 void MorseTextChannel::reactivateLocalTyping()

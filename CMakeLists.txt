@@ -3,15 +3,15 @@ project(telepathy-morse)
 cmake_minimum_required(VERSION 2.8)
 
 if (USE_QT4)
-    find_package(TelepathyQt4 0.9.5 REQUIRED)
-    find_package(TelepathyQt4Service 0.9.5 REQUIRED)
+    find_package(TelepathyQt4 0.9.6 REQUIRED)
+    find_package(TelepathyQt4Service 0.9.6 REQUIRED)
 
     find_package(TelegramQt4 REQUIRED)
 
     find_package(Qt4 4.6.0 REQUIRED QtCore QtNetwork)
 else()
-    find_package(TelepathyQt5 0.9.5 REQUIRED)
-    find_package(TelepathyQt5Service 0.9.5 REQUIRED)
+    find_package(TelepathyQt5 0.9.6 REQUIRED)
+    find_package(TelepathyQt5Service 0.9.6 REQUIRED)
 
     find_package(TelegramQt5 REQUIRED)
 

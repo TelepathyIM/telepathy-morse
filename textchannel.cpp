@@ -55,7 +55,8 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_chatStateIface));
 
     if (baseChannel->targetHandleType() == Tp::HandleTypeRoom) {
-        m_groupIface = Tp::BaseChannelGroupInterface::create(Tp::ChannelGroupFlagCanAdd, selfHandle); //Tp::ChannelGroupFlagChannelSpecificHandles
+        Tp::ChannelGroupFlags glibBugWorkaroundFlags = Tp::ChannelGroupFlagHandleOwnersNotAvailable|Tp::ChannelGroupFlagMembersChangedDetailed|Tp::ChannelGroupFlagProperties;
+        m_groupIface = Tp::BaseChannelGroupInterface::create(Tp::ChannelGroupFlagCanAdd|glibBugWorkaroundFlags, selfHandle); //Tp::ChannelGroupFlagChannelSpecificHandles
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_groupIface));
 
         m_roomIface = Tp::BaseChannelRoomInterface::create(m_targetID, QString(), QString(), 0, QDateTime());
@@ -120,7 +121,7 @@ void MorseTextChannel::whenMessageReceived(const QString &message, quint32 messa
 
 void MorseTextChannel::whenChatMessageReceived(uint senderHandle, const QString &message, quint32 messageId, quint32 flags, uint timestamp)
 {
-    processReceivedMessage(senderHandle, m_participantHandles.value(senderHandle), message, messageId, flags, timestamp);
+    processReceivedMessage(senderHandle, m_groupIface->memberIdentifiers().value(senderHandle), message, messageId, flags, timestamp);
 }
 
 void MorseTextChannel::processReceivedMessage(uint contactHandle, QString contactID, const QString &message, quint32 messageId, quint32 flags, uint timestamp)
@@ -160,70 +161,30 @@ void MorseTextChannel::processReceivedMessage(uint contactHandle, QString contac
     }
 }
 
-void MorseTextChannel::updateChatParticipants(const Tp::UIntList &handles, const QStringList &identifiers)
-{
-    qDebug() << Q_FUNC_INFO << identifiers;
-
-    if (handles.count() != identifiers.count()) {
-        return;
-    }
-
-    // Process removed participants
-    {
-        Tp::UIntList removedHandles;
-
-        foreach (uint handle, m_participantHandles.keys()) {
-            if (!handles.contains(handle)) {
-                removedHandles << handle;
-            }
-        }
-
-        if (!removedHandles.isEmpty()) {
-            foreach (uint handle, removedHandles) {
-                m_participantHandles.remove(handle);
-            }
-
-            m_groupIface->removeMembers(removedHandles);
-        }
-    }
-
-    // Process added participants
-    {
-        const Tp::UIntList previousHandles = m_participantHandles.keys();
-        Tp::UIntList addedHandles;
-
-        for (int i = 0; i < handles.count(); ++i) {
-            uint handle = handles.at(i);
-            if (!previousHandles.contains(handle)) {
-                m_participantHandles.insert(handle, identifiers.at(i));
-            }
-            addedHandles << handle;
-        }
-
-        if (!addedHandles.isEmpty()) {
-            QStringList addedIDs;
-            foreach (uint handle, addedHandles) {
-                addedIDs << m_participantHandles.value(handle);
-            }
-
-            m_groupIface->addMembers(addedHandles, addedIDs);
-        }
-    }
-}
-
 void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles, const QStringList &identifiers)
 {
     qDebug() << Q_FUNC_INFO << chatId;
     const QString chatID = QString(QLatin1String("chat%1")).arg(chatId);
 
     if (m_targetID == chatID) {
-        updateChatParticipants(handles, identifiers);
+        if (handles.count() == identifiers.count()) {
+            Tp::HandleIdentifierMap identifiersMap;
+            for (int i = 0; i < handles.count(); ++i) {
+                identifiersMap[handles.at(i)] = identifiers.at(i);
+            }
+
+            m_groupIface->setMemberIdentifiers(identifiersMap, 0);
+        } else {
+            qDebug() << Q_FUNC_INFO << "handles.count() != identifiers.count()";
+        }
 
         TelegramNamespace::GroupChat info;
         if (m_core->getChatInfo(&info, chatId)) {
             m_roomConfigIface->setTitle(info.title);
             m_roomConfigIface->setConfigurationRetrieved(true);
         }
+
+        qDebug() << Q_FUNC_INFO << info.title;
     }
 }
 

@@ -20,7 +20,7 @@ Features
 * Restoring connection on network problem
 
 Experimental features:
-* Group chat (seems to work only with KTp and with most recent TelepathyQt)
+* Group chat
 
 Requirements
 ============

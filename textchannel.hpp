@@ -41,7 +41,6 @@ public slots:
     void whenContactChatStateComposingChanged(const QString &phone, bool composing);
     void whenMessageReceived(const QString &message, quint32 messageId, quint32 flags, uint timestamp);
     void whenChatMessageReceived(uint senderHandle, const QString &message, quint32 messageId, quint32 flags, uint timestamp);
-    void updateChatParticipants(const Tp::UIntList &handles, const QStringList &identifiers);
 
     void whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles, const QStringList &identifiers);
 
@@ -57,8 +56,6 @@ private:
     MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfID);
 
     QPointer<CTelegramCore> m_core;
-
-    QMap<uint, QString> m_participantHandles;
 
     uint m_targetHandle;
     uint m_selfHandle;

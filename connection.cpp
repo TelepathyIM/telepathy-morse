@@ -129,18 +129,22 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     personalChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeContact;
     personalChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
     personalChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
+    requestsIface->requestableChannelClasses << personalChat;
 
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
     Tp::RequestableChannelClass groupChat;
     groupChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
     groupChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeRoom;
     groupChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
     groupChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
+    requestsIface->requestableChannelClasses << groupChat;
 
     Tp::RequestableChannelClass chatList;
     chatList.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST;
     chatList.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeNone;
+    requestsIface->requestableChannelClasses << chatList;
+#endif
 
-    requestsIface->requestableChannelClasses << personalChat << groupChat << chatList;
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(requestsIface));
 
     m_selfPhone = parameters.value(QLatin1String("account")).toString();
@@ -448,7 +452,9 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
 
     switch (targetHandleType) {
     case Tp::HandleTypeContact:
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
     case Tp::HandleTypeRoom:
+#endif
         break;
     default:
         if (error) {

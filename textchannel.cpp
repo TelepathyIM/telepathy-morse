@@ -168,12 +168,14 @@ void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList
 
     if (m_targetID == chatID) {
         if (handles.count() == identifiers.count()) {
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
             Tp::HandleIdentifierMap identifiersMap;
             for (int i = 0; i < handles.count(); ++i) {
                 identifiersMap[handles.at(i)] = identifiers.at(i);
             }
 
             m_groupIface->setMemberIdentifiers(identifiersMap, 0);
+#endif
         } else {
             qDebug() << Q_FUNC_INFO << "handles.count() != identifiers.count()";
         }

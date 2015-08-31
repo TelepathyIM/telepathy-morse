@@ -41,8 +41,9 @@ public slots:
     void whenContactChatStateComposingChanged(const QString &phone, bool composing);
     void whenMessageReceived(const QString &message, quint32 messageId, quint32 flags, uint timestamp);
     void whenChatMessageReceived(uint senderHandle, const QString &message, quint32 messageId, quint32 flags, uint timestamp);
+    void updateChatParticipants(const Tp::UIntList &handles);
 
-    void whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles, const QStringList &identifiers);
+    void whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
 
 protected slots:
     void sentMessageDeliveryStatusChanged(const QString &phone, quint64 messageId, TelegramNamespace::MessageDeliveryStatus status);

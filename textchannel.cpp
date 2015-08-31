@@ -54,17 +54,30 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
     m_chatStateIface->setSetChatStateCallback(Tp::memFun(this, &MorseTextChannel::setChatState));
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_chatStateIface));
 
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
     if (baseChannel->targetHandleType() == Tp::HandleTypeRoom) {
-        Tp::ChannelGroupFlags glibBugWorkaroundFlags = Tp::ChannelGroupFlagHandleOwnersNotAvailable|Tp::ChannelGroupFlagMembersChangedDetailed|Tp::ChannelGroupFlagProperties;
-        m_groupIface = Tp::BaseChannelGroupInterface::create(Tp::ChannelGroupFlagCanAdd|glibBugWorkaroundFlags, selfHandle); //Tp::ChannelGroupFlagChannelSpecificHandles
+        Tp::ChannelGroupFlags groupFlags = Tp::ChannelGroupFlagChannelSpecificHandles|Tp::ChannelGroupFlagHandleOwnersNotAvailable|Tp::ChannelGroupFlagProperties;
+
+        // Permissions:
+        groupFlags |= Tp::ChannelGroupFlagCanAdd;
+
+        m_groupIface = Tp::BaseChannelGroupInterface::create(baseChannel->connection()); //Tp::ChannelGroupFlagChannelSpecificHandles
+        m_groupIface->setGroupFlags(groupFlags);
+        m_groupIface->setSelfHandle(m_selfHandle);
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_groupIface));
 
-        m_roomIface = Tp::BaseChannelRoomInterface::create(m_targetID, QString(), QString(), 0, QDateTime());
+        m_roomIface = Tp::BaseChannelRoomInterface::create(/* roomName */ m_targetID,
+                                                           /* server */ QString(),
+                                                           /* creator */ QString(),
+                                                           /* creatorHandle */ 0,
+                                                           /* creationTimestamp */ QDateTime());
+
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_roomIface));
 
         m_roomConfigIface = Tp::BaseChannelRoomConfigInterface::create();
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_roomConfigIface));
     }
+#endif
 
     connect(m_core.data(), SIGNAL(contactTypingStatusChanged(QString,bool)), SLOT(whenContactChatStateComposingChanged(QString,bool)));
     connect(m_core.data(), SIGNAL(sentMessageStatusChanged(QString,quint64,TelegramNamespace::MessageDeliveryStatus)),
@@ -121,7 +134,10 @@ void MorseTextChannel::whenMessageReceived(const QString &message, quint32 messa
 
 void MorseTextChannel::whenChatMessageReceived(uint senderHandle, const QString &message, quint32 messageId, quint32 flags, uint timestamp)
 {
-    processReceivedMessage(senderHandle, m_groupIface->memberIdentifiers().value(senderHandle), message, messageId, flags, timestamp);
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
+    const QString identifier = m_groupIface->memberIdentifiers().value(senderHandle);
+    processReceivedMessage(senderHandle, identifier, message, messageId, flags, timestamp);
+#endif
 }
 
 void MorseTextChannel::processReceivedMessage(uint contactHandle, QString contactID, const QString &message, quint32 messageId, quint32 flags, uint timestamp)
@@ -161,32 +177,26 @@ void MorseTextChannel::processReceivedMessage(uint contactHandle, QString contac
     }
 }
 
-void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles, const QStringList &identifiers)
+void MorseTextChannel::updateChatParticipants(const Tp::UIntList &handles)
+{
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
+    m_groupIface->setMembers(handles, /* details */ QVariantMap());
+#endif
+}
+
+void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles)
 {
     qDebug() << Q_FUNC_INFO << chatId;
     const QString chatID = QString(QLatin1String("chat%1")).arg(chatId);
 
     if (m_targetID == chatID) {
-        if (handles.count() == identifiers.count()) {
-#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
-            Tp::HandleIdentifierMap identifiersMap;
-            for (int i = 0; i < handles.count(); ++i) {
-                identifiersMap[handles.at(i)] = identifiers.at(i);
-            }
-
-            m_groupIface->setMemberIdentifiers(identifiersMap, 0);
-#endif
-        } else {
-            qDebug() << Q_FUNC_INFO << "handles.count() != identifiers.count()";
-        }
+        updateChatParticipants(handles);
 
         TelegramNamespace::GroupChat info;
         if (m_core->getChatInfo(&info, chatId)) {
             m_roomConfigIface->setTitle(info.title);
             m_roomConfigIface->setConfigurationRetrieved(true);
         }
-
-        qDebug() << Q_FUNC_INFO << info.title;
     }
 }
 

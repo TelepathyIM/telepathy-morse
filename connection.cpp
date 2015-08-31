@@ -79,7 +79,11 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 {
     qDebug() << Q_FUNC_INFO;
     /* Connection.Interface.Contacts */
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
+    contactsIface = Tp::BaseConnectionContactsInterface::create(this);
+#else
     contactsIface = Tp::BaseConnectionContactsInterface::create();
+#endif
     contactsIface->setGetContactAttributesCallback(Tp::memFun(this, &MorseConnection::getContactAttributes));
     contactsIface->setContactAttributeInterfaces(QStringList()
                                                  << TP_QT_IFACE_CONNECTION
@@ -487,11 +491,11 @@ Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp
 
             QStringList participants;
             if (m_core->getChatParticipants(&participants, chatId) && !participants.isEmpty()) {
-                textChannel->whenChatDetailsChanged(chatId, requestHandles(Tp::HandleTypeContact, participants, 0), participants);
+                textChannel->whenChatDetailsChanged(chatId, requestHandles(Tp::HandleTypeContact, participants, 0));
             }
 
             connect(this, SIGNAL(chatDetailsChanged(quint32,Tp::UIntList,QStringList)),
-                    textChannel.data(), SLOT(whenChatDetailsChanged(quint32,Tp::UIntList,QStringList)));
+                    textChannel.data(), SLOT(whenChatDetailsChanged(quint32,Tp::UIntList)));
         }
     }
 

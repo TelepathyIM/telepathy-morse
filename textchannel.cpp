@@ -66,11 +66,21 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
         m_groupIface->setSelfHandle(m_selfHandle);
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_groupIface));
 
+        TelegramNamespace::GroupChat info;
+
+        quint32 chatId = CTelegramCore::identifierToChatId(m_targetID);
+        m_core->getChatInfo(&info, chatId);
+
+        QDateTime creationTimestamp;
+        if (info.date) {
+            creationTimestamp.setTime_t(info.date);
+        }
+
         m_roomIface = Tp::BaseChannelRoomInterface::create(/* roomName */ m_targetID,
                                                            /* server */ QString(),
                                                            /* creator */ QString(),
                                                            /* creatorHandle */ 0,
-                                                           /* creationTimestamp */ QDateTime());
+                                                           creationTimestamp);
 
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_roomIface));
 

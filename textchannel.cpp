@@ -56,7 +56,7 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
 
 #if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
     if (baseChannel->targetHandleType() == Tp::HandleTypeRoom) {
-        Tp::ChannelGroupFlags groupFlags = Tp::ChannelGroupFlagChannelSpecificHandles|Tp::ChannelGroupFlagHandleOwnersNotAvailable|Tp::ChannelGroupFlagProperties;
+        Tp::ChannelGroupFlags groupFlags = Tp::ChannelGroupFlagProperties | Tp::ChannelGroupFlagMembersChangedDetailed;
 
         // Permissions:
         groupFlags |= Tp::ChannelGroupFlagCanAdd;

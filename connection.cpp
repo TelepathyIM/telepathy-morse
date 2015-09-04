@@ -157,7 +157,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     setConnectCallback(Tp::memFun(this, &MorseConnection::doConnect));
     setInspectHandlesCallback(Tp::memFun(this, &MorseConnection::inspectHandles));
-    setCreateChannelCallback(Tp::memFun(this, &MorseConnection::createChannel));
+    setCreateChannelCallback(Tp::memFun(this, &MorseConnection::createChannelCB));
     setRequestHandlesCallback(Tp::memFun(this, &MorseConnection::requestHandles));
 
     connect(this, SIGNAL(disconnected()), SLOT(whenDisconnected()));
@@ -408,7 +408,7 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
     return result;
 }
 
-Tp::BaseChannelPtr MorseConnection::createChannel(const QVariantMap &request, Tp::DBusError *error)
+Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, Tp::DBusError *error)
 {
     const QString channelType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")).toString();
 

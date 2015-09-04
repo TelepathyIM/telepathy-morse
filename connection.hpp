@@ -34,7 +34,7 @@ public:
     void doConnect(Tp::DBusError *error);
 
     QStringList inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error);
-    Tp::BaseChannelPtr createChannel(const QVariantMap &request, Tp::DBusError *error);
+    Tp::BaseChannelPtr createChannelCB(const QVariantMap &request, Tp::DBusError *error);
 
     Tp::UIntList requestHandles(uint handleType, const QStringList &identifiers, Tp::DBusError *error);
 

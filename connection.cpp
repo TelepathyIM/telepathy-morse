@@ -278,13 +278,16 @@ void MorseConnection::whenAuthErrorReceived()
 {
     qDebug() << Q_FUNC_INFO;
 
-    if (!m_authReconnectionsCount) {
+    static const int reconnectionsLimit = 1;
+
+    if (m_authReconnectionsCount < reconnectionsLimit) {
+        qDebug() << "MorseConnection::whenAuthErrorReceived(): Auth error received. Trying to re-init connection without session data..." << m_authReconnectionsCount + 1 << " attempt.";
         setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonAuthenticationFailed);
         ++m_authReconnectionsCount;
-        qDebug() << "Auth error received. Trying to re-init connection without session data..." << m_authReconnectionsCount << " attempt.";
         m_core->closeConnection();
         m_core->initConnection(QLatin1String("173.240.5.1"), 443);
     } else {
+        qDebug() << "MorseConnection::whenAuthErrorReceived(): Auth error received. Can not connect (tried" << m_authReconnectionsCount << " times).";
         setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonAuthenticationFailed);
     }
 }

@@ -28,7 +28,9 @@ MorseProtocol::MorseProtocol(const QDBusConnection &dbusConnection, const QStrin
 {
     qDebug() << Q_FUNC_INFO;
     setParameters(Tp::ProtocolParameterList()
-                  << Tp::ProtocolParameter(QLatin1String("account"), QLatin1String("s"), Tp::ConnMgrParamFlagRequired));
+                  << Tp::ProtocolParameter(QLatin1String("account"), QLatin1String("s"), Tp::ConnMgrParamFlagRequired)
+                  << Tp::ProtocolParameter(QLatin1String("keepalive-interval"), QLatin1String("u"), Tp::ConnMgrParamFlagHasDefault)
+                  );
 
     setRequestableChannelClasses(Tp::RequestableChannelClassSpecList() << Tp::RequestableChannelClassSpec::textChat());
 

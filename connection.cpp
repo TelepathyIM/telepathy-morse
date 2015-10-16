@@ -148,6 +148,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(requestsIface));
 
     m_selfPhone = parameters.value(QLatin1String("account")).toString();
+    m_keepaliveInterval = parameters.value(QLatin1String("keepalive-interval"), CTelegramCore::defaultPingInterval() / 1000).toUInt();
 
     setSelfHandle(addContact(m_selfPhone));
 
@@ -180,6 +181,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 
     m_authReconnectionsCount = 0;
     m_core = new CTelegramCore(0);
+    m_core->setPingInterval(m_keepaliveInterval * 1000);
     m_core->setAppInformation(&appInfo);
     m_core->setMessageReceivingFilterFlags(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagRead);
     m_core->setAcceptableMessageTypes(TelegramNamespace::MessageTypeText);

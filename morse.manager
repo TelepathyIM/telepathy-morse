@@ -5,6 +5,9 @@ ObjectPath = /org/freedesktop/Telepathy/ConnectionManager/morse
 
 [Protocol telegram]
 param-account = s required
+param-keepalive-interval=u
+default-keepalive-interval=15
+
 EnglishName=Telegram
 RequestableChannelClasses=text-1on1;text-multi;roomlist;
 Interfaces=org.freedesktop.Telepathy.Protocol.Interface.Presence;org.freedesktop.Telepathy.Protocol.Interface.Addressing;

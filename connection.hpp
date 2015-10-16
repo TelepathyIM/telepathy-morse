@@ -136,6 +136,7 @@ private:
     int m_authReconnectionsCount;
 
     QString m_selfPhone;
+    uint m_keepaliveInterval;
 };
 
 #endif // MORSE_CONNECTION_HPP

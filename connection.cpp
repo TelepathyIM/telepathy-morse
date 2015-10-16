@@ -79,11 +79,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 {
     qDebug() << Q_FUNC_INFO;
     /* Connection.Interface.Contacts */
-#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
-    contactsIface = Tp::BaseConnectionContactsInterface::create(this);
-#else
     contactsIface = Tp::BaseConnectionContactsInterface::create();
-#endif
     contactsIface->setGetContactAttributesCallback(Tp::memFun(this, &MorseConnection::getContactAttributes));
     contactsIface->setContactAttributeInterfaces(QStringList()
                                                  << TP_QT_IFACE_CONNECTION

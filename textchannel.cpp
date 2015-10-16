@@ -56,12 +56,12 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
 
 #if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
     if (baseChannel->targetHandleType() == Tp::HandleTypeRoom) {
-        Tp::ChannelGroupFlags groupFlags = Tp::ChannelGroupFlagProperties | Tp::ChannelGroupFlagMembersChangedDetailed;
+        Tp::ChannelGroupFlags groupFlags = Tp::ChannelGroupFlagProperties;
 
         // Permissions:
         groupFlags |= Tp::ChannelGroupFlagCanAdd;
 
-        m_groupIface = Tp::BaseChannelGroupInterface::create(baseChannel->connection()); //Tp::ChannelGroupFlagChannelSpecificHandles
+        m_groupIface = Tp::BaseChannelGroupInterface::create(); //Tp::ChannelGroupFlagChannelSpecificHandles
         m_groupIface->setGroupFlags(groupFlags);
         m_groupIface->setSelfHandle(m_selfHandle);
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_groupIface));

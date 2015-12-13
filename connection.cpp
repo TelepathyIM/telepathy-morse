@@ -843,10 +843,6 @@ void MorseConnection::whenMessageReceived(const QString &identifier, const QStri
 
 void MorseConnection::whenChatMessageReceived(quint32 chatId, const QString &contact, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp)
 {
-    if (type != TelegramNamespace::MessageTypeText) {
-        return;
-    }
-
     const QString identifier = QString(QLatin1String("chat%1")).arg(chatId);
 
     uint initiatorHandle, targetHandle, contactHandle;
@@ -879,7 +875,12 @@ void MorseConnection::whenChatMessageReceived(quint32 chatId, const QString &con
         return;
     }
 
-    textChannel->whenChatMessageReceived(contactHandle, message, messageId, flags, timestamp);
+    if (type == TelegramNamespace::MessageTypeText) {
+        textChannel->whenChatMessageReceived(contactHandle, message, messageId, flags, timestamp);
+    } else {
+        textChannel->whenChatMessageReceived(contactHandle, tr("Telepathy-Morse doesn't support multimedia messages yet."), messageId, flags, timestamp);
+    }
+
 }
 
 void MorseConnection::whenChatChanged(quint32 chatId)

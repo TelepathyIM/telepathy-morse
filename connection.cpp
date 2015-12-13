@@ -184,7 +184,14 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     m_core->setPingInterval(m_keepaliveInterval * 1000);
     m_core->setAppInformation(&appInfo);
     m_core->setMessageReceivingFilterFlags(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagRead);
-    m_core->setAcceptableMessageTypes(TelegramNamespace::MessageTypeText);
+    m_core->setAcceptableMessageTypes(
+                    TelegramNamespace::MessageTypeText |
+                    TelegramNamespace::MessageTypePhoto |
+                    TelegramNamespace::MessageTypeAudio |
+                    TelegramNamespace::MessageTypeVideo |
+                    TelegramNamespace::MessageTypeContact |
+                    TelegramNamespace::MessageTypeDocument |
+                    TelegramNamespace::MessageTypeGeo );
 
     setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonNoneSpecified);
 
@@ -800,10 +807,6 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
 /* Receive message from outside (telegram server) */
 void MorseConnection::whenMessageReceived(const QString &identifier, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp)
 {
-    if (type != TelegramNamespace::MessageTypeText) {
-        return;
-    }
-
     uint initiatorHandle, targetHandle;
 
     initiatorHandle = targetHandle = ensureContact(identifier);
@@ -831,7 +834,11 @@ void MorseConnection::whenMessageReceived(const QString &identifier, const QStri
         return;
     }
 
-    textChannel->whenMessageReceived(message, messageId, flags, timestamp);
+    if (type == TelegramNamespace::MessageTypeText) {
+        textChannel->whenMessageReceived(message, messageId, flags, timestamp);
+    } else {
+        textChannel->whenMessageReceived( tr("Telepathy-Morse doesn't support multimedia messages yet."), messageId, flags, timestamp);
+    }
 }
 
 void MorseConnection::whenChatMessageReceived(quint32 chatId, const QString &contact, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp)

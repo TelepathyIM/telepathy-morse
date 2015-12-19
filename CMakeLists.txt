@@ -24,6 +24,8 @@ include(GNUInstallDirs)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
+add_definitions(-DQT_NO_CAST_FROM_ASCII)
+
 set(morse_SOURCES
     main.cpp
     connection.cpp

@@ -247,7 +247,7 @@ void MorseTextChannel::sentMessageDeliveryStatusChanged(const QString &phone, qu
 
 void MorseTextChannel::reactivateLocalTyping()
 {
-    m_core->setTyping(m_targetID, true);
+    m_core->setTyping(m_targetID, TelegramNamespace::MessageActionTyping);
 }
 
 void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
@@ -260,11 +260,11 @@ void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
         connect(m_localTypingTimer, SIGNAL(timeout()), this, SLOT(reactivateLocalTyping()));
     }
 
-    m_core->setTyping(m_targetID, state == Tp::ChannelChatStateComposing);
-
     if (state == Tp::ChannelChatStateComposing) {
+        m_core->setTyping(m_targetID, TelegramNamespace::MessageActionTyping);
         m_localTypingTimer->start();
     } else {
+        m_core->setTyping(m_targetID, TelegramNamespace::MessageActionNone);
         m_localTypingTimer->stop();
     }
 }

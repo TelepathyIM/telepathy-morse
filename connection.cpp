@@ -183,7 +183,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     m_core = new CTelegramCore(0);
     m_core->setPingInterval(m_keepaliveInterval * 1000);
     m_core->setAppInformation(&appInfo);
-    m_core->setMessageReceivingFilterFlags(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagRead);
+    m_core->setMessageReceivingFilter(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagRead);
     m_core->setAcceptableMessageTypes(
                     TelegramNamespace::MessageTypeText |
                     TelegramNamespace::MessageTypePhoto |
@@ -207,10 +207,8 @@ void MorseConnection::doConnect(Tp::DBusError *error)
             this, SLOT(whenAvatarReceived(QString,QByteArray,QString,QString)));
     connect(m_core, SIGNAL(contactListChanged()),
             this, SLOT(whenContactListChanged()));
-    connect(m_core, SIGNAL(messageReceived(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)),
-            this, SLOT(whenMessageReceived(QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)));
-    connect(m_core, SIGNAL(chatMessageReceived(quint32,QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)),
-            this, SLOT(whenChatMessageReceived(quint32,QString,QString,TelegramNamespace::MessageType,quint32,quint32,quint32)));
+    connect( m_core, SIGNAL(messageReceived(TelegramNamespace::Message)),
+             this, SLOT(whenMessageReceived(TelegramNamespace::Message)));
     connect(m_core, SIGNAL(chatChanged(quint32)),
             this, SLOT(whenChatChanged(quint32)));
     connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)),
@@ -220,7 +218,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 
     if (sessionData.isEmpty()) {
         qDebug() << "init connection...";
-        m_core->initConnection(QLatin1String("149.154.175.50"), 443);
+        m_core->initConnection(QVector<TelegramNamespace::DcOption>(1, TelegramNamespace::DcOption(QLatin1String("149.154.175.50"), 443)));
     } else {
         qDebug() << "restore connection...";
         m_core->restoreConnection(sessionData);
@@ -290,7 +288,7 @@ void MorseConnection::whenAuthErrorReceived()
         setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonAuthenticationFailed);
         ++m_authReconnectionsCount;
         m_core->closeConnection();
-        m_core->initConnection(QLatin1String("173.240.5.1"), 443);
+        m_core->initConnection(QVector<TelegramNamespace::DcOption>(1, TelegramNamespace::DcOption(QLatin1String("149.154.175.50"), 443)));
     } else {
         qDebug() << "MorseConnection::whenAuthErrorReceived(): Auth error received. Can not connect (tried" << m_authReconnectionsCount << " times).";
         setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonAuthenticationFailed);
@@ -378,7 +376,7 @@ void MorseConnection::whenConnectionReady()
     saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
 
     m_core->setOnlineStatus(m_wantedPresence == c_onlineSimpleStatusKey);
-    m_core->setMessageReceivingFilterFlags(TelegramNamespace::MessageFlagNone);
+    m_core->setMessageReceivingFilter(TelegramNamespace::MessageFlagNone);
     whenContactListChanged();
 }
 
@@ -805,11 +803,19 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
 }
 
 /* Receive message from outside (telegram server) */
-void MorseConnection::whenMessageReceived(const QString &identifier, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp)
+void MorseConnection::whenMessageReceived(const TelegramNamespace::Message &message)
 {
+    bool chatMessage = message.peer.startsWith(QLatin1String("chat"));
+
+    uint contactHandle = ensureContact(message.contact);
+
     uint initiatorHandle, targetHandle;
-
-    initiatorHandle = targetHandle = ensureContact(identifier);
+    if (!chatMessage) {
+        initiatorHandle = targetHandle = ensureContact(message.peer);
+    } else {
+        targetHandle = ensureChat(message.peer);
+        initiatorHandle = contactHandle;
+    }
 
     //TODO: initiator should be group creator
     Tp::DBusError error;
@@ -818,7 +824,7 @@ void MorseConnection::whenMessageReceived(const QString &identifier, const QStri
     QVariantMap request;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = Tp::HandleTypeContact;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = chatMessage ? Tp::HandleTypeRoom : Tp::HandleTypeContact;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = initiatorHandle;
 
     Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
@@ -834,53 +840,18 @@ void MorseConnection::whenMessageReceived(const QString &identifier, const QStri
         return;
     }
 
-    if (type == TelegramNamespace::MessageTypeText) {
-        textChannel->whenMessageReceived(message, messageId, flags, timestamp);
+    QString text;
+    if (message.type == TelegramNamespace::MessageTypeText) {
+        text = message.text;
     } else {
-        textChannel->whenMessageReceived( tr("Telepathy-Morse doesn't support multimedia messages yet."), messageId, flags, timestamp);
-    }
-}
-
-void MorseConnection::whenChatMessageReceived(quint32 chatId, const QString &contact, const QString &message, TelegramNamespace::MessageType type, quint32 messageId, quint32 flags, quint32 timestamp)
-{
-    const QString identifier = QString(QLatin1String("chat%1")).arg(chatId);
-
-    uint initiatorHandle, targetHandle, contactHandle;
-
-    targetHandle = ensureChat(identifier);
-    contactHandle = ensureContact(contact);
-
-    initiatorHandle = contactHandle; // For now
-
-    //TODO: initiator should be group creator
-    Tp::DBusError error;
-    bool yours;
-
-    QVariantMap request;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = Tp::HandleTypeRoom;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = initiatorHandle;
-
-    Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
-    if (error.isValid()) {
-        qWarning() << Q_FUNC_INFO << "ensureChannel failed:" << error.name() << " " << error.message();
-        return;
+        text = tr("Telepathy-Morse doesn't support multimedia messages yet.");
     }
 
-    MorseTextChannelPtr textChannel = MorseTextChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_TEXT));
-
-    if (!textChannel) {
-        qDebug() << Q_FUNC_INFO << "Error, channel is not a morseTextChannel?";
-        return;
-    }
-
-    if (type == TelegramNamespace::MessageTypeText) {
-        textChannel->whenChatMessageReceived(contactHandle, message, messageId, flags, timestamp);
+    if (!chatMessage) {
+        textChannel->whenMessageReceived(text, message.id, message.flags, message.timestamp);
     } else {
-        textChannel->whenChatMessageReceived(contactHandle, tr("Telepathy-Morse doesn't support multimedia messages yet."), messageId, flags, timestamp);
+        textChannel->whenChatMessageReceived(contactHandle, text, message.id, message.flags, message.timestamp);
     }
-
 }
 
 void MorseConnection::whenChatChanged(quint32 chatId)

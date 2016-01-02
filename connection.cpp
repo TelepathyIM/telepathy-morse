@@ -840,18 +840,8 @@ void MorseConnection::whenMessageReceived(const TelegramNamespace::Message &mess
         return;
     }
 
-    QString text;
-    if (message.type == TelegramNamespace::MessageTypeText) {
-        text = message.text;
-    } else {
-        text = tr("Telepathy-Morse doesn't support multimedia messages yet.");
-    }
+    textChannel->whenMessageReceived(message, contactHandle);
 
-    if (!chatMessage) {
-        textChannel->whenMessageReceived(text, message.id, message.flags, message.timestamp);
-    } else {
-        textChannel->whenChatMessageReceived(contactHandle, text, message.id, message.flags, message.timestamp);
-    }
 }
 
 void MorseConnection::whenChatChanged(quint32 chatId)

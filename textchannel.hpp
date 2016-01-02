@@ -39,8 +39,7 @@ public:
 
 public slots:
     void whenContactChatStateComposingChanged(const QString &phone, bool composing);
-    void whenMessageReceived(const QString &message, quint32 messageId, quint32 flags, uint timestamp);
-    void whenChatMessageReceived(uint senderHandle, const QString &message, quint32 messageId, quint32 flags, uint timestamp);
+    void whenMessageReceived(const TelegramNamespace::Message &message, uint senderHandle);
     void updateChatParticipants(const Tp::UIntList &handles);
 
     void whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
@@ -51,7 +50,6 @@ protected slots:
 
 protected:
     void setChatState(uint state, Tp::DBusError *error);
-    void processReceivedMessage(uint contactHandle, QString contactID, const QString &message, quint32 messageId, quint32 flags, uint timestamp);
 
 private:
     MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfID);
@@ -59,6 +57,7 @@ private:
     QPointer<CTelegramCore> m_core;
 
     uint m_targetHandle;
+    uint m_targetHandleType;
     uint m_selfHandle;
     QString m_targetID;
     QString m_selfID;

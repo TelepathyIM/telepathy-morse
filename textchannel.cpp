@@ -26,6 +26,7 @@
 MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfID)
     : Tp::BaseChannelTextType(baseChannel),
       m_targetHandle(baseChannel->targetHandle()),
+      m_targetHandleType(baseChannel->targetHandleType()),
       m_selfHandle(selfHandle),
       m_targetID(baseChannel->targetID()),
       m_selfID(selfID),
@@ -55,7 +56,7 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_chatStateIface));
 
 #if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
-    if (baseChannel->targetHandleType() == Tp::HandleTypeRoom) {
+    if (m_targetHandleType == Tp::HandleTypeRoom) {
         Tp::ChannelGroupFlags groupFlags = Tp::ChannelGroupFlagProperties;
 
         // Permissions:
@@ -137,37 +138,40 @@ void MorseTextChannel::whenContactChatStateComposingChanged(const QString &phone
     }
 }
 
-void MorseTextChannel::whenMessageReceived(const QString &message, quint32 messageId, quint32 flags, uint timestamp)
+void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &message, uint senderHandle)
 {
-    processReceivedMessage(m_targetHandle, m_targetID, message, messageId, flags, timestamp);
-}
-
-void MorseTextChannel::whenChatMessageReceived(uint senderHandle, const QString &message, quint32 messageId, quint32 flags, uint timestamp)
-{
+    QString contactID;
+    if (m_targetHandleType == Tp::HandleTypeContact) {
+        contactID = m_targetID;
+    } else {
 #if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
-    const QString identifier = m_groupIface->memberIdentifiers().value(senderHandle);
-    processReceivedMessage(senderHandle, identifier, message, messageId, flags, timestamp);
+        contactID = m_groupIface->memberIdentifiers().value(senderHandle);
+#else
+        return;
 #endif
-}
+    }
 
-void MorseTextChannel::processReceivedMessage(uint contactHandle, QString contactID, const QString &message, quint32 messageId, quint32 flags, uint timestamp)
-{
-    qDebug() << Q_FUNC_INFO << message;
     Tp::MessagePartList body;
     Tp::MessagePart text;
     text[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
-    text[QLatin1String("content")]      = QDBusVariant(message);
+
+    if (message.type == TelegramNamespace::MessageTypeText) {
+        text[QLatin1String("content")] = QDBusVariant(message.text);
+    } else {
+        text[QLatin1String("content")] = QDBusVariant(tr("Telepathy-Morse doesn't support multimedia messages yet."));
+    }
+
     body << text;
 
     Tp::MessagePartList partList;
     Tp::MessagePart header;
 
-    const QString token = QString::number(messageId);
+    const QString token = QString::number(message.id);
     header[QLatin1String("message-token")] = QDBusVariant(token);
     header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
-    header[QLatin1String("message-sent")]  = QDBusVariant(timestamp);
+    header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
 
-    if (flags & TelegramNamespace::MessageFlagOut) {
+    if (message.flags & TelegramNamespace::MessageFlagOut) {
         header[QLatin1String("message-sender")]    = QDBusVariant(m_selfHandle);
         header[QLatin1String("message-sender-id")] = QDBusVariant(m_selfID);
         partList << header << body;
@@ -176,7 +180,7 @@ void MorseTextChannel::processReceivedMessage(uint contactHandle, QString contac
         uint currentTimestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
 
         header[QLatin1String("message-received")]  = QDBusVariant(currentTimestamp);
-        header[QLatin1String("message-sender")]    = QDBusVariant(contactHandle);
+        header[QLatin1String("message-sender")]    = QDBusVariant(senderHandle);
 
         if (!contactID.isEmpty()) {
             header[QLatin1String("message-sender-id")] = QDBusVariant(contactID);

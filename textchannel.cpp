@@ -34,7 +34,10 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
 {
     m_core = core;
 
-    QStringList supportedContentTypes = QStringList() << QLatin1String("text/plain");
+    QStringList supportedContentTypes = QStringList()
+            << QLatin1String("text/plain")
+            << QLatin1String("application/geo+json")
+               ;
     Tp::UIntList messageTypes = Tp::UIntList() << Tp::ChannelTextMessageTypeNormal << Tp::ChannelTextMessageTypeDeliveryReport;
 
     uint messagePartSupportFlags = 0;
@@ -168,7 +171,32 @@ void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &mes
     if (message.type == TelegramNamespace::MessageTypeText) {
         text[QLatin1String("content")] = QDBusVariant(message.text);
     } else {
-        text[QLatin1String("content")] = QDBusVariant(tr("Telepathy-Morse doesn't support multimedia messages yet."));
+        Tp::MessagePart textMessage;
+        textMessage[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
+
+        if (message.type == TelegramNamespace::MessageTypeGeo) {
+            text[QLatin1String("content")] = QDBusVariant(message.text);
+
+            static const QString jsonTemplate = QLatin1String("{\"type\":\"point\",\"coordinates\":\[%1, %2]}");
+            static const QString textTemplate = QLatin1String("geo:%1,%2");
+            Tp::MessagePart geo;
+            geo[QLatin1String("content-type")] = QDBusVariant(QLatin1String("application/geo+json"));
+
+            TelegramNamespace::MessageMediaInfo info;
+            m_core->getMessageMediaInfo(&info, message.id);
+
+            geo[QLatin1String("alternative")] = QDBusVariant(QLatin1String("geopoint"));
+            geo[QLatin1String("content")] = QDBusVariant(jsonTemplate.arg(info.latitude()).arg(info.longitude()));
+
+            body << geo;
+
+            textMessage[QLatin1String("alternative")] = QDBusVariant(QLatin1String("geopoint"));
+            textMessage[QLatin1String("content")] = QDBusVariant(textTemplate.arg(info.latitude()).arg(info.longitude()));
+        } else {
+            textMessage[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));
+            textMessage[QLatin1String("content")] = QDBusVariant(tr("Telepathy-Morse doesn't support multimedia messages yet."));
+        }
+        body << textMessage;
     }
 
     body << text;

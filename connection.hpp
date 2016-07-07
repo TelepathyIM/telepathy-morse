@@ -58,7 +58,7 @@ public:
 public slots:
     void whenMessageReceived(const TelegramNamespace::Message &message);
     void whenChatChanged(quint32 chatId);
-    void updateContactPresence(const QString &identifier);
+    void setContactStatus(const QString &identifier, TelegramNamespace::ContactStatus status);
 
 signals:
     void messageReceived(const QString &sender, const QString &message);

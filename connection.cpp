@@ -212,7 +212,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     connect(m_core, SIGNAL(chatChanged(quint32)),
             this, SLOT(whenChatChanged(quint32)));
     connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)),
-            this, SLOT(updateContactPresence(QString)));
+            this, SLOT(setContactStatus(QString,TelegramNamespace::ContactStatus)));
 
     const QByteArray sessionData = getSessionData(m_selfPhone);
 
@@ -706,7 +706,8 @@ uint MorseConnection::addContact(const QString &identifier)
 
     m_handles.insert(handle, identifier);
 
-    updateContactPresence(identifier);
+    TelegramNamespace::ContactStatus status = m_core->contactStatus(identifier);
+    setContactStatus(identifier, status);
 
     setSubscriptionState(QStringList() << identifier, QList<uint>() << handle, Tp::SubscriptionStateUnknown);
 
@@ -1027,10 +1028,36 @@ bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &da
     return false;
 }
 
-void MorseConnection::updateContactPresence(const QString &identifier)
+void MorseConnection::setContactStatus(const QString &identifier, TelegramNamespace::ContactStatus status)
 {
-    qDebug() << "Update presence for " << identifier;
-    updateContactsState(QStringList() << identifier);
+    qDebug() << "setContactStatus " << identifier << status;
+    Tp::SimpleContactPresences newPresences;
+    uint handle = ensureContact(identifier);
+
+    if (handle == selfHandle()) {
+        return;
+    }
+
+    Tp::SimplePresence presence;
+
+    switch (status) {
+    case TelegramNamespace::ContactStatusOnline:
+        presence.status = QLatin1String("available");
+        presence.type = Tp::ConnectionPresenceTypeAvailable;
+        break;
+    case TelegramNamespace::ContactStatusOffline:
+        presence.status = QLatin1String("offline");
+        presence.type = Tp::ConnectionPresenceTypeOffline;
+        break;
+    default:
+    case TelegramNamespace::ContactStatusUnknown:
+        presence.status = QLatin1String("unknown");
+        presence.type = Tp::ConnectionPresenceTypeUnknown;
+        break;
+    }
+
+    newPresences[handle] = presence;
+    simplePresenceIface->setPresences(newPresences);
 }
 
 uint MorseConnection::getHandle(const QString &identifier) const

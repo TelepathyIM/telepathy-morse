@@ -90,7 +90,6 @@ private:
     uint getHandle(const QString &identifier) const;
     uint getChatHandle(const QString &identifier) const;
     uint addContact(const QString &identifier);
-    uint addContacts(const QStringList &identifiers);
 
     void updateContactsState(const QStringList &identifiers);
     void updateSelfContactState(Tp::ConnectionStatus status);

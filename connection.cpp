@@ -691,38 +691,30 @@ uint MorseConnection::ensureChat(const QString &identifier)
     return handle;
 }
 
-uint MorseConnection::addContacts(const QStringList &identifiers)
-{
-    qDebug() << Q_FUNC_INFO << identifiers;
-    uint handle = 0;
-
-    if (!m_handles.isEmpty()) {
-        handle = m_handles.keys().last();
-    }
-
-    QList<uint> newHandles;
-    QStringList newIdentifiers;
-    foreach(const QString &identifier, identifiers) {
-        if (getHandle(identifier)) {
-            continue;
-        }
-
-        ++handle;
-        m_handles.insert(handle, identifier);
-        newHandles << handle;
-        newIdentifiers << identifier;
-    }
-
-    updateContactsState(newIdentifiers);
-    setSubscriptionState(newIdentifiers, newHandles, Tp::SubscriptionStateUnknown);
-
-    return handle;
-}
-
 uint MorseConnection::addContact(const QString &identifier)
 {
-    qDebug() << Q_FUNC_INFO;
-    return addContacts(QStringList() << identifier);
+    qDebug() << Q_FUNC_INFO << identifier;
+
+    uint handle = m_handles.key(identifier, 0);
+
+    if (handle) {
+        qDebug() << "Unable to add a contact: already exists";
+        return handle;
+    }
+
+    if (m_handles.isEmpty()) {
+        handle = 1;
+    } else {
+        handle = m_handles.keys().last() + 1;
+    }
+
+    m_handles.insert(handle, identifier);
+
+    updateContactPresence(identifier);
+
+    setSubscriptionState(QStringList() << identifier, QList<uint>() << handle, Tp::SubscriptionStateUnknown);
+
+    return handle;
 }
 
 void MorseConnection::updateContactsState(const QStringList &identifiers)

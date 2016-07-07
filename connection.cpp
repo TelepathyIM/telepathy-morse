@@ -645,11 +645,7 @@ QString MorseConnection::getAlias(uint handle)
 
 Tp::SimplePresence MorseConnection::getPresence(uint handle)
 {
-    if (!m_presences.contains(handle)) {
-        return Tp::SimplePresence();
-    }
-
-    return m_presences.value(handle);
+    return simplePresenceIface->getPresences(Tp::UIntList() << handle).first();
 }
 
 uint MorseConnection::setPresence(const QString &status, const QString &message, Tp::DBusError *error)
@@ -752,7 +748,6 @@ void MorseConnection::updateContactsState(const QStringList &identifiers)
             break;
         }
 
-        m_presences[handle] = presence;
         newPresences[handle] = presence;
     }
     simplePresenceIface->setPresences(newPresences);
@@ -770,7 +765,6 @@ void MorseConnection::updateSelfContactState(Tp::ConnectionStatus status)
         presence.type = Tp::ConnectionPresenceTypeOffline;
     }
 
-    m_presences[selfHandle()] = presence;
     newPresences[selfHandle()] = presence;
     simplePresenceIface->setPresences(newPresences);
 }

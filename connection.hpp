@@ -120,8 +120,6 @@ private:
     Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface;
     Tp::BaseChannelRoomListTypePtr roomListChannel;
 
-    Tp::SimpleContactPresences m_presences;
-
     QString m_wantedPresence;
 
     QMap<uint, QString> m_handles;

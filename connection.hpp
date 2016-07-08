@@ -18,6 +18,8 @@
 
 #include <TelegramQt/TelegramNamespace>
 
+#include "identifier.hpp"
+
 class CTelegramCore;
 
 class MorseConnection : public Tp::BaseConnection
@@ -52,17 +54,18 @@ public:
     Tp::SimplePresence getPresence(uint handle);
     uint setPresence(const QString &status, const QString &message, Tp::DBusError *error);
 
-    uint ensureContact(const QString &identifier);
-    uint ensureChat(const QString &identifier);
+    uint ensureHandle(const MorseIdentifier &identifier);
+    uint ensureContact(const MorseIdentifier &identifier);
+    uint ensureChat(const MorseIdentifier &identifier);
 
 public slots:
     void whenMessageReceived(const TelegramNamespace::Message &message);
     void whenChatChanged(quint32 chatId);
-    void setContactStatus(const QString &identifier, TelegramNamespace::ContactStatus status);
+    void setContactStatus(quint32 userId, TelegramNamespace::ContactStatus status);
 
 signals:
     void messageReceived(const QString &sender, const QString &message);
-    void chatDetailsChanged(quint32 chatId, const Tp::UIntList &handles, const QStringList &identifiers);
+    void chatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
 
 private slots:
     void whenConnectionStateChanged(TelegramNamespace::ConnectionState state);
@@ -75,7 +78,7 @@ private slots:
     void whenDisconnected();
 
     /* Connection.Interface.Avatars */
-    void whenAvatarReceived(const QString &contact, const QByteArray &data, const QString &mimeType, const QString &token);
+    void whenAvatarReceived(quint32 userId, const QByteArray &data, const QString &mimeType, const QString &token);
 
     /* Channel.Type.RoomList */
     void whenGotRooms();
@@ -87,13 +90,15 @@ private:
     static QByteArray getSessionData(const QString &phone);
     static bool saveSessionData(const QString &phone, const QByteArray &data);
 
-    uint getHandle(const QString &identifier) const;
-    uint getChatHandle(const QString &identifier) const;
-    uint addContact(const QString &identifier);
+    uint getHandle(const MorseIdentifier &identifier) const;
+    uint getChatHandle(const MorseIdentifier &identifier) const;
+    uint addContact(const MorseIdentifier &identifier);
+    uint addContacts(const QVector<MorseIdentifier> &identifiers);
 
-    void updateContactsState(const QStringList &identifiers);
+    void updateContactsStatus(const QVector<MorseIdentifier> &identifiers);
     void updateSelfContactState(Tp::ConnectionStatus status);
-    void setSubscriptionState(const QStringList &identifiers, const QList<uint> &handles, uint state);
+    void setSubscriptionState(const QVector<uint> &handles, uint state);
+    void setSubscriptionState(const QVector<MorseIdentifier> &identifiers, const QList<uint> &handles, uint state);
 
     void startMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
 
@@ -122,8 +127,8 @@ private:
 
     QString m_wantedPresence;
 
-    QMap<uint, QString> m_handles;
-    QMap<uint, QString> m_chatHandles;
+    QMap<uint, MorseIdentifier> m_handles;
+    QMap<uint, MorseIdentifier> m_chatHandles;
     /* Maps a contact handle to its subscription state */
     QHash<uint, uint> m_contactsSubscription;
 

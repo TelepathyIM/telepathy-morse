@@ -150,8 +150,6 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     m_selfPhone = parameters.value(QLatin1String("account")).toString();
     m_keepaliveInterval = parameters.value(QLatin1String("keepalive-interval"), CTelegramCore::defaultPingInterval() / 1000).toUInt();
 
-    setSelfHandle(addContact(m_selfPhone));
-
     setConnectCallback(Tp::memFun(this, &MorseConnection::doConnect));
     setInspectHandlesCallback(Tp::memFun(this, &MorseConnection::inspectHandles));
     setCreateChannelCallback(Tp::memFun(this, &MorseConnection::createChannelCB));
@@ -203,16 +201,16 @@ void MorseConnection::doConnect(Tp::DBusError *error)
             this, SLOT(whenPhoneCodeRequired()));
     connect(m_core, SIGNAL(authSignErrorReceived(TelegramNamespace::AuthSignError,QString)),
             this, SLOT(whenAuthSignErrorReceived(TelegramNamespace::AuthSignError,QString)));
-    connect(m_core, SIGNAL(avatarReceived(QString,QByteArray,QString,QString)),
-            this, SLOT(whenAvatarReceived(QString,QByteArray,QString,QString)));
+    connect(m_core, SIGNAL(avatarReceived(quint32,QByteArray,QString,QString)),
+            this, SLOT(whenAvatarReceived(quint32,QByteArray,QString,QString)));
     connect(m_core, SIGNAL(contactListChanged()),
             this, SLOT(whenContactListChanged()));
-    connect( m_core, SIGNAL(messageReceived(TelegramNamespace::Message)),
+    connect(m_core, SIGNAL(messageReceived(TelegramNamespace::Message)),
              this, SLOT(whenMessageReceived(TelegramNamespace::Message)));
     connect(m_core, SIGNAL(chatChanged(quint32)),
             this, SLOT(whenChatChanged(quint32)));
-    connect(m_core, SIGNAL(contactStatusChanged(QString,TelegramNamespace::ContactStatus)),
-            this, SLOT(setContactStatus(QString,TelegramNamespace::ContactStatus)));
+    connect(m_core, SIGNAL(contactStatusChanged(quint32,TelegramNamespace::ContactStatus)),
+            this, SLOT(setContactStatus(quint32,TelegramNamespace::ContactStatus)));
 
     const QByteArray sessionData = getSessionData(m_selfPhone);
 
@@ -256,6 +254,11 @@ void MorseConnection::whenAuthenticated()
 {
     qDebug() << Q_FUNC_INFO;
 
+    MorseIdentifier selfIdentifier = MorseIdentifier::fromUserId(m_core->selfId());
+
+    int selfHandle = ensureContact(selfIdentifier);
+    setSelfContact(selfHandle, selfIdentifier.toString());
+
     if (!saslIface.isNull()) {
         saslIface->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
     }
@@ -270,7 +273,7 @@ void MorseConnection::whenAuthenticated()
     presence.status = m_wantedPresence;
     presence.statusMessage = QString();
     presence.type = simplePresenceIface->statuses().value(m_wantedPresence).type;
-    presences[selfHandle()] = presence;
+    presences[selfHandle] = presence;
     simplePresenceIface->setPresences(presences);
 
     setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
@@ -398,7 +401,7 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
 
     QStringList result;
 
-    const QMap<uint, QString> handlesContainer = handleType == Tp::HandleTypeContact ? m_handles : m_chatHandles;
+    const QMap<uint, MorseIdentifier> handlesContainer = handleType == Tp::HandleTypeContact ? m_handles : m_chatHandles;
 
     foreach (uint handle, handles) {
         if (!handlesContainer.contains(handle)) {
@@ -408,7 +411,7 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
             return QStringList();
         }
 
-        result.append(handlesContainer.value(handle));
+        result.append(handlesContainer.value(handle).toString());
     }
 
     return result;
@@ -424,7 +427,7 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
 
     uint targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
     uint targetHandle = 0;
-    QString targetID;
+    MorseIdentifier targetID;
 
     switch (targetHandleType) {
     case Tp::HandleTypeContact:
@@ -432,8 +435,8 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
             targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
             targetID = m_handles.value(targetHandle);
         } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
-            targetID = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString();
-            targetHandle = ensureContact(targetID);
+            targetID = MorseIdentifier::fromString(request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString());
+            targetHandle = ensureHandle(targetID);
         }
         break;
     case Tp::HandleTypeRoom:
@@ -441,8 +444,8 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
             targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
             targetID = m_chatHandles.value(targetHandle);
         } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
-            targetID = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString();
-            targetHandle = ensureChat(targetID);
+            targetID = MorseIdentifier::fromString(request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString());
+            targetHandle = ensureHandle(targetID);
         }
     default:
         break;
@@ -462,9 +465,7 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
 
     switch (targetHandleType) {
     case Tp::HandleTypeContact:
-#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
     case Tp::HandleTypeRoom:
-#endif
         break;
     default:
         if (error) {
@@ -485,23 +486,18 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
     }
 
     Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, Tp::HandleType(targetHandleType), targetHandle);
-    baseChannel->setTargetID(targetID);
+    baseChannel->setTargetID(targetID.toString());
     baseChannel->setInitiatorHandle(initiatorHandle);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        MorseTextChannelPtr textChannel = MorseTextChannel::create(m_core, baseChannel.data(), selfHandle(), m_selfPhone);
+        MorseTextChannelPtr textChannel = MorseTextChannel::create(m_core, baseChannel.data(), selfHandle(), selfID());
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
 
         if (targetHandleType == Tp::HandleTypeRoom) {
-            quint32 chatId = targetID.section(QLatin1String("chat"), 1).toUInt();
-
-            QStringList participants;
-            if (m_core->getChatParticipants(&participants, chatId) && !participants.isEmpty()) {
-                textChannel->whenChatDetailsChanged(chatId, requestHandles(Tp::HandleTypeContact, participants, 0));
-            }
-
             connect(this, SIGNAL(chatDetailsChanged(quint32,Tp::UIntList,QStringList)),
                     textChannel.data(), SLOT(whenChatDetailsChanged(quint32,Tp::UIntList)));
+
+            whenChatChanged(targetID.chatId());
         }
     }
 
@@ -520,7 +516,7 @@ Tp::UIntList MorseConnection::requestHandles(uint handleType, const QStringList 
     }
 
     foreach(const QString &identify, identifiers) {
-        result.append(ensureContact(identify));
+        result.append(ensureContact(MorseIdentifier::fromString(identify)));
     }
 
     return result;
@@ -546,8 +542,8 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
     foreach (const uint handle, handles) {
         if (m_handles.contains(handle)){
             QVariantMap attributes;
-            const QString identifier = m_handles.value(handle);
-            attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = identifier;
+            const MorseIdentifier identifier = m_handles.value(handle);
+            attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = identifier.toString();
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
@@ -563,7 +559,7 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
             }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_core->contactAvatarToken(identifier));
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_core->contactAvatarToken(identifier.userId()));
             }
 
             contactAttributes[handle] = attributes;
@@ -596,21 +592,32 @@ void MorseConnection::requestSubscription(const Tp::UIntList &handles, const QSt
 
 void MorseConnection::removeContacts(const Tp::UIntList &handles, Tp::DBusError *error)
 {
-    const QStringList phoneNumbers = inspectHandles(Tp::HandleTypeContact, handles, error);
-
-    if (error->isValid()) {
-        return;
-    }
-
-    if (phoneNumbers.isEmpty()) {
-        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
+    if (handles.isEmpty()) {
+        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid argument (no handles provided)"));
     }
 
     if (!coreIsReady()) {
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
     }
 
-    m_core->deleteContacts(phoneNumbers);
+    QVector<quint32> ids;
+
+    foreach (uint handle, handles) {
+        if (!m_handles.contains(handle)) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+            return;
+        }
+
+        quint32 id = m_handles.value(handle).userId();
+
+        if (!id) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Internal error (invalid handle)"));
+        }
+
+        ids.append(id);
+    }
+
+    m_core->deleteContacts(ids);
 }
 
 Tp::AliasMap MorseConnection::getAliases(const Tp::UIntList &handles, Tp::DBusError *error)
@@ -634,13 +641,25 @@ void MorseConnection::setAliases(const Tp::AliasMap &aliases, Tp::DBusError *err
 
 QString MorseConnection::getAlias(uint handle)
 {
-    const QString phone = m_handles.value(handle);
+    const MorseIdentifier identifier = m_handles.value(handle);
 
-    if (phone.isEmpty()) {
-        return QString();
+    if (identifier.isNull()) {
+        return QLatin1String("Invalid alias");
     }
 
-    return m_core->contactFirstName(phone) + QLatin1Char(' ') + m_core->contactLastName(phone);
+    TelegramNamespace::UserInfo info;
+    m_core->getUserInfo(&info, identifier.userId());
+
+    QString name = info.firstName() + QLatin1Char(' ') + info.lastName();
+    if (!name.simplified().isEmpty()) {
+        return name;
+    }
+
+    if (!info.userName().isEmpty()) {
+        return info.userName();
+    }
+
+    return tr("Unknown name");
 }
 
 Tp::SimplePresence MorseConnection::getPresence(uint handle)
@@ -663,7 +682,16 @@ uint MorseConnection::setPresence(const QString &status, const QString &message,
     return 0;
 }
 
-uint MorseConnection::ensureContact(const QString &identifier)
+uint MorseConnection::ensureHandle(const MorseIdentifier &identifier)
+{
+    if (identifier.userId()) {
+        return ensureContact(identifier);
+    } else {
+        return ensureChat(identifier);
+    }
+}
+
+uint MorseConnection::ensureContact(const MorseIdentifier &identifier)
 {
     uint handle = getHandle(identifier);
     if (!handle) {
@@ -672,7 +700,7 @@ uint MorseConnection::ensureContact(const QString &identifier)
     return handle;
 }
 
-uint MorseConnection::ensureChat(const QString &identifier)
+uint MorseConnection::ensureChat(const MorseIdentifier &identifier)
 {
     uint handle = getChatHandle(identifier);
     if (!handle) {
@@ -687,39 +715,43 @@ uint MorseConnection::ensureChat(const QString &identifier)
     return handle;
 }
 
-uint MorseConnection::addContact(const QString &identifier)
+uint MorseConnection::addContacts(const QVector<MorseIdentifier> &identifiers)
 {
-    qDebug() << Q_FUNC_INFO << identifier;
+    qDebug() << Q_FUNC_INFO;
+    uint handle = 0;
 
-    uint handle = m_handles.key(identifier, 0);
-
-    if (handle) {
-        qDebug() << "Unable to add a contact: already exists";
-        return handle;
+    if (!m_handles.isEmpty()) {
+        handle = m_handles.keys().last();
     }
 
-    if (m_handles.isEmpty()) {
-        handle = 1;
-    } else {
-        handle = m_handles.keys().last() + 1;
+    QList<uint> newHandles;
+    QVector<MorseIdentifier> newIdentifiers;
+    foreach (const MorseIdentifier &identifier, identifiers) {
+        if (getHandle(identifier)) {
+            continue;
+        }
+
+        ++handle;
+        m_handles.insert(handle, identifier);
+        newHandles << handle;
+        newIdentifiers << identifier;
     }
-
-    m_handles.insert(handle, identifier);
-
-    TelegramNamespace::ContactStatus status = m_core->contactStatus(identifier);
-    setContactStatus(identifier, status);
-
-    setSubscriptionState(QStringList() << identifier, QList<uint>() << handle, Tp::SubscriptionStateUnknown);
 
     return handle;
 }
 
-void MorseConnection::updateContactsState(const QStringList &identifiers)
+uint MorseConnection::addContact(const MorseIdentifier &identifier)
+{
+    qDebug() << Q_FUNC_INFO;
+    return addContacts(QVector<MorseIdentifier>() << identifier);
+}
+
+void MorseConnection::updateContactsStatus(const QVector<MorseIdentifier> &identifiers)
 {
     qDebug() << Q_FUNC_INFO;
     Tp::SimpleContactPresences newPresences;
-    foreach (const QString &phone, identifiers) {
-        uint handle = ensureContact(phone);
+    foreach (const MorseIdentifier &identifier, identifiers) {
+        uint handle = ensureContact(identifier);
 
         if (handle == selfHandle()) {
             continue;
@@ -728,7 +760,10 @@ void MorseConnection::updateContactsState(const QStringList &identifiers)
         TelegramNamespace::ContactStatus st = TelegramNamespace::ContactStatusUnknown;
 
         if (m_core) {
-            st = m_core->contactStatus(phone);
+            TelegramNamespace::UserInfo info;
+            m_core->getUserInfo(&info, identifier.userId());
+
+            st = info.status();
         }
 
         Tp::SimplePresence presence;
@@ -770,7 +805,12 @@ void MorseConnection::updateSelfContactState(Tp::ConnectionStatus status)
     simplePresenceIface->setPresences(newPresences);
 }
 
-void MorseConnection::setSubscriptionState(const QStringList &identifiers, const QList<uint> &handles, uint state)
+void MorseConnection::setSubscriptionState(const QVector<uint> &handles, uint state)
+{
+
+}
+
+void MorseConnection::setSubscriptionState(const QVector<MorseIdentifier> &identifiers, const QList<uint> &handles, uint state)
 {
     qDebug() << Q_FUNC_INFO;
     Tp::ContactSubscriptionMap changes;
@@ -782,7 +822,7 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
         change.publishRequest = QString();
         change.subscribe = state;
         changes[handles[i]] = change;
-        identifiersMap[handles[i]] = identifiers[i];
+        identifiersMap[handles[i]] = identifiers[i].toString();
         m_contactsSubscription[handles[i]] = state;
     }
     Tp::HandleIdentifierMap removals;
@@ -792,16 +832,16 @@ void MorseConnection::setSubscriptionState(const QStringList &identifiers, const
 /* Receive message from outside (telegram server) */
 void MorseConnection::whenMessageReceived(const TelegramNamespace::Message &message)
 {
-    bool chatMessage = message.peer.startsWith(QLatin1String("chat"));
+    bool chatMessage = message.peer().type != TelegramNamespace::Peer::User;
 
-    uint contactHandle = ensureContact(message.contact);
+    uint contactHandle = ensureContact(MorseIdentifier::fromUserId(message.userId));
+    uint targetHandle = ensureHandle(MorseIdentifier::fromPeer(message.peer()));
+    uint initiatorHandle = 0;
 
-    uint initiatorHandle, targetHandle;
-    if (!chatMessage) {
-        initiatorHandle = targetHandle = ensureContact(message.peer);
-    } else {
-        targetHandle = ensureChat(message.peer);
+    if (chatMessage) {
         initiatorHandle = contactHandle;
+    } else {
+        initiatorHandle = targetHandle;
     }
 
     //TODO: initiator should be group creator
@@ -828,35 +868,44 @@ void MorseConnection::whenMessageReceived(const TelegramNamespace::Message &mess
     }
 
     textChannel->whenMessageReceived(message, contactHandle);
-
 }
 
 void MorseConnection::whenChatChanged(quint32 chatId)
 {
-    QStringList participants;
+    QVector<quint32> participants;
     if (m_core->getChatParticipants(&participants, chatId) && !participants.isEmpty()) {
-        emit chatDetailsChanged(chatId, requestHandles(Tp::HandleTypeContact, participants, 0), participants);
+
+        Tp::UIntList handles;
+        foreach (quint32 participant, participants) {
+            handles.append(ensureHandle(MorseIdentifier::fromUserId(participant)));
+        }
+
+        emit chatDetailsChanged(chatId, handles);
     }
 }
 
 void MorseConnection::whenContactListChanged()
 {
-    const QStringList identifiers = m_core->contactList();
+    const QVector<quint32> ids = m_core->contactList();
 
-    qDebug() << Q_FUNC_INFO << identifiers;
+    qDebug() << Q_FUNC_INFO << ids;
 
 //    Tp::ContactSubscriptionMap changes;
 //    Tp::HandleIdentifierMap identifiers;
 //    Tp::HandleIdentifierMap removals;
 
-    QList<uint> handles;
+    QVector<uint> handles;
+    QVector<MorseIdentifier> identifiers;
+    handles.reserve(ids.count());
+    identifiers.reserve(ids.count());
 
-    for (int i = 0; i < identifiers.count(); ++i) {
-        handles.append(ensureContact(identifiers.at(i)));
+    foreach (quint32 id, ids) {
+        identifiers.append(MorseIdentifier::fromUserId(id));
+        handles.append(ensureContact(identifiers.last()));
     }
 
-    setSubscriptionState(identifiers, handles, Tp::SubscriptionStateYes);
-    updateContactsState(identifiers);
+    setSubscriptionState(handles, Tp::SubscriptionStateYes);
+    updateContactsStatus(identifiers);
 
     contactListIface->setContactListState(Tp::ContactListStateSuccess);
 }
@@ -872,9 +921,9 @@ void MorseConnection::whenDisconnected()
 }
 
 /* Connection.Interface.Avatars */
-void MorseConnection::whenAvatarReceived(const QString &contact, const QByteArray &data, const QString &mimeType, const QString &token)
+void MorseConnection::whenAvatarReceived(quint32 userId, const QByteArray &data, const QString &mimeType, const QString &token)
 {
-    avatarsIface->avatarRetrieved(ensureContact(contact), token , data, mimeType);
+    avatarsIface->avatarRetrieved(ensureContact(MorseIdentifier::fromUserId(userId)), token , data, mimeType);
 }
 
 void MorseConnection::whenGotRooms()
@@ -886,10 +935,10 @@ void MorseConnection::whenGotRooms()
         Tp::RoomInfo roomInfo;
         TelegramNamespace::GroupChat chatInfo;
 
-        const QString chatID = QString(QLatin1String("chat%1")).arg(chatId);
+        const MorseIdentifier chatID = MorseIdentifier::fromChatId(chatId);
         roomInfo.channelType = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
         roomInfo.handle = ensureChat(chatID);
-        roomInfo.info[QLatin1String("handle-name")] = chatID;
+        roomInfo.info[QLatin1String("handle-name")] = chatID.toString();
         roomInfo.info[QLatin1String("members-only")] = true;
         roomInfo.info[QLatin1String("invite-only")] = true;
         roomInfo.info[QLatin1String("password")] = false;
@@ -921,25 +970,20 @@ Tp::BaseChannelPtr MorseConnection::createRoomListChannel()
 
 Tp::AvatarTokenMap MorseConnection::getKnownAvatarTokens(const Tp::UIntList &contacts, Tp::DBusError *error)
 {
-    const QStringList identifiers = inspectHandles(Tp::HandleTypeContact, contacts, error);
-
-    if (error->isValid()) {
-        return Tp::AvatarTokenMap();
-    }
-
-    if (identifiers.isEmpty()) {
-        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Invalid handle(s)"));
-        return Tp::AvatarTokenMap();
+    if (contacts.isEmpty()) {
+        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("No handles provided"));
     }
 
     if (!coreIsReady()) {
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
-        return Tp::AvatarTokenMap();
     }
 
     Tp::AvatarTokenMap result;
-    for (int i = 0; i < contacts.count(); ++i) {
-        result.insert(contacts.at(i), m_core->contactAvatarToken(identifiers.at(i)));
+    foreach (quint32 handle, contacts) {
+        if (!m_handles.contains(handle)) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
+        }
+        result.insert(handle, m_core->contactAvatarToken(m_handles.value(handle).userId()));
     }
 
     return result;
@@ -947,22 +991,19 @@ Tp::AvatarTokenMap MorseConnection::getKnownAvatarTokens(const Tp::UIntList &con
 
 void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError *error)
 {
-    const QStringList identifiers = inspectHandles(Tp::HandleTypeContact, contacts, error);
-
-    if (error->isValid()) {
-        return;
-    }
-
-    if (identifiers.isEmpty()) {
-        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
+    if (contacts.isEmpty()) {
+        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("No handles provided"));
     }
 
     if (!coreIsReady()) {
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
     }
 
-    foreach (const QString &identifier, identifiers) {
-        m_core->requestContactAvatar(identifier);
+    foreach (quint32 handle, contacts) {
+        if (!m_handles.contains(handle)) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
+        }
+        m_core->requestContactAvatar(m_handles.value(handle).userId());
     }
 }
 
@@ -1028,11 +1069,12 @@ bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &da
     return false;
 }
 
-void MorseConnection::setContactStatus(const QString &identifier, TelegramNamespace::ContactStatus status)
+void MorseConnection::setContactStatus(quint32 userId, TelegramNamespace::ContactStatus status)
 {
-    qDebug() << "setContactStatus " << identifier << status;
+    qDebug() << "Update presence for " << userId << "to" << status;
+
     Tp::SimpleContactPresences newPresences;
-    uint handle = ensureContact(identifier);
+    uint handle = ensureContact(MorseIdentifier::fromUserId(userId));
 
     if (handle == selfHandle()) {
         return;
@@ -1057,16 +1099,16 @@ void MorseConnection::setContactStatus(const QString &identifier, TelegramNamesp
     }
 
     newPresences[handle] = presence;
+
     simplePresenceIface->setPresences(newPresences);
 }
 
-uint MorseConnection::getHandle(const QString &identifier) const
+uint MorseConnection::getHandle(const MorseIdentifier &identifier) const
 {
     return m_handles.key(identifier, 0);
 }
 
-uint MorseConnection::getChatHandle(const QString &identifier) const
+uint MorseConnection::getChatHandle(const MorseIdentifier &identifier) const
 {
     return m_chatHandles.key(identifier, 0);
 }
-

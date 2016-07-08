@@ -20,11 +20,30 @@
 
 #include <TelegramQt/CTelegramCore>
 
+#include "identifier.hpp"
+
 class QTimer;
 
 class MorseTextChannel;
 
 typedef Tp::SharedPtr<MorseTextChannel> MorseTextChannelPtr;
+
+struct SentMessageId
+{
+    SentMessageId(quint64 random = 0, quint32 actualId = 0) :
+        randomId(random),
+        id(actualId)
+    {
+    }
+
+    bool operator==(const SentMessageId &info) const
+    {
+        return randomId == info.randomId && id == info.id;
+    }
+
+    quint64 randomId;
+    quint32 id;
+};
 
 class MorseTextChannel : public Tp::BaseChannelTextType
 {
@@ -38,14 +57,18 @@ public:
     void messageAcknowledgedCallback(const QString &messageId);
 
 public slots:
-    void whenContactChatStateComposingChanged(const QString &phone, bool composing);
+    void whenContactChatStateComposingChanged(quint32 userId, TelegramNamespace::MessageAction action);
+    void whenContactRoomStateComposingChanged(quint32 chatId, quint32 userId, TelegramNamespace::MessageAction action);
+    void setMessageAction(const MorseIdentifier &identifier, TelegramNamespace::MessageAction action);
     void whenMessageReceived(const TelegramNamespace::Message &message, uint senderHandle);
     void updateChatParticipants(const Tp::UIntList &handles);
 
     void whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
 
 protected slots:
-    void sentMessageDeliveryStatusChanged(const QString &phone, quint64 messageId, TelegramNamespace::MessageDeliveryStatus status);
+    void setMessageInboxRead(TelegramNamespace::Peer peer, quint32 messageId);
+    void setMessageOutboxRead(TelegramNamespace::Peer peer, quint32 messageId);
+    void setResolvedMessageId(quint64 randomId, quint32 resolvedId);
     void reactivateLocalTyping();
 
 protected:
@@ -59,8 +82,8 @@ private:
     uint m_targetHandle;
     uint m_targetHandleType;
     uint m_selfHandle;
-    QString m_targetID;
-    QString m_selfID;
+    MorseIdentifier m_targetID;
+    MorseIdentifier m_selfID;
 
     Tp::BaseChannelTextTypePtr m_channelTextType;
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;
@@ -69,6 +92,7 @@ private:
     Tp::BaseChannelRoomInterfacePtr m_roomIface;
     Tp::BaseChannelRoomConfigInterfacePtr m_roomConfigIface;
 
+    QVector<SentMessageId> m_sentMessageIds;
     QTimer *m_localTypingTimer;
 
 };

@@ -30,6 +30,8 @@ set(morse_SOURCES
     main.cpp
     connection.cpp
     connection.hpp
+    identifier.cpp
+    identifier.hpp
     protocol.cpp
     protocol.hpp
     textchannel.cpp

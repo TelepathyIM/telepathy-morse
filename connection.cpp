@@ -312,21 +312,22 @@ void MorseConnection::whenPhoneCodeRequired()
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
 
     saslIface_authCode = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"),
-                                                                   /* hasInitialData */ false,
-                                                                   /* canTryAgain */ true,
-                                                                   /* authorizationIdentity */ m_selfPhone,
-                                                                   /* defaultUsername */ QString(),
-                                                                   /* defaultRealm */ QString(),
-                                                                   /* maySaveResponse */ false);
+                                                                            /* hasInitialData */ true,
+                                                                            /* canTryAgain */ true,
+                                                                            /* authorizationIdentity */ m_selfPhone,
+                                                                            /* defaultUsername */ QString(),
+                                                                            /* defaultRealm */ QString(),
+                                                                            /* maySaveResponse */ false);
 
-    saslIface_authCode->setStartMechanismWithDataCallback( Tp::memFun(this, &MorseConnection::startMechanismWithData_authCode));
+    saslIface_authCode->setStartMechanismWithDataCallback(Tp::memFun(this, &MorseConnection::startMechanismWithData_authCode));
 
     baseChannel->setRequested(false);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(saslIface_authCode));
-
     baseChannel->registerObject(&error);
 
-    if (!error.isValid()) {
+    if (error.isValid()) {
+        qDebug() << Q_FUNC_INFO << error.name() << error.message();
+    } else {
         addChannel(baseChannel);
     }
 }
@@ -339,9 +340,14 @@ void MorseConnection::whenAuthSignErrorReceived(TelegramNamespace::AuthSignError
     details[QLatin1String("server-message")] = errorMessage;
 
     switch (errorCode) {
+    case TelegramNamespace::AuthSignErrorPhoneCodeIsExpired:
+    case TelegramNamespace::AuthSignErrorPhoneCodeIsInvalid:
+        if (!saslIface_authCode.isNull()) {
+            saslIface_authCode->setSaslStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, details);
+        }
         break;
     default:
-        saslIface_authCode->setSaslStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, details);
+        qWarning() << Q_FUNC_INFO << "Unhandled!";
         break;
     }
 }

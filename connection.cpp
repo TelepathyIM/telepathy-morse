@@ -75,6 +75,7 @@ Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
 MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
     Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters),
     m_core(0),
+    m_passwordInfo(0),
     m_authReconnectionsCount(0)
 {
     qDebug() << Q_FUNC_INFO;
@@ -195,12 +196,14 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 
     connect(m_core, SIGNAL(connectionStateChanged(TelegramNamespace::ConnectionState)),
             this, SLOT(whenConnectionStateChanged(TelegramNamespace::ConnectionState)));
-    connect(m_core, SIGNAL(authorizationErrorReceived()),
-            this, SLOT(whenAuthErrorReceived()));
+    connect(m_core, SIGNAL(authorizationErrorReceived(TelegramNamespace::UnauthorizedError,QString)),
+            this, SLOT(onAuthErrorReceived(TelegramNamespace::UnauthorizedError,QString)));
     connect(m_core, SIGNAL(phoneCodeRequired()),
             this, SLOT(whenPhoneCodeRequired()));
     connect(m_core, SIGNAL(authSignErrorReceived(TelegramNamespace::AuthSignError,QString)),
             this, SLOT(whenAuthSignErrorReceived(TelegramNamespace::AuthSignError,QString)));
+    connect(m_core, SIGNAL(passwordInfoReceived(quint64)),
+            SLOT(onPasswordInfoReceived(quint64)));
     connect(m_core, SIGNAL(avatarReceived(quint32,QByteArray,QString,QString)),
             this, SLOT(whenAvatarReceived(quint32,QByteArray,QString,QString)));
     connect(m_core, SIGNAL(contactListChanged()),
@@ -263,6 +266,15 @@ void MorseConnection::whenAuthenticated()
         saslIface_authCode->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
     }
 
+    if (!saslIface_password.isNull()) {
+        saslIface_password->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
+    }
+
+    if (m_passwordInfo) {
+        delete m_passwordInfo;
+        m_passwordInfo = 0;
+    }
+
     Tp::SimpleContactPresences presences;
     Tp::SimplePresence presence;
 
@@ -280,9 +292,18 @@ void MorseConnection::whenAuthenticated()
     contactListIface->setContactListState(Tp::ContactListStateWaiting);
 }
 
-void MorseConnection::whenAuthErrorReceived()
+void MorseConnection::onAuthErrorReceived(TelegramNamespace::UnauthorizedError errorCode, const QString &errorMessage)
 {
-    qDebug() << Q_FUNC_INFO;
+    qDebug() << Q_FUNC_INFO << errorCode << errorMessage;
+
+    if (errorCode == TelegramNamespace::UnauthorizedSessionPasswordNeeded) {
+        if (!saslIface_authCode.isNull()) {
+            saslIface_authCode->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
+        }
+
+        m_core->getPassword();
+        return;
+    }
 
     static const int reconnectionsLimit = 1;
 
@@ -332,6 +353,44 @@ void MorseConnection::whenPhoneCodeRequired()
     }
 }
 
+void MorseConnection::onPasswordInfoReceived(quint64 requestId)
+{
+    Q_UNUSED(requestId)
+
+    qDebug() << Q_FUNC_INFO;
+
+    m_passwordInfo = new TelegramNamespace::PasswordInfo();
+    m_core->getPasswordInfo(m_passwordInfo, requestId);
+
+    Tp::DBusError error;
+
+    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, TP_QT_IFACE_CHANNEL_TYPE_SERVER_AUTHENTICATION);
+
+    Tp::BaseChannelServerAuthenticationTypePtr authType
+            = Tp::BaseChannelServerAuthenticationType::create(TP_QT_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION);
+    baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
+
+    saslIface_password = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"),
+                                                                            /* hasInitialData */ true,
+                                                                            /* canTryAgain */ true,
+                                                                            /* authorizationIdentity */ m_selfPhone,
+                                                                            /* defaultUsername */ QString(),
+                                                                            /* defaultRealm */ QString(),
+                                                                            /* maySaveResponse */ true);
+
+    saslIface_password->setStartMechanismWithDataCallback(Tp::memFun(this, &MorseConnection::startMechanismWithData_password));
+
+    baseChannel->setRequested(false);
+    baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(saslIface_password));
+    baseChannel->registerObject(&error);
+
+    if (error.isValid()) {
+        qDebug() << Q_FUNC_INFO << error.name() << error.message();
+    } else {
+        addChannel(baseChannel);
+    }
+}
+
 void MorseConnection::whenAuthSignErrorReceived(TelegramNamespace::AuthSignError errorCode, const QString &errorMessage)
 {
     qDebug() << Q_FUNC_INFO << errorCode << errorMessage;
@@ -344,6 +403,11 @@ void MorseConnection::whenAuthSignErrorReceived(TelegramNamespace::AuthSignError
     case TelegramNamespace::AuthSignErrorPhoneCodeIsInvalid:
         if (!saslIface_authCode.isNull()) {
             saslIface_authCode->setSaslStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, details);
+        }
+        break;
+    case TelegramNamespace::AuthSignErrorPasswordHashInvalid:
+        if (!saslIface_password.isNull()) {
+            saslIface_password->setSaslStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, details);
         }
         break;
     default:
@@ -359,6 +423,15 @@ void MorseConnection::startMechanismWithData_authCode(const QString &mechanism, 
     saslIface_authCode->setSaslStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
 
     m_core->signIn(m_selfPhone, QString::fromLatin1(data.constData()));
+}
+
+void MorseConnection::startMechanismWithData_password(const QString &mechanism, const QByteArray &data, Tp::DBusError *error)
+{
+    qDebug() << Q_FUNC_INFO << mechanism << data;
+
+    saslIface_password->setSaslStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
+
+    m_core->tryPassword(m_passwordInfo->currentSalt(), data);
 }
 
 Tp::ContactInfoMap MorseConnection::getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error)

@@ -70,8 +70,9 @@ signals:
 private slots:
     void whenConnectionStateChanged(TelegramNamespace::ConnectionState state);
     void whenAuthenticated();
-    void whenAuthErrorReceived();
+    void onAuthErrorReceived(TelegramNamespace::UnauthorizedError errorCode, const QString &errorMessage);
     void whenPhoneCodeRequired();
+    void onPasswordInfoReceived(quint64 requestId);
     void whenAuthSignErrorReceived(TelegramNamespace::AuthSignError errorCode, const QString &errorMessage);
     void whenConnectionReady();
     void whenContactListChanged();
@@ -101,6 +102,7 @@ private:
     void setSubscriptionState(const QVector<MorseIdentifier> &identifiers, const QList<uint> &handles, uint state);
 
     void startMechanismWithData_authCode(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
+    void startMechanismWithData_password(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
 
     Tp::ContactInfoMap getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error);
 
@@ -123,6 +125,7 @@ private:
     Tp::BaseConnectionAddressingInterfacePtr addressingIface;
     Tp::BaseConnectionRequestsInterfacePtr requestsIface;
     Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface_authCode;
+    Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface_password;
     Tp::BaseChannelRoomListTypePtr roomListChannel;
 
     QString m_wantedPresence;
@@ -133,6 +136,7 @@ private:
     QHash<uint, uint> m_contactsSubscription;
 
     CTelegramCore *m_core;
+    TelegramNamespace::PasswordInfo *m_passwordInfo;
 
     int m_authReconnectionsCount;
 

@@ -100,7 +100,7 @@ private:
     void setSubscriptionState(const QVector<uint> &handles, uint state);
     void setSubscriptionState(const QVector<MorseIdentifier> &identifiers, const QList<uint> &handles, uint state);
 
-    void startMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
+    void startMechanismWithData_authCode(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
 
     Tp::ContactInfoMap getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error);
 
@@ -122,7 +122,7 @@ private:
     Tp::BaseConnectionAvatarsInterfacePtr avatarsIface;
     Tp::BaseConnectionAddressingInterfacePtr addressingIface;
     Tp::BaseConnectionRequestsInterfacePtr requestsIface;
-    Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface;
+    Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface_authCode;
     Tp::BaseChannelRoomListTypePtr roomListChannel;
 
     QString m_wantedPresence;

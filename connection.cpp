@@ -259,8 +259,8 @@ void MorseConnection::whenAuthenticated()
     int selfHandle = ensureContact(selfIdentifier);
     setSelfContact(selfHandle, selfIdentifier.toString());
 
-    if (!saslIface.isNull()) {
-        saslIface->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
+    if (!saslIface_authCode.isNull()) {
+        saslIface_authCode->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
     }
 
     Tp::SimpleContactPresences presences;
@@ -311,7 +311,7 @@ void MorseConnection::whenPhoneCodeRequired()
             = Tp::BaseChannelServerAuthenticationType::create(TP_QT_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
 
-    saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"),
+    saslIface_authCode = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"),
                                                                    /* hasInitialData */ false,
                                                                    /* canTryAgain */ true,
                                                                    /* authorizationIdentity */ m_selfPhone,
@@ -319,10 +319,10 @@ void MorseConnection::whenPhoneCodeRequired()
                                                                    /* defaultRealm */ QString(),
                                                                    /* maySaveResponse */ false);
 
-    saslIface->setStartMechanismWithDataCallback( Tp::memFun(this, &MorseConnection::startMechanismWithData));
+    saslIface_authCode->setStartMechanismWithDataCallback( Tp::memFun(this, &MorseConnection::startMechanismWithData_authCode));
 
     baseChannel->setRequested(false);
-    baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(saslIface));
+    baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(saslIface_authCode));
 
     baseChannel->registerObject(&error);
 
@@ -341,16 +341,16 @@ void MorseConnection::whenAuthSignErrorReceived(TelegramNamespace::AuthSignError
     switch (errorCode) {
         break;
     default:
-        saslIface->setSaslStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, details);
+        saslIface_authCode->setSaslStatus(Tp::SASLStatusServerFailed, TP_QT_ERROR_AUTHENTICATION_FAILED, details);
         break;
     }
 }
 
-void MorseConnection::startMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error)
+void MorseConnection::startMechanismWithData_authCode(const QString &mechanism, const QByteArray &data, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << mechanism << data;
 
-    saslIface->setSaslStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
+    saslIface_authCode->setSaslStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
 
     m_core->signIn(m_selfPhone, QString::fromLatin1(data.constData()));
 }

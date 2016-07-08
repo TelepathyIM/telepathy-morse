@@ -28,6 +28,8 @@ set(morse_SOURCES
     main.cpp
     connection.cpp
     connection.hpp
+    debug.cpp
+    debug.hpp
     identifier.cpp
     identifier.hpp
     protocol.cpp

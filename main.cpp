@@ -6,6 +6,8 @@
 
 #include "protocol.hpp"
 
+#include "debug.hpp"
+
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
@@ -14,6 +16,7 @@ int main(int argc, char *argv[])
     Tp::registerTypes();
     Tp::enableDebug(true);
     Tp::enableWarnings(true);
+    enableDebugInterface();
 
     Tp::BaseProtocolPtr proto = Tp::BaseProtocol::create<MorseProtocol>(QLatin1String("telegram"));
     Tp::BaseConnectionManagerPtr cm = Tp::BaseConnectionManager::create(QLatin1String("morse"));

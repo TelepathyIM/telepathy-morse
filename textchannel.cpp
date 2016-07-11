@@ -95,6 +95,8 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
                 SLOT(whenContactRoomStateComposingChanged(quint32,quint32,TelegramNamespace::MessageAction)));
     }
 
+    connect(m_core.data(), SIGNAL(messageReadInbox(TelegramNamespace::Peer,quint32)),
+            SLOT(setMessageInboxRead(TelegramNamespace::Peer,quint32)));
     connect(m_core.data(), SIGNAL(sentMessageIdReceived(quint64,quint32)),
             SLOT(setResolvedMessageId(quint64,quint32)));
 }
@@ -254,20 +256,29 @@ void MorseTextChannel::setMessageInboxRead(TelegramNamespace::Peer peer, quint32
     }
 
     // TODO: Mark *all* messages up to this as read
+    QStringList tokens;
 
-//    const QString token = QString::number(messageId);
+    foreach (const Tp::MessagePartList &message, pendingMessages()) {
+        if (message.isEmpty()) {
+            // Invalid message
+            continue;
+        }
+        const Tp::MessagePart &header = message.front();
+        bool ok;
+        const QString token = header.value(QLatin1String("message-token")).variant().toString();
+        quint32 mId = token.toUInt(&ok);
+        if (!ok) {
+            // Invalid message token
+            continue;
+        }
 
-//    Tp::MessagePartList partList;
+        if (mId <= messageId) {
+            tokens.append(token);
+        }
+    }
 
-//    Tp::MessagePart header;
-//    header[QLatin1String("message-sender")]    = QDBusVariant(m_targetHandle);
-//    header[QLatin1String("message-sender-id")] = QDBusVariant(m_targetId);
-//    header[QLatin1String("message-type")]      = QDBusVariant(Tp::ChannelTextMessageTypeDeliveryReport);
-//    header[QLatin1String("delivery-status")]   = QDBusVariant(Tp::DeliveryStatusRead);
-//    header[QLatin1String("delivery-token")]    = QDBusVariant(token);
-//    partList << header;
-
-//    addReceivedMessage(partList);
+    Tp::DBusError error;
+    acknowledgePendingMessages(tokens, &error);
 }
 
 void MorseTextChannel::setMessageOutboxRead(TelegramNamespace::Peer peer, quint32 messageId)

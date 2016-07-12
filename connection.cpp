@@ -157,6 +157,9 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     setRequestHandlesCallback(Tp::memFun(this, &MorseConnection::requestHandles));
 
     connect(this, SIGNAL(disconnected()), SLOT(whenDisconnected()));
+
+    m_handles.insert(1, MorseIdentifier());
+    setSelfHandle(1);
 }
 
 MorseConnection::~MorseConnection()
@@ -196,6 +199,8 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 
     connect(m_core, SIGNAL(connectionStateChanged(TelegramNamespace::ConnectionState)),
             this, SLOT(whenConnectionStateChanged(TelegramNamespace::ConnectionState)));
+    connect(m_core, SIGNAL(selfUserAvailable(quint32)),
+            SLOT(onSelfUserAvailable()));
     connect(m_core, SIGNAL(authorizationErrorReceived(TelegramNamespace::UnauthorizedError,QString)),
             this, SLOT(onAuthErrorReceived(TelegramNamespace::UnauthorizedError,QString)));
     connect(m_core, SIGNAL(phoneCodeRequired()),
@@ -257,11 +262,6 @@ void MorseConnection::whenAuthenticated()
 {
     qDebug() << Q_FUNC_INFO;
 
-    MorseIdentifier selfIdentifier = MorseIdentifier::fromUserId(m_core->selfId());
-
-    int selfHandle = ensureContact(selfIdentifier);
-    setSelfContact(selfHandle, selfIdentifier.toString());
-
     if (!saslIface_authCode.isNull()) {
         saslIface_authCode->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
     }
@@ -275,6 +275,21 @@ void MorseConnection::whenAuthenticated()
         m_passwordInfo = 0;
     }
 
+    setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
+    contactListIface->setContactListState(Tp::ContactListStateWaiting);
+}
+
+void MorseConnection::onSelfUserAvailable()
+{
+    qDebug() << Q_FUNC_INFO;
+
+    MorseIdentifier selfIdentifier = MorseIdentifier::fromUserId(m_core->selfId());
+
+    m_handles.insert(1, selfIdentifier);
+
+    int selfHandle = 1;
+    setSelfContact(selfHandle, selfIdentifier.toString());
+
     Tp::SimpleContactPresences presences;
     Tp::SimplePresence presence;
 
@@ -287,9 +302,6 @@ void MorseConnection::whenAuthenticated()
     presence.type = simplePresenceIface->statuses().value(m_wantedPresence).type;
     presences[selfHandle] = presence;
     simplePresenceIface->setPresences(presences);
-
-    setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
-    contactListIface->setContactListState(Tp::ContactListStateWaiting);
 }
 
 void MorseConnection::onAuthErrorReceived(TelegramNamespace::UnauthorizedError errorCode, const QString &errorMessage)

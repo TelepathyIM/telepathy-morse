@@ -70,6 +70,7 @@ signals:
 private slots:
     void whenConnectionStateChanged(TelegramNamespace::ConnectionState state);
     void whenAuthenticated();
+    void onSelfUserAvailable();
     void onAuthErrorReceived(TelegramNamespace::UnauthorizedError errorCode, const QString &errorMessage);
     void whenPhoneCodeRequired();
     void onPasswordInfoReceived(quint64 requestId);

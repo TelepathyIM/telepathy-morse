@@ -277,8 +277,10 @@ void MorseTextChannel::setMessageInboxRead(TelegramNamespace::Peer peer, quint32
         }
     }
 
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 8)
     Tp::DBusError error;
     acknowledgePendingMessages(tokens, &error);
+#endif
 }
 
 void MorseTextChannel::setMessageOutboxRead(TelegramNamespace::Peer peer, quint32 messageId)

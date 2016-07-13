@@ -585,7 +585,7 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
 
         if (targetHandleType == Tp::HandleTypeRoom) {
-            connect(this, SIGNAL(chatDetailsChanged(quint32,Tp::UIntList,QStringList)),
+            connect(this, SIGNAL(chatDetailsChanged(quint32,Tp::UIntList)),
                     textChannel.data(), SLOT(whenChatDetailsChanged(quint32,Tp::UIntList)));
 
             whenChatChanged(targetID.chatId());

@@ -550,9 +550,9 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
     }
 
     qDebug() << "MorseConnection::createChannel " << channelType
-             << " " << targetHandleType
-             << " " << targetHandle
-             << " " << request;
+             << targetHandleType
+             << targetHandle
+             << request;
 
     switch (targetHandleType) {
     case Tp::HandleTypeContact:

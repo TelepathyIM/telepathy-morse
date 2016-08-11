@@ -159,12 +159,7 @@ void MorseTextChannel::setMessageAction(const MorseIdentifier &identifier, Teleg
 
 void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &message, uint senderHandle)
 {
-    MorseIdentifier contactID;
-    if (m_targetHandleType == Tp::HandleTypeContact) {
-        contactID = m_targetID;
-    } else {
-        contactID = MorseIdentifier::fromUserInChatId(message.chatId, message.userId);
-    }
+    const MorseIdentifier senderID = MorseIdentifier::fromUserId(message.userId);
 
     Tp::MessagePartList body;
     Tp::MessagePart text;
@@ -210,19 +205,15 @@ void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &mes
     header[QLatin1String("message-token")] = QDBusVariant(token);
     header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
     header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
+    header[QLatin1String("message-sender")]    = QDBusVariant(senderHandle);
+    header[QLatin1String("message-sender-id")] = QDBusVariant(senderID.toString());
 
     if (message.flags & TelegramNamespace::MessageFlagOut) {
-        header[QLatin1String("message-sender")]    = QDBusVariant(m_selfHandle);
-        header[QLatin1String("message-sender-id")] = QDBusVariant(m_selfID.toString());
         partList << header << body;
         m_messagesIface->messageSent(partList, 0, token);
     } else {
         uint currentTimestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
-
         header[QLatin1String("message-received")]  = QDBusVariant(currentTimestamp);
-        header[QLatin1String("message-sender")]    = QDBusVariant(senderHandle);
-        header[QLatin1String("message-sender-id")] = QDBusVariant(contactID.toString());
-
         partList << header << body;
         addReceivedMessage(partList);
     }

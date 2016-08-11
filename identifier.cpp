@@ -81,15 +81,12 @@ QString MorseIdentifier::toString() const
 {
     QString result;
 
-    if (m_userId) {
-        result = c_userPrefix + QString::number(m_userId);
+    if (m_chatId) {
+        result = c_chatPrefix + QString::number(m_chatId);
     }
 
-    if (m_chatId) {
-        if (m_userId) {
-            result += QLatin1Char('_');
-        }
-        result += c_chatPrefix + QString::number(m_chatId);
+    if (m_userId) {
+        result = c_userPrefix + QString::number(m_userId);
     }
 
     Q_ASSERT(!result.isEmpty());

@@ -40,6 +40,7 @@ static const QString secretsDirPath = QLatin1String("/secrets/");
 #endif // INSECURE_SAVE
 
 static const QString c_onlineSimpleStatusKey = QLatin1String("available");
+static const QString c_saslMechanismTelepathyPassword = QLatin1String("X-TELEPATHY-PASSWORD");
 
 Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
 {
@@ -344,7 +345,8 @@ void MorseConnection::whenPhoneCodeRequired()
             = Tp::BaseChannelServerAuthenticationType::create(TP_QT_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
 
-    saslIface_authCode = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"),
+    saslIface_authCode = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList()
+                                                                            << c_saslMechanismTelepathyPassword,
                                                                             /* hasInitialData */ true,
                                                                             /* canTryAgain */ true,
                                                                             /* authorizationIdentity */ m_selfPhone,
@@ -382,7 +384,8 @@ void MorseConnection::onPasswordInfoReceived(quint64 requestId)
             = Tp::BaseChannelServerAuthenticationType::create(TP_QT_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
 
-    saslIface_password = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"),
+    saslIface_password = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList()
+                                                                            << c_saslMechanismTelepathyPassword,
                                                                             /* hasInitialData */ true,
                                                                             /* canTryAgain */ true,
                                                                             /* authorizationIdentity */ m_selfPhone,

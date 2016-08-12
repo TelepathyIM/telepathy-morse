@@ -432,6 +432,11 @@ void MorseConnection::startMechanismWithData_authCode(const QString &mechanism, 
 {
     qDebug() << Q_FUNC_INFO << mechanism << data;
 
+    if (!saslIface_authCode->availableMechanisms().contains(mechanism)) {
+        error->set(TP_QT_ERROR_NOT_IMPLEMENTED, QString(QLatin1String("Given SASL mechanism \"%1\" is not implemented")).arg(mechanism));
+        return;
+    }
+
     saslIface_authCode->setSaslStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
 
     m_core->signIn(m_selfPhone, QString::fromLatin1(data.constData()));
@@ -440,6 +445,11 @@ void MorseConnection::startMechanismWithData_authCode(const QString &mechanism, 
 void MorseConnection::startMechanismWithData_password(const QString &mechanism, const QByteArray &data, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << mechanism << data;
+
+    if (!saslIface_password->availableMechanisms().contains(mechanism)) {
+        error->set(TP_QT_ERROR_NOT_IMPLEMENTED, QString(QLatin1String("Given SASL mechanism \"%1\" is not implemented")).arg(mechanism));
+        return;
+    }
 
     saslIface_password->setSaslStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
 

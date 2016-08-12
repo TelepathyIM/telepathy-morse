@@ -21,7 +21,32 @@
 #endif
 
 static QtMessageHandler defaultMessageHandler = 0;
+
+#if TP_QT_VERSION < TP_QT_VERSION_CHECK(0, 9, 8)
+class FixedBaseDebug : public Tp::BaseDebug
+{
+    Q_OBJECT
+public slots:
+    bool registerObject(const QString &busName, Tp::DBusError *error = NULL)
+    {
+        if (isRegistered()) {
+            return true;
+        }
+
+        Tp::DBusError _error;
+        bool ret = Tp::DBusService::registerObject(busName, TP_QT_DEBUG_OBJECT_PATH, &_error);
+
+        if (!ret && error) {
+            error->set(_error.name(), _error.message());
+        }
+
+        return ret;
+    }
+};
+static QPointer<FixedBaseDebug> debugInterfacePtr;
+#else
 static QPointer<Tp::BaseDebug> debugInterfacePtr;
+#endif
 
 void debugViaDBusInterface(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
@@ -72,7 +97,12 @@ bool enableDebugInterface()
         return debugInterfacePtr->isRegistered();
     }
 
+#if TP_QT_VERSION < TP_QT_VERSION_CHECK(0, 9, 8)
+    debugInterfacePtr = new FixedBaseDebug();
+#else
     debugInterfacePtr = new Tp::BaseDebug();
+#endif
+
     debugInterfacePtr->setGetMessagesLimit(-1);
 
     if (!debugInterfacePtr->registerObject(TP_QT_CONNECTION_MANAGER_BUS_NAME_BASE + QLatin1String("morse"))) {
@@ -82,3 +112,7 @@ bool enableDebugInterface()
     defaultMessageHandler = qInstallMessageHandler(debugViaDBusInterface);
     return true;
 }
+
+#if TP_QT_VERSION < TP_QT_VERSION_CHECK(0, 9, 8)
+#include "debug.moc"
+#endif

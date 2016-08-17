@@ -32,7 +32,7 @@ MorseProtocol::MorseProtocol(const QDBusConnection &dbusConnection, const QStrin
                   << Tp::ProtocolParameter(QLatin1String("keepalive-interval"), QLatin1String("u"), Tp::ConnMgrParamFlagHasDefault, 15)
                   );
 
-    setRequestableChannelClasses(Tp::RequestableChannelClassSpecList() << Tp::RequestableChannelClassSpec::textChat());
+    setRequestableChannelClasses(MorseConnection::getRequestableChannelList());
 
     // callbacks
     setCreateConnectionCallback(memFun(this, &MorseProtocol::createConnection));

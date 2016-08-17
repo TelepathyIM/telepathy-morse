@@ -73,6 +73,34 @@ Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
     return specs;
 }
 
+Tp::RequestableChannelClassSpecList MorseConnection::getRequestableChannelList()
+{
+    Tp::RequestableChannelClassSpecList result;
+
+    /* Fill requestableChannelClasses */
+    Tp::RequestableChannelClass personalChat;
+    personalChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
+    personalChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeContact;
+    personalChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
+    personalChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
+    result << Tp::RequestableChannelClassSpec(personalChat);
+
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
+    Tp::RequestableChannelClass groupChat;
+    groupChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
+    groupChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeRoom;
+    groupChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
+    groupChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
+    result << Tp::RequestableChannelClassSpec(groupChat);
+
+    Tp::RequestableChannelClass chatList;
+    chatList.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST;
+    result << Tp::RequestableChannelClassSpec(chatList);
+#endif // TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
+
+    return result;
+}
+
 MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
     Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters),
     m_core(0),
@@ -125,27 +153,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     /* Connection.Interface.Requests */
     requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
-    /* Fill requestableChannelClasses */
-    Tp::RequestableChannelClass personalChat;
-    personalChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
-    personalChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeContact;
-    personalChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
-    personalChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
-    requestsIface->requestableChannelClasses << personalChat;
-
-#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
-    Tp::RequestableChannelClass groupChat;
-    groupChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
-    groupChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeRoom;
-    groupChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
-    groupChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
-    requestsIface->requestableChannelClasses << groupChat;
-
-    Tp::RequestableChannelClass chatList;
-    chatList.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST;
-    chatList.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeNone;
-    requestsIface->requestableChannelClasses << chatList;
-#endif
+    requestsIface->requestableChannelClasses = getRequestableChannelList().bareClasses();
 
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(requestsIface));
 

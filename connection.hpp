@@ -15,6 +15,8 @@
 #define MORSE_CONNECTION_HPP
 
 #include <TelepathyQt/BaseConnection>
+#include <TelepathyQt/RequestableChannelClassSpec>
+#include <TelepathyQt/RequestableChannelClassSpecList>
 
 #include <TelegramQt/TelegramNamespace>
 
@@ -32,6 +34,7 @@ public:
     ~MorseConnection();
 
     static Tp::SimpleStatusSpecMap getSimpleStatusSpecMap();
+    static Tp::RequestableChannelClassSpecList getRequestableChannelList();
 
     void doConnect(Tp::DBusError *error);
 

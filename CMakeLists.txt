@@ -20,7 +20,10 @@ endif()
 
 include(GNUInstallDirs)
 
-include_directories(${CMAKE_SOURCE_DIR})
+include_directories(
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}
+)
 
 add_definitions(-DQT_NO_CAST_FROM_ASCII)
 

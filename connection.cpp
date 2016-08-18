@@ -284,7 +284,7 @@ void MorseConnection::whenAuthenticated()
         m_passwordInfo = 0;
     }
 
-    setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
+    checkConnected();
     contactListIface->setContactListState(Tp::ContactListStateWaiting);
 }
 
@@ -311,6 +311,8 @@ void MorseConnection::onSelfUserAvailable()
     presence.type = simplePresenceIface->statuses().value(m_wantedPresence).type;
     presences[selfHandle] = presence;
     simplePresenceIface->setPresences(presences);
+
+    checkConnected();
 }
 
 void MorseConnection::onAuthErrorReceived(TelegramNamespace::UnauthorizedError errorCode, const QString &errorMessage)
@@ -1145,6 +1147,13 @@ bool MorseConnection::coreIsReady()
 bool MorseConnection::coreIsAuthenticated()
 {
     return m_core && (m_core->connectionState() >= TelegramNamespace::ConnectionStateAuthenticated);
+}
+
+void MorseConnection::checkConnected()
+{
+    if (coreIsAuthenticated() && !m_handles.value(selfHandle()).isNull()) {
+        setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
+    }
 }
 
 QByteArray MorseConnection::getSessionData(const QString &phone)

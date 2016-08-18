@@ -121,6 +121,8 @@ private:
     bool coreIsReady();
     bool coreIsAuthenticated();
 
+    void checkConnected();
+
     Tp::BaseConnectionContactsInterfacePtr contactsIface;
     Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr contactListIface;

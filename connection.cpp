@@ -15,6 +15,10 @@
 
 #include "textchannel.hpp"
 
+#if TP_QT_VERSION < TP_QT_VERSION_CHECK(0, 9, 8)
+#include "contactgroups.hpp"
+#endif
+
 #include <TelegramQt/CAppInformation>
 #include <TelegramQt/CTelegramCore>
 
@@ -150,6 +154,13 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     avatarsIface->setGetKnownAvatarTokensCallback(Tp::memFun(this, &MorseConnection::getKnownAvatarTokens));
     avatarsIface->setRequestAvatarsCallback(Tp::memFun(this, &MorseConnection::requestAvatars));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(avatarsIface));
+
+#if TP_QT_VERSION < TP_QT_VERSION_CHECK(0, 9, 8)
+    ConnectionContactGroupsInterfacePtr groupsIface = ConnectionContactGroupsInterface::create();
+#else
+    Tp::BaseConnectionContactGroupsInterfacePtr groupsIface = Tp::BaseConnectionContactGroupsInterface::create();
+#endif
+    plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(groupsIface));
 
     /* Connection.Interface.Requests */
     requestsIface = Tp::BaseConnectionRequestsInterface::create(this);

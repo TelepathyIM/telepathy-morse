@@ -776,7 +776,11 @@ QString MorseConnection::getAlias(uint handle)
 
 Tp::SimplePresence MorseConnection::getPresence(uint handle)
 {
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+    return *simplePresenceIface->getPresences(Tp::UIntList() << handle).constBegin();
+#else
     return simplePresenceIface->getPresences(Tp::UIntList() << handle).first();
+#endif
 }
 
 uint MorseConnection::setPresence(const QString &status, const QString &message, Tp::DBusError *error)

@@ -13,8 +13,13 @@
 
 #include "identifier.hpp"
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+static const QString c_userPrefix = QLatin1String("user");
+static const QString c_chatPrefix = QLatin1String("chat");
+#else
 static const QLatin1String c_userPrefix = QLatin1String("user");
 static const QLatin1String c_chatPrefix = QLatin1String("chat");
+#endif
 
 MorseIdentifier::MorseIdentifier() :
     m_userId(0),
@@ -98,17 +103,26 @@ MorseIdentifier MorseIdentifier::fromString(const QString &string)
 {
     MorseIdentifier id;
 
-    // Possible schemas: user1234, chat1234, user1234_chat1234
+    // Possible schemes: user1234, chat1234, user1234_chat1234
 
     int chatOffset = string.indexOf(c_chatPrefix);
 
+
     if (string.startsWith(c_userPrefix)) {
         int length = chatOffset < 0 ? -1 : chatOffset - c_userPrefix.size() - 1;
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+        id.m_userId = string.mid(c_userPrefix.size(), length).toUInt();
+    }
+
+    if (chatOffset >= 0) {
+        id.m_chatId = string.mid(c_chatPrefix.size() + chatOffset).toUInt();
+#else
         id.m_userId = string.midRef(c_userPrefix.size(), length).toUInt();
     }
 
     if (chatOffset >= 0) {
         id.m_chatId = string.midRef(c_chatPrefix.size() + chatOffset).toUInt();
+#endif
     }
 
     return id;

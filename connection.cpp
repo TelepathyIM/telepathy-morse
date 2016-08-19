@@ -665,9 +665,13 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
     Tp::ContactAttributesMap contactAttributes;
 
     foreach (const uint handle, handles) {
-        if (m_handles.contains(handle)){
+        if (m_handles.contains(handle)) {
             QVariantMap attributes;
             const MorseIdentifier identifier = m_handles.value(handle);
+            if (identifier.isNull()) {
+                qWarning() << Q_FUNC_INFO << "Handle is in map, but identifier is not valid";
+                continue;
+            }
             attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = identifier.toString();
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {

@@ -118,6 +118,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     contactsIface->setContactAttributeInterfaces(QStringList()
                                                  << TP_QT_IFACE_CONNECTION
                                                  << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST
+                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO
                                                  << TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE
                                                  << TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING
                                                  << TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS);
@@ -138,6 +139,25 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     contactListIface->setRequestSubscriptionCallback(Tp::memFun(this, &MorseConnection::requestSubscription));
     contactListIface->setRemoveContactsCallback(Tp::memFun(this, &MorseConnection::removeContacts));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactListIface));
+
+    /* Connection.Interface.ContactInfo */
+    contactInfoIface = Tp::BaseConnectionContactInfoInterface::create();
+
+    Tp::FieldSpec vcardSpecPhone;
+    Tp::FieldSpec vcardSpecNickname;
+    Tp::FieldSpec vcardSpecName;
+    vcardSpecPhone.name = QLatin1String("TEL");
+    vcardSpecNickname.name = QLatin1String("N");
+    vcardSpecName.name = QLatin1String("NICKNAME");
+    contactInfoIface->setSupportedFields(Tp::FieldSpecs()
+                                         << vcardSpecPhone
+                                         << vcardSpecNickname
+                                         << vcardSpecName
+                                         );
+    contactInfoIface->setContactInfoFlags(Tp::ContactInfoFlagPush);
+    contactInfoIface->setGetContactInfoCallback(Tp::memFun(this, &MorseConnection::getContactInfo));
+    contactInfoIface->setRequestContactInfoCallback(Tp::memFun(this, &MorseConnection::requestContactInfo));
+    plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactInfoIface));
 
     /* Connection.Interface.Aliasing */
     aliasingIface = Tp::BaseConnectionAliasingInterface::create();
@@ -674,6 +694,10 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_core->contactAvatarToken(identifier.userId()));
             }
 
+            if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO)) {
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO + QLatin1String("/info")] = QVariant::fromValue(getUserInfo(identifier.userId()));
+            }
+
             contactAttributes[handle] = attributes;
         }
     }
@@ -730,6 +754,92 @@ void MorseConnection::removeContacts(const Tp::UIntList &handles, Tp::DBusError 
     }
 
     m_core->deleteContacts(ids);
+}
+
+Tp::ContactInfoFieldList MorseConnection::requestContactInfo(uint handle, Tp::DBusError *error)
+{
+    qDebug() << Q_FUNC_INFO << handle;
+
+    if (!m_handles.contains(handle)) {
+        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle"));
+        return Tp::ContactInfoFieldList();
+    }
+    MorseIdentifier id = m_handles.value(handle);
+    if (id.isNull()) {
+        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid morse identifier"));
+        return Tp::ContactInfoFieldList();
+    }
+
+    return getUserInfo(id.userId());
+}
+
+Tp::ContactInfoFieldList MorseConnection::getUserInfo(const quint32 userId) const
+{
+    TelegramNamespace::UserInfo userInfo;
+    if (!m_core->getUserInfo(&userInfo, userId)) {
+        return Tp::ContactInfoFieldList();
+    }
+
+    Tp::ContactInfoFieldList contactInfo;
+    if (!userInfo.userName().isEmpty()) {
+        Tp::ContactInfoField contactInfoField;
+        contactInfoField.fieldName = QLatin1String("nickname");
+        contactInfoField.fieldValue.append(userInfo.userName());
+        contactInfo << contactInfoField;
+    }
+    if (!userInfo.phone().isEmpty()) {
+        Tp::ContactInfoField contactInfoField;
+        contactInfoField.fieldName = QLatin1String("tel");
+        QString phone = userInfo.phone();
+        if (!phone.startsWith(QLatin1Char('+'))) {
+            phone.prepend(QLatin1Char('+'));
+        }
+        contactInfoField.parameters.append(QLatin1String("type=text"));
+        contactInfoField.parameters.append(QLatin1String("type=cell"));
+        contactInfoField.fieldValue.append(phone);
+        contactInfo << contactInfoField;
+    }
+
+    QString name = userInfo.firstName() + QLatin1Char(' ') + userInfo.lastName();
+    name = name.simplified();
+    if (!name.isEmpty()) {
+        Tp::ContactInfoField contactInfoField;
+        contactInfoField.fieldName = QLatin1String("fn"); // Formatted name
+        contactInfoField.fieldValue.append(name);
+        contactInfo << contactInfoField;
+    }
+    {
+        Tp::ContactInfoField contactInfoField;
+        contactInfoField.fieldName = QLatin1String("n");
+        contactInfoField.fieldValue.append(userInfo.lastName()); // "Surname"
+        contactInfoField.fieldValue.append(userInfo.firstName()); // "Given"
+        contactInfoField.fieldValue.append(QString()); // Additional
+        contactInfoField.fieldValue.append(QString()); // Prefix
+        contactInfoField.fieldValue.append(QString()); // Suffix
+        contactInfo << contactInfoField;
+    }
+
+    return contactInfo;
+}
+
+Tp::ContactInfoMap MorseConnection::getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error)
+{
+    qDebug() << Q_FUNC_INFO << contacts;
+
+    if (contacts.isEmpty()) {
+        return Tp::ContactInfoMap();
+    }
+
+    Tp::ContactInfoMap result;
+
+    foreach (uint handle, contacts) {
+        const Tp::ContactInfoFieldList contactInfo = requestContactInfo(handle, error);
+        if (!contactInfo.isEmpty()) {
+            result.insert(handle, contactInfo);
+        }
+    }
+
+    return result;
 }
 
 Tp::AliasMap MorseConnection::getAliases(const Tp::UIntList &handles, Tp::DBusError *error)

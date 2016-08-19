@@ -49,6 +49,10 @@ public:
     void requestSubscription(const Tp::UIntList &handles, const QString &message, Tp::DBusError *error);
     void removeContacts(const Tp::UIntList &handles, Tp::DBusError *error);
 
+    Tp::ContactInfoFieldList requestContactInfo(uint handle, Tp::DBusError *error);
+    Tp::ContactInfoFieldList getUserInfo(const quint32 userId) const;
+    Tp::ContactInfoMap getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error);
+
     Tp::AliasMap getAliases(const Tp::UIntList &handles, Tp::DBusError *error = 0);
     void setAliases(const Tp::AliasMap &aliases, Tp::DBusError *error);
 
@@ -124,6 +128,7 @@ private:
     Tp::BaseConnectionContactsInterfacePtr contactsIface;
     Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr contactListIface;
+    Tp::BaseConnectionContactInfoInterfacePtr contactInfoIface;
     Tp::BaseConnectionAliasingInterfacePtr aliasingIface;
     Tp::BaseConnectionAvatarsInterfacePtr avatarsIface;
     Tp::BaseConnectionAddressingInterfacePtr addressingIface;

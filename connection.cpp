@@ -480,23 +480,6 @@ void MorseConnection::startMechanismWithData_password(const QString &mechanism, 
     m_core->tryPassword(m_passwordInfo->currentSalt(), data);
 }
 
-Tp::ContactInfoMap MorseConnection::getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error)
-{
-    qDebug() << Q_FUNC_INFO << contacts;
-
-    Tp::ContactInfoMap result;
-    Tp::ContactInfoFieldList contactInfo;
-    Tp::ContactInfoField contactInfoField;
-    contactInfoField.fieldName = QLatin1String("fn");
-    contactInfoField.fieldValue.append(QLatin1String("first last"));
-
-    contactInfo.append(contactInfoField);
-
-    result.insert(contacts.first(), contactInfo);
-
-    return result;
-}
-
 void MorseConnection::whenConnectionReady()
 {
     qDebug() << Q_FUNC_INFO;

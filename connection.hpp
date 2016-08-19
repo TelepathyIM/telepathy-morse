@@ -108,8 +108,6 @@ private:
     void startMechanismWithData_authCode(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
     void startMechanismWithData_password(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
 
-    Tp::ContactInfoMap getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error);
-
     /* Connection.Interface.Avatars */
     Tp::AvatarTokenMap getKnownAvatarTokens(const Tp::UIntList &contacts, Tp::DBusError *error);
     void requestAvatars(const Tp::UIntList &contacts, Tp::DBusError *error);

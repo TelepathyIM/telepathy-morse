@@ -146,9 +146,9 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     Tp::FieldSpec vcardSpecPhone;
     Tp::FieldSpec vcardSpecNickname;
     Tp::FieldSpec vcardSpecName;
-    vcardSpecPhone.name = QLatin1String("TEL");
-    vcardSpecNickname.name = QLatin1String("N");
-    vcardSpecName.name = QLatin1String("NICKNAME");
+    vcardSpecPhone.name = QLatin1String("tel");
+    vcardSpecNickname.name = QLatin1String("n");
+    vcardSpecName.name = QLatin1String("nickname");
     contactInfoIface->setSupportedFields(Tp::FieldSpecs()
                                          << vcardSpecPhone
                                          << vcardSpecNickname

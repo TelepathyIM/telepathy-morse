@@ -60,6 +60,7 @@ public:
     virtual ~MorseTextChannel();
 
     QString sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
+    void getMessagesCallback(const QVariantMap &filter, Tp::DBusError *error);
 
     void messageAcknowledgedCallback(const QString &messageId);
 
@@ -95,6 +96,7 @@ private:
 
     Tp::BaseChannelTextTypePtr m_channelTextType;
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;
+    Tp::BaseChannelMessageArchiveInterfacePtr m_messageArchiveIface;
     Tp::BaseChannelChatStateInterfacePtr m_chatStateIface;
     Tp::BaseChannelGroupInterfacePtr m_groupIface;
     Tp::BaseChannelRoomInterfacePtr m_roomIface;

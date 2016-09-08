@@ -60,6 +60,10 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_messagesIface));
     m_messagesIface->setSendMessageCallback(Tp::memFun(this, &MorseTextChannel::sendMessageCallback));
 
+    m_messageArchiveIface = Tp::BaseChannelMessageArchiveInterface::create();
+    m_messageArchiveIface->setGetMessagesCallback(Tp::memFun(this, &MorseTextChannel::getMessagesCallback));
+    baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_messageArchiveIface));
+
     m_chatStateIface = Tp::BaseChannelChatStateInterface::create();
     m_chatStateIface->setSetChatStateCallback(Tp::memFun(this, &MorseTextChannel::setChatState));
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_chatStateIface));
@@ -136,6 +140,17 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
     m_sentMessageIds.append(SentMessageId(tmpId));
 
     return QString::number(tmpId);
+}
+
+void MorseTextChannel::getMessagesCallback(const QVariantMap &filter, Tp::DBusError *error)
+{
+    qDebug() << Q_FUNC_INFO << filter << m_targetID.toString();
+    Q_UNUSED(error)
+
+    const quint32 offset = filter.value(QLatin1String("offset"), 0).toUInt();
+    const quint32 limit = filter.value(QLatin1String("limit"), 30).toUInt();
+
+    m_core->requestHistory(m_targetID.toPeer(), offset, limit);
 }
 
 void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)

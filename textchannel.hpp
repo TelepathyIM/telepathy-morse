@@ -60,7 +60,7 @@ public slots:
     void whenContactChatStateComposingChanged(quint32 userId, TelegramNamespace::MessageAction action);
     void whenContactRoomStateComposingChanged(quint32 chatId, quint32 userId, TelegramNamespace::MessageAction action);
     void setMessageAction(const MorseIdentifier &identifier, TelegramNamespace::MessageAction action);
-    void whenMessageReceived(const TelegramNamespace::Message &message, uint senderHandle);
+    void whenMessageReceived(const TelegramNamespace::Message &message, uint contactHandle);
     void updateChatParticipants(const Tp::UIntList &handles);
 
     void whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);

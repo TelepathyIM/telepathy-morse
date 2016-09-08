@@ -157,10 +157,8 @@ void MorseTextChannel::setMessageAction(const MorseIdentifier &identifier, Teleg
     }
 }
 
-void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &message, uint senderHandle)
+void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &message, uint contactHandle)
 {
-    const MorseIdentifier senderID = MorseIdentifier::fromUserId(message.userId);
-
     Tp::MessagePartList body;
     Tp::MessagePart text;
     text[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
@@ -201,12 +199,19 @@ void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &mes
     Tp::MessagePartList partList;
     Tp::MessagePart header;
 
+    const MorseIdentifier contactID = MorseIdentifier::fromUserId(message.userId);
     const QString token = QString::number(message.id);
     header[QLatin1String("message-token")] = QDBusVariant(token);
     header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
     header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
-    header[QLatin1String("message-sender")]    = QDBusVariant(senderHandle);
-    header[QLatin1String("message-sender-id")] = QDBusVariant(senderID.toString());
+
+    if (message.flags & TelegramNamespace::MessageFlagOut) {
+        header[QLatin1String("message-sender")]    = QDBusVariant(m_selfHandle);
+        header[QLatin1String("message-sender-id")] = QDBusVariant(m_selfID.toString());
+    } else {
+        header[QLatin1String("message-sender")]    = QDBusVariant(contactHandle);
+        header[QLatin1String("message-sender-id")] = QDBusVariant(contactID.toString());
+    }
 
     if (message.flags & TelegramNamespace::MessageFlagOut) {
         partList << header << body;

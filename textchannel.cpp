@@ -213,15 +213,23 @@ void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &mes
         header[QLatin1String("message-sender-id")] = QDBusVariant(contactID.toString());
     }
 
-    if (message.flags & TelegramNamespace::MessageFlagOut) {
-        partList << header << body;
-        m_messagesIface->messageSent(partList, 0, token);
+    // messageReceived signal is always emitted before maxMessageId update, so
+    // the message is a new one, if its id is bigger, than the last known message id,
+    // This works for both, In and Out messages.
+    const bool scrollback = message.id <= m_core->maxMessageId();
+
+    if (scrollback) {
+        header[QLatin1String("scrollback")] = QDBusVariant(true);
+        // Telegram has no timestamp for message read, only sent.
+        // Fallback to the message sent timestamp to keep received messages in chronological order.
+        // Alternatively, client can sort messages in order of message-sent.
+        header[QLatin1String("message-received")]  = QDBusVariant(message.timestamp);
     } else {
         uint currentTimestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
         header[QLatin1String("message-received")]  = QDBusVariant(currentTimestamp);
-        partList << header << body;
-        addReceivedMessage(partList);
     }
+    partList << header << body;
+    addReceivedMessage(partList);
 }
 
 void MorseTextChannel::updateChatParticipants(const Tp::UIntList &handles)

@@ -636,15 +636,19 @@ Tp::UIntList MorseConnection::requestHandles(uint handleType, const QStringList 
 {
     qDebug() << Q_FUNC_INFO << identifiers;
 
-    Tp::UIntList result;
-
     if (handleType != Tp::HandleTypeContact) {
         error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("MorseConnection::requestHandles - Handle Type unknown"));
-        return result;
+        return Tp::UIntList();
     }
 
+    Tp::UIntList result;
     foreach(const QString &identify, identifiers) {
-        result.append(ensureContact(MorseIdentifier::fromString(identify)));
+        const MorseIdentifier id = MorseIdentifier::fromString(identify);
+        if (id.isNull()) {
+            error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("MorseConnection::requestHandles - invalid identifier"));
+            return Tp::UIntList();
+        }
+        result.append(ensureContact(id));
     }
 
     return result;

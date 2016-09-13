@@ -264,7 +264,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 
     if (sessionData.isEmpty()) {
         qDebug() << "init connection...";
-        m_core->initConnection(QVector<TelegramNamespace::DcOption>(1, TelegramNamespace::DcOption(QLatin1String("149.154.175.50"), 443)));
+        m_core->initConnection();
     } else {
         qDebug() << "restore connection...";
         m_core->restoreConnection(sessionData);
@@ -366,7 +366,7 @@ void MorseConnection::onAuthErrorReceived(TelegramNamespace::UnauthorizedError e
         setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonAuthenticationFailed);
         ++m_authReconnectionsCount;
         m_core->closeConnection();
-        m_core->initConnection(QVector<TelegramNamespace::DcOption>(1, TelegramNamespace::DcOption(QLatin1String("149.154.175.50"), 443)));
+        m_core->initConnection();
     } else {
         qDebug() << "MorseConnection::whenAuthErrorReceived(): Auth error received. Can not connect (tried" << m_authReconnectionsCount << " times).";
         setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonAuthenticationFailed);

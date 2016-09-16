@@ -51,7 +51,24 @@ void debugViaDBusInterface(QtMsgType type, const QMessageLogContext &context, co
 {
     if (!debugInterfacePtr.isNull()) {
         QString domain(QLatin1String("%1:%2, %3"));
-        domain = domain.arg(QString::fromLatin1(context.file)).arg(context.line).arg(QString::fromLatin1(context.function));
+        QByteArray fileName = QByteArray::fromRawData(context.file, qstrlen(context.file));
+
+        static const char *namesToWrap[] = {
+            "morse",
+            "telepathy-qt"
+        };
+
+        for (int i = 0; i < 2; ++i) {
+            int index = fileName.indexOf(namesToWrap[i]);
+            if (index < 0) {
+                continue;
+            }
+
+            fileName = fileName.mid(index);
+            break;
+        }
+
+        domain = domain.arg(QString::fromLocal8Bit(fileName)).arg(context.line).arg(QString::fromLatin1(context.function));
         switch (type) {
         case QtDebugMsg:
             debugInterfacePtr->newDebugMessage(domain, Tp::DebugLevelDebug, msg);

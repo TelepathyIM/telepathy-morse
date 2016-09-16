@@ -69,21 +69,29 @@ void debugViaDBusInterface(QtMsgType type, const QMessageLogContext &context, co
         }
 
         domain = domain.arg(QString::fromLocal8Bit(fileName)).arg(context.line).arg(QString::fromLatin1(context.function));
+        QString message = msg;
+        if (message.startsWith(QLatin1String(context.function))) {
+            message = message.mid(qstrlen(context.function));
+            if (message.startsWith(QLatin1Char(' '))) {
+                message.remove(0, 1);
+            }
+        }
+
         switch (type) {
         case QtDebugMsg:
-            debugInterfacePtr->newDebugMessage(domain, Tp::DebugLevelDebug, msg);
+            debugInterfacePtr->newDebugMessage(domain, Tp::DebugLevelDebug, message);
             break;
         case QtInfoMsg:
-            debugInterfacePtr->newDebugMessage(domain, Tp::DebugLevelInfo, msg);
+            debugInterfacePtr->newDebugMessage(domain, Tp::DebugLevelInfo, message);
             break;
         case QtWarningMsg:
-            debugInterfacePtr->newDebugMessage(domain, Tp::DebugLevelWarning, msg);
+            debugInterfacePtr->newDebugMessage(domain, Tp::DebugLevelWarning, message);
             break;
         case QtCriticalMsg:
-            debugInterfacePtr->newDebugMessage(domain, Tp::DebugLevelCritical, msg);
+            debugInterfacePtr->newDebugMessage(domain, Tp::DebugLevelCritical, message);
             break;
         case QtFatalMsg:
-            debugInterfacePtr->newDebugMessage(domain, Tp::DebugLevelError, msg);
+            debugInterfacePtr->newDebugMessage(domain, Tp::DebugLevelError, message);
             break;
         }
     }

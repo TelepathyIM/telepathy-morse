@@ -1,0 +1,27 @@
+telepathy-morse 0.1.0 (2016-09-16)
+=================================
+
+The first release
+
+Features:
+ * Contact list with first/last names
+ * Contact avatars
+ * Personal messaging (one to one, no secret chat yet)
+ * Basic group chat (unable to create a group, Telegram channels are not implemented yet)
+ * User typing events
+ * Two-step verification
+ * Full message delivery status support
+ * Own presence (online, offline, hidden)
+ * Loading unread messages on connect
+ * DBus activation
+ * Sessions (Means that you don't have to get confirmation code again and again)
+ * Restoring connection on network problem
+ * Supported incoming multimedia messages:
+   - Geopoint (text/plain URI/RFC 5870, application/geo+json)
+   - Stickers (text/plain with Unicode alternative)
+
+Requirements:
+ * CMake-2.8.12+ (required by TelepathyQt)
+ * Qt4 or Qt5
+ * TelepathyQt-0.9.7
+ * TelegramQt-0.1.0

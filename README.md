@@ -9,29 +9,29 @@ Features
 
 * Contact list with first/last names
 * Contact avatars
-* Contact management (you can add/delete contact by its phone number)
-* Personal messaging (one to one)
+* Personal messaging (one to one, no secret chat yet)
+* Basic group chat (unable to create a group, Telegram channels are not implemented yet)
 * User typing events
-* Message acknowledgment
+* Two-step verification
+* Full message delivery status support
 * Own presence (online, offline, hidden)
 * Loading unread messages on connect
 * DBus activation
 * Sessions (Means that you don't have to get confirmation code again and again)
 * Restoring connection on network problem
-
-Experimental features:
-* Group chat (Enabled for TelepathyQt-0.9.7+)
+* Supported incoming multimedia messages:
+  - Geopoint (text/plain URI/RFC 5870, application/geo+json)
+  - Stickers (text/plain with Unicode alternative)
 
 Requirements
 ============
 
 * CMake-2.8.12+ (required by TelepathyQt)
 * Qt4 or Qt5
-* TelepathyQt-0.9.6+
-* TelegramQt
+* TelepathyQt-0.9.7
+* TelegramQt-0.1.0
 
-Note: TelegramQt is not released yet. You can download (clone) it from https://github.com/Kaffeine/telegram-qt.git
-
+Note: TelegramQt is available at https://github.com/Kaffeine/telegram-qt
 Note: In order to use Morse, you need to have a complementary Telepathy Client application, such as KDE-Telepathy or Empathy.
 
 Installation
@@ -41,7 +41,7 @@ Installation
 
 or
 
-    tar -xf telepathy-morse-0.1.0.tar.bz2
+    tar -xf telepathy-morse-0.1.0.tar.gz
 
     mkdir morse-build
     cd morse-build
@@ -61,12 +61,14 @@ Known issues
 
 * Initial low-level encryption sometimes generates bad random values, which rarely can leads to “connection doesn’t work” issue.
 * Unable to send long messages (Missed TelegramQt gzip packing implementation; limit is about 400 characters; telegram protocol limitation is 4095 characters).
-* Authentication doesn't work on the Sailfish OS (show-stopper).
+* Authentication doesn't work on the Sailfish OS. It is possible to copy an authorization key from your pc to the device, the directory is ~/.cache/telepathy-morse/secrets.
 
 License
 =======
 
-This application is free software; you can redistribute it and/or modify it
-under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation; either version 2.1 of the License,
-or (at your option) any later version.
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+See COPYNG for details.

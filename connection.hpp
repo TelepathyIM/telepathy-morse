@@ -112,7 +112,6 @@ private:
 
     void updateContactsStatus(const QVector<MorseIdentifier> &identifiers);
     void updateSelfContactState(Tp::ConnectionStatus status);
-    void setSubscriptionState(const QVector<uint> &handles, uint state);
     void setSubscriptionState(const QVector<MorseIdentifier> &identifiers, const QList<uint> &handles, uint state);
 
     void startMechanismWithData_authCode(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);

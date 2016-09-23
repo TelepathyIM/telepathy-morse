@@ -1041,11 +1041,6 @@ void MorseConnection::updateSelfContactState(Tp::ConnectionStatus status)
     simplePresenceIface->setPresences(newPresences);
 }
 
-void MorseConnection::setSubscriptionState(const QVector<uint> &handles, uint state)
-{
-
-}
-
 void MorseConnection::setSubscriptionState(const QVector<MorseIdentifier> &identifiers, const QList<uint> &handles, uint state)
 {
     qDebug() << Q_FUNC_INFO;

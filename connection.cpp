@@ -1125,7 +1125,7 @@ void MorseConnection::whenContactListChanged()
 //    Tp::HandleIdentifierMap identifiers;
 //    Tp::HandleIdentifierMap removals;
 
-    QVector<uint> handles;
+    QList<uint> handles;
     QVector<MorseIdentifier> identifiers;
     handles.reserve(ids.count());
     identifiers.reserve(ids.count());
@@ -1135,7 +1135,7 @@ void MorseConnection::whenContactListChanged()
         handles.append(ensureContact(identifiers.last()));
     }
 
-    setSubscriptionState(handles, Tp::SubscriptionStateYes);
+    setSubscriptionState(identifiers, handles, Tp::SubscriptionStateYes);
     updateContactsStatus(identifiers);
 
     contactListIface->setContactListState(Tp::ContactListStateSuccess);

@@ -232,6 +232,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     m_core->setPingInterval(m_keepaliveInterval * 1000);
     m_core->setAppInformation(&appInfo);
     m_core->setMessageReceivingFilter(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagRead);
+#ifndef TELEGRAMQT_VERSION
     m_core->setAcceptableMessageTypes(
                     TelegramNamespace::MessageTypeText |
                     TelegramNamespace::MessageTypePhoto |
@@ -240,6 +241,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
                     TelegramNamespace::MessageTypeContact |
                     TelegramNamespace::MessageTypeDocument |
                     TelegramNamespace::MessageTypeGeo );
+#endif
 
     setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonNoneSpecified);
 

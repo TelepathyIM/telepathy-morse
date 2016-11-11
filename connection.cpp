@@ -21,7 +21,9 @@
 
 #include "textchannel.hpp"
 
-#if TP_QT_VERSION < TP_QT_VERSION_CHECK(0, 9, 8)
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 8)
+#include "contactsearchchannel.hpp"
+#else
 #include "contactgroups.hpp"
 #endif
 
@@ -107,6 +109,15 @@ Tp::RequestableChannelClassSpecList MorseConnection::getRequestableChannelList()
     chatList.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST;
     result << Tp::RequestableChannelClassSpec(chatList);
 #endif // ENABLE_GROUP_CHAT
+
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 8)
+    Tp::RequestableChannelClass contactSearch;
+    contactSearch.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_CONTACT_SEARCH;
+    contactSearch.fixedProperties[TP_QT_IFACE_CHANNEL_TYPE_CONTACT_SEARCH + QLatin1String(".AvailableSearchKeys")] = QLatin1Literal("");
+    contactSearch.fixedProperties[TP_QT_IFACE_CHANNEL_TYPE_CONTACT_SEARCH + QLatin1String(".Server")] = QLatin1Literal("");
+    contactSearch.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_CONTACT_SEARCH + QLatin1String(".Limit"));
+    result << Tp::RequestableChannelClassSpec(contactSearch);
+#endif
 
     return result;
 }
@@ -561,6 +572,8 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST) {
         return createRoomListChannel();
+    } else if (channelType == TP_QT_IFACE_CHANNEL_TYPE_CONTACT_SEARCH) {
+        return createContactSearchChannel(request);
     }
 
     uint targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
@@ -1231,6 +1244,16 @@ Tp::BaseChannelPtr MorseConnection::createRoomListChannel()
     roomListChannel->setListRoomsCallback(Tp::memFun(this, &MorseConnection::roomListStartListing));
     roomListChannel->setStopListingCallback(Tp::memFun(this, &MorseConnection::roomListStopListing));
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(roomListChannel));
+
+    return baseChannel;
+}
+
+Tp::BaseChannelPtr MorseConnection::createContactSearchChannel(const QVariantMap &request)
+{
+    qDebug() << Q_FUNC_INFO;
+    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, TP_QT_IFACE_CHANNEL_TYPE_CONTACT_SEARCH);
+    Tp::BaseChannelContactSearchTypePtr contactSearchChannel = MorseContactSearchChannel::create(m_core, request);
+    baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(contactSearchChannel));
 
     return baseChannel;
 }

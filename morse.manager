@@ -28,3 +28,7 @@ allowed=org.freedesktop.Telepathy.Channel.TargetHandle;org.freedesktop.Telepathy
 org.freedesktop.Telepathy.Channel.ChannelType s=org.freedesktop.Telepathy.Channel.Type.RoomList
 org.freedesktop.Telepathy.Channel.TargetHandleType u=0
 allowed=org.freedesktop.Telepathy.Channel.Type.RoomList.Server;
+
+[contactsearch]
+org.freedesktop.Telepathy.Channel.ChannelType s=org.freedesktop.Telepathy.Channel.Type.ContactSearch
+allowed=org.freedesktop.Telepathy.Channel.Type.ContactSearch.Limit;

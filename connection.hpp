@@ -100,6 +100,7 @@ private slots:
 
 protected:
     Tp::BaseChannelPtr createRoomListChannel();
+    Tp::BaseChannelPtr createContactSearchChannel(const QVariantMap &request);
 
 private:
     static QByteArray getSessionData(const QString &phone);

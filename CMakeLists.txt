@@ -71,6 +71,11 @@ if (USE_BUNDLED_GROUPS_IFACE)
         contactgroups.cpp
         contactgroups.hpp
     )
+else()
+    list(APPEND morse_SOURCES
+        contactsearchchannel.cpp
+        contactsearchchannel.hpp
+    )
 endif()
 
 add_executable(telepathy-morse ${morse_SOURCES})

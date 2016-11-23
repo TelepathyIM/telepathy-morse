@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 2.8)
 if (USE_QT4)
     find_package(TelepathyQt4 0.9.7 REQUIRED)
     find_package(TelepathyQt4Service 0.9.7 REQUIRED)
+    set(TELEPATHY_QT_VERSION ${TELEPATHY_QT4_VERSION})
 
     find_package(TelegramQt4 REQUIRED)
 
@@ -16,6 +17,7 @@ if (USE_QT4)
 else()
     find_package(TelepathyQt5 0.9.7 REQUIRED)
     find_package(TelepathyQt5Service 0.9.7 REQUIRED)
+    set(TELEPATHY_QT_VERSION ${TELEPATHY_QT5_VERSION})
 
     find_package(TelegramQt5 REQUIRED)
 

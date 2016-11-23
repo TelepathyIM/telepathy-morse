@@ -29,16 +29,10 @@ include_directories(
 
 add_definitions(-DQT_NO_CAST_FROM_ASCII)
 
-if (TELEPATHY_QT_VERSION VERSION_LESS "0.9.8")
-    set(USE_BUNDLED_GROUPS_IFACE TRUE)
-endif()
-
 set(morse_SOURCES
     main.cpp
     connection.cpp
     connection.hpp
-    debug.cpp
-    debug.hpp
     identifier.cpp
     identifier.hpp
     protocol.cpp
@@ -46,6 +40,31 @@ set(morse_SOURCES
     textchannel.cpp
     textchannel.hpp
 )
+
+if (NOT TELEPATHY_QT_VERSION VERSION_LESS "0.9.7")
+    set(ENABLE_DEBUG_IFACE TRUE)
+endif()
+
+if (NOT TELEPATHY_QT_VERSION VERSION_LESS "0.9.7")
+    set(ENABLE_GROUP_CHAT TRUE)
+endif()
+
+if (ENABLE_DEBUG_IFACE)
+    add_definitions(-DENABLE_DEBUG_IFACE)
+    list(APPEND morse_SOURCES
+        debug.cpp
+        debug.hpp
+    )
+endif()
+
+if (ENABLE_GROUP_CHAT)
+    add_definitions(-DENABLE_GROUP_CHAT)
+
+    if (TELEPATHY_QT_VERSION VERSION_LESS "0.9.8")
+        add_definitions(-DUSE_BUNDLED_GROUPS_IFACE)
+        set(USE_BUNDLED_GROUPS_IFACE TRUE)
+    endif()
+endif()
 
 if (USE_BUNDLED_GROUPS_IFACE)
     list(APPEND morse_SOURCES

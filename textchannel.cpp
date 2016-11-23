@@ -68,6 +68,7 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
         connect(m_core.data(), SIGNAL(contactMessageActionChanged(quint32,TelegramNamespace::MessageAction)),
                 SLOT(whenContactChatStateComposingChanged(quint32,TelegramNamespace::MessageAction)));
     } else if (m_targetHandleType == Tp::HandleTypeRoom) {
+#ifdef ENABLE_GROUP_CHAT
         Tp::ChannelGroupFlags groupFlags = Tp::ChannelGroupFlagProperties;
 
         // Permissions:
@@ -99,6 +100,7 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_roomConfigIface));
         connect(m_core.data(), SIGNAL(contactChatMessageActionChanged(quint32,quint32,TelegramNamespace::MessageAction)),
                 SLOT(whenContactRoomStateComposingChanged(quint32,quint32,TelegramNamespace::MessageAction)));
+#endif
     }
 
     connect(m_core.data(), SIGNAL(messageReadInbox(TelegramNamespace::Peer,quint32)),
@@ -240,7 +242,11 @@ void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &mes
 
 void MorseTextChannel::updateChatParticipants(const Tp::UIntList &handles)
 {
+#ifdef ENABLE_GROUP_CHAT
     m_groupIface->setMembers(handles, /* details */ QVariantMap());
+#else
+    Q_UNUSED(handles)
+#endif
 }
 
 void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles)

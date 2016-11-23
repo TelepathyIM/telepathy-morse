@@ -95,7 +95,7 @@ Tp::RequestableChannelClassSpecList MorseConnection::getRequestableChannelList()
     personalChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
     result << Tp::RequestableChannelClassSpec(personalChat);
 
-#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
+#ifdef ENABLE_GROUP_CHAT
     Tp::RequestableChannelClass groupChat;
     groupChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
     groupChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeRoom;
@@ -106,7 +106,7 @@ Tp::RequestableChannelClassSpecList MorseConnection::getRequestableChannelList()
     Tp::RequestableChannelClass chatList;
     chatList.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST;
     result << Tp::RequestableChannelClassSpec(chatList);
-#endif // TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 7)
+#endif // ENABLE_GROUP_CHAT
 
     return result;
 }
@@ -181,12 +181,14 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     avatarsIface->setRequestAvatarsCallback(Tp::memFun(this, &MorseConnection::requestAvatars));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(avatarsIface));
 
-#if TP_QT_VERSION < TP_QT_VERSION_CHECK(0, 9, 8)
+#ifdef ENABLE_GROUP_CHAT
+# ifdef USE_BUNDLED_GROUPS_IFACE
     ConnectionContactGroupsInterfacePtr groupsIface = ConnectionContactGroupsInterface::create();
-#else
+# else
     Tp::BaseConnectionContactGroupsInterfacePtr groupsIface = Tp::BaseConnectionContactGroupsInterface::create();
-#endif
+# endif
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(groupsIface));
+#endif
 
     /* Connection.Interface.Requests */
     requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
@@ -601,7 +603,9 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
 
     switch (targetHandleType) {
     case Tp::HandleTypeContact:
+#ifdef ENABLE_GROUP_CHAT
     case Tp::HandleTypeRoom:
+#endif
         break;
     default:
         if (error) {

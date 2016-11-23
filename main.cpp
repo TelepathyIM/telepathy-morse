@@ -25,7 +25,9 @@
 
 #include "protocol.hpp"
 
+#ifdef ENABLE_DEBUG_IFACE
 #include "debug.hpp"
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -35,7 +37,9 @@ int main(int argc, char *argv[])
     Tp::registerTypes();
     Tp::enableDebug(true);
     Tp::enableWarnings(true);
+#ifdef ENABLE_DEBUG_IFACE
     enableDebugInterface();
+#endif
 
     Tp::BaseProtocolPtr proto = Tp::BaseProtocol::create<MorseProtocol>(QLatin1String("telegram"));
     Tp::BaseConnectionManagerPtr cm = Tp::BaseConnectionManager::create(QLatin1String("morse"));

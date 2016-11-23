@@ -10,10 +10,6 @@ if (USE_QT4)
     find_package(TelegramQt4 REQUIRED)
 
     find_package(Qt4 4.6.0 REQUIRED QtCore QtNetwork)
-
-    if (TELEPATHY_QT4_VERSION VERSION_LESS "0.9.8")
-        set(USE_BUNDLED_GROUPS_IFACE TRUE)
-    endif()
 else()
     find_package(TelepathyQt5 0.9.7 REQUIRED)
     find_package(TelepathyQt5Service 0.9.7 REQUIRED)
@@ -22,10 +18,6 @@ else()
     find_package(TelegramQt5 REQUIRED)
 
     find_package(Qt5 REQUIRED COMPONENTS Core DBus Xml Network)
-
-    if (TELEPATHY_QT5_VERSION VERSION_LESS "0.9.8")
-        set(USE_BUNDLED_GROUPS_IFACE TRUE)
-    endif()
 endif()
 
 include(GNUInstallDirs)
@@ -36,6 +28,10 @@ include_directories(
 )
 
 add_definitions(-DQT_NO_CAST_FROM_ASCII)
+
+if (TELEPATHY_QT_VERSION VERSION_LESS "0.9.8")
+    set(USE_BUNDLED_GROUPS_IFACE TRUE)
+endif()
 
 set(morse_SOURCES
     main.cpp

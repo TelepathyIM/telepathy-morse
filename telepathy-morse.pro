@@ -24,6 +24,7 @@ HEADERS = \
     textchannel.hpp
 
 OTHER_FILES += CMakeLists.txt
+OTHER_FILES += rpm/telepathy-morse.spec
 
 # Installation directories
 isEmpty(INSTALL_PREFIX) {

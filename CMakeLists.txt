@@ -2,8 +2,6 @@ project(telepathy-morse)
 
 cmake_minimum_required(VERSION 2.8)
 
-message("Warning: If TelepathyQt version < 0.9.7, then group chat support will be disabled.")
-
 if (USE_QT4)
     find_package(TelepathyQt4 0.9.6 REQUIRED)
     find_package(TelepathyQt4Service 0.9.6 REQUIRED)
@@ -43,12 +41,11 @@ set(morse_SOURCES
     textchannel.hpp
 )
 
-if (NOT TELEPATHY_QT_VERSION VERSION_LESS "0.9.7")
-    set(ENABLE_DEBUG_IFACE TRUE)
-endif()
-
-if (NOT TELEPATHY_QT_VERSION VERSION_LESS "0.9.7")
+if (TELEPATHY_QT_VERSION VERSION_LESS "0.9.7")
+    message(WARNING "TelepathyQt version < 0.9.7, so group chat and debug interface support will be disabled.")
+else()
     set(ENABLE_GROUP_CHAT TRUE)
+    set(ENABLE_DEBUG_IFACE TRUE)
 endif()
 
 if (ENABLE_DEBUG_IFACE)

@@ -109,7 +109,7 @@ else()
     )
 endif()
 
-configure_file(morse.service.in org.freedesktop.Telepathy.ConnectionManager.morse.service)
+configure_file(dbus-service.in org.freedesktop.Telepathy.ConnectionManager.morse.service)
 
 install(
     TARGETS telepathy-morse

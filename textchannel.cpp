@@ -205,7 +205,7 @@ void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &mes
     Tp::MessagePartList partList;
     Tp::MessagePart header;
 
-    const MorseIdentifier contactID = MorseIdentifier::fromUserId(message.userId);
+    const MorseIdentifier contactID = MorseIdentifier::fromUserId(message.fromId);
     const QString token = QString::number(message.id);
     header[QLatin1String("message-token")] = QDBusVariant(token);
     header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);

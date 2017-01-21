@@ -1067,7 +1067,7 @@ void MorseConnection::whenMessageReceived(const TelegramNamespace::Message &mess
 {
     bool chatMessage = message.peer().type != TelegramNamespace::Peer::User;
 
-    uint contactHandle = ensureContact(MorseIdentifier::fromUserId(message.userId));
+    uint contactHandle = ensureContact(MorseIdentifier::fromUserId(message.fromId));
     uint targetHandle = ensureHandle(MorseIdentifier::fromPeer(message.peer()));
     uint initiatorHandle = 0;
 

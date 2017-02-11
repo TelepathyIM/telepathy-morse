@@ -37,11 +37,7 @@
 
 #ifdef INSECURE_SAVE
 
-#if QT_VERSION >= 0x050000
 #include <QStandardPaths>
-#else
-#include <QDesktopServices>
-#endif // QT_VERSION >= 0x050000
 
 #include <QDir>
 #include <QFile>
@@ -902,11 +898,7 @@ QString MorseConnection::getAlias(uint handle)
 
 Tp::SimplePresence MorseConnection::getPresence(uint handle)
 {
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-    return *simplePresenceIface->getPresences(Tp::UIntList() << handle).constBegin();
-#else
     return simplePresenceIface->getPresences(Tp::UIntList() << handle).first();
-#endif
 }
 
 uint MorseConnection::setPresence(const QString &status, const QString &message, Tp::DBusError *error)
@@ -1278,13 +1270,7 @@ void MorseConnection::checkConnected()
 QByteArray MorseConnection::getSessionData(const QString &phone)
 {
 #ifdef INSECURE_SAVE
-
-#if QT_VERSION >= 0x050000
     QFile secretFile(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + secretsDirPath + phone);
-#else // QT_VERSION >= 0x050000
-    QFile secretFile(QDesktopServices::storageLocation(QDesktopServices::CacheLocation) + secretsDirPath + phone);
-#endif // QT_VERSION >= 0x050000
-
     if (secretFile.open(QIODevice::ReadOnly)) {
         return secretFile.readAll();
     }
@@ -1297,14 +1283,8 @@ bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &da
 {
 #ifdef INSECURE_SAVE
     QDir dir;
-#if QT_VERSION >= 0x050000
     dir.mkpath(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + secretsDirPath);
     QFile secretFile(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + secretsDirPath + phone);
-#else // QT_VERSION >= 0x050000
-    dir.mkpath(QDesktopServices::storageLocation(QDesktopServices::CacheLocation) + secretsDirPath);
-    QFile secretFile(QDesktopServices::storageLocation(QDesktopServices::CacheLocation) + secretsDirPath + phone);
-#endif // QT_VERSION >= 0x050000
-
     if (secretFile.open(QIODevice::WriteOnly)) {
         return secretFile.write(data) == data.size();
     }

@@ -47,10 +47,6 @@ static QPointer<FixedBaseDebug> debugInterfacePtr;
 static QPointer<Tp::BaseDebug> debugInterfacePtr;
 #endif
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-bool enableDebugInterface() { return false; }
-#else
-
 static QtMessageHandler defaultMessageHandler = 0;
 
 void debugViaDBusInterface(QtMsgType type, const QMessageLogContext &context, const QString &msg)
@@ -142,7 +138,6 @@ bool enableDebugInterface()
     defaultMessageHandler = qInstallMessageHandler(debugViaDBusInterface);
     return true;
 }
-#endif
 
 #if TP_QT_VERSION < TP_QT_VERSION_CHECK(0, 9, 8)
 #include "debug.moc"

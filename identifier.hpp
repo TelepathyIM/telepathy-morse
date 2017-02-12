@@ -20,7 +20,9 @@
 #ifndef MORSE_IDENTIFIER_HPP
 #define MORSE_IDENTIFIER_HPP
 
-#include <TelegramQt/TelegramNamespace>
+#include <QString>
+
+//#include <TelegramQt/TelegramNamespace>
 
 class MorseIdentifier
 {
@@ -35,8 +37,8 @@ public:
 
     quint32 userId() const { return m_userId; }
     quint32 chatId() const { return m_chatId; }
-    TelegramNamespace::Peer toPeer() const;
-    static MorseIdentifier fromPeer(const TelegramNamespace::Peer &peer);
+//    TelegramNamespace::Peer toPeer() const;
+//    static MorseIdentifier fromPeer(const TelegramNamespace::Peer &peer);
     static MorseIdentifier fromChatId(quint32 chatId);
     static MorseIdentifier fromUserId(quint32 userId);
     static MorseIdentifier fromUserInChatId(quint32 chatId, quint32 userId);

@@ -24,11 +24,14 @@
 #include <TelepathyQt/RequestableChannelClassSpec>
 #include <TelepathyQt/RequestableChannelClassSpecList>
 
-#include <TelegramQt/TelegramNamespace>
+//#include <TelegramQt/TelegramNamespace>
+
 
 #include "identifier.hpp"
 
-class CTelegramCore;
+//class CTelegramCore;
+class Telegram;
+class ContactsModel;
 
 class MorseConnection : public Tp::BaseConnection
 {
@@ -72,22 +75,23 @@ public:
     uint ensureChat(const MorseIdentifier &identifier);
 
 public slots:
-    void whenMessageReceived(const TelegramNamespace::Message &message);
+//    void whenMessageReceived(const TelegramNamespace::Message &message);
     void whenChatChanged(quint32 chatId);
-    void setContactStatus(quint32 userId, TelegramNamespace::ContactStatus status);
+//    void setContactStatus(quint32 userId, TelegramNamespace::ContactStatus status);
 
 signals:
     void messageReceived(const QString &sender, const QString &message);
     void chatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
 
 private slots:
-    void whenConnectionStateChanged(TelegramNamespace::ConnectionState state);
+//    void whenConnectionStateChanged(TelegramNamespace::ConnectionState state);
     void whenAuthenticated();
     void onSelfUserAvailable();
-    void onAuthErrorReceived(TelegramNamespace::UnauthorizedError errorCode, const QString &errorMessage);
+//    void onAuthErrorReceived(TelegramNamespace::UnauthorizedError errorCode, const QString &errorMessage);
     void whenPhoneCodeRequired();
-    void onPasswordInfoReceived(quint64 requestId);
-    void whenAuthSignErrorReceived(TelegramNamespace::AuthSignError errorCode, const QString &errorMessage);
+//    void onPasswordInfoReceived(quint64 requestId);
+    void onPasswordInfoReceived(QString hint);
+//    void whenAuthSignErrorReceived(TelegramNamespace::AuthSignError errorCode, const QString &errorMessage);
     void whenConnectionReady();
     void whenContactListChanged();
     void whenDisconnected();
@@ -149,8 +153,10 @@ private:
     /* Maps a contact handle to its subscription state */
     QHash<uint, uint> m_contactsSubscription;
 
-    CTelegramCore *m_core;
-    TelegramNamespace::PasswordInfo *m_passwordInfo;
+//    CTelegramCore *m_core;
+    Telegram *m_core;
+//    TelegramNamespace::PasswordInfo *m_passwordInfo;
+    ContactsModel *m_contacts;
 
     int m_authReconnectionsCount;
 

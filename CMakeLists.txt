@@ -4,13 +4,13 @@ cmake_minimum_required(VERSION 2.8)
 
 message("Warning: If TelepathyQt version < 0.9.7, then group chat support will be disabled.")
 
+find_package(PkgConfig REQUIRED)
 find_package(TelepathyQt5 0.9.6 REQUIRED)
 find_package(TelepathyQt5Service 0.9.6 REQUIRED)
 set(TELEPATHY_QT_VERSION ${TELEPATHY_QT5_VERSION})
 
-find_package(TelegramQt5 REQUIRED)
-
-find_package(Qt5 REQUIRED COMPONENTS Core DBus Xml Network)
+find_package(Qt5 REQUIRED COMPONENTS Core DBus Xml Network Sql)
+pkg_check_modules(LIBQTELEGRAM LibQTelegram REQUIRED)
 
 include(GNUInstallDirs)
 
@@ -19,7 +19,7 @@ include_directories(
     ${CMAKE_BINARY_DIR}
 )
 
-add_definitions(-DQT_NO_CAST_FROM_ASCII)
+#add_definitions(-DQT_NO_CAST_FROM_ASCII)
 
 if (NOT TELEPATHY_QT_VERSION VERSION_LESS "0.9.7")
     set(ENABLE_DEBUG_IFACE TRUE)
@@ -56,8 +56,8 @@ set(morse_SOURCES
     identifier.hpp
     protocol.cpp
     protocol.hpp
-    textchannel.cpp
-    textchannel.hpp
+#    textchannel.cpp
+#    textchannel.hpp
 )
 
 if (USE_BUNDLED_GROUPS_IFACE)
@@ -72,17 +72,21 @@ add_executable(telepathy-morse ${morse_SOURCES})
 set_target_properties(telepathy-morse PROPERTIES AUTOMOC TRUE)
 
 target_include_directories(telepathy-morse PRIVATE
+    ${QT5_INCLUDES}
     ${TELEPATHY_QT5_INCLUDE_DIR}
-    ${TELEGRAM_QT5_INCLUDE_DIR}
+    ${LIBQTELEGRAM_INCLUDE_DIRS}
 )
+
+message(STATUS "ST:" ${LIBQTELEGRAM_LDFLAGS})
 
 target_link_libraries(telepathy-morse
     Qt5::Core
     Qt5::DBus
     Qt5::Network
+    Qt5::Sql
     ${TELEPATHY_QT5_LIBRARIES}
     ${TELEPATHY_QT5_SERVICE_LIBRARIES}
-    ${TELEGRAM_QT5_LIBRARIES}
+    ${LIBQTELEGRAM_LDFLAGS}
     -lcrypto
     -lz
 )

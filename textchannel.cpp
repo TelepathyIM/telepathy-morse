@@ -79,7 +79,7 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
         m_groupIface->setSelfHandle(m_selfHandle);
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_groupIface));
 
-        TelegramNamespace::GroupChat info;
+        Telegram::GroupChat info;
 
         m_core->getChatInfo(&info, m_targetID.chatId());
 
@@ -103,8 +103,8 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
 #endif
     }
 
-    connect(m_core.data(), SIGNAL(messageReadInbox(TelegramNamespace::Peer,quint32)),
-            SLOT(setMessageInboxRead(TelegramNamespace::Peer,quint32)));
+    connect(m_core.data(), SIGNAL(messageReadInbox(Telegram::Peer,quint32)),
+            SLOT(setMessageInboxRead(Telegram::Peer,quint32)));
     connect(m_core.data(), SIGNAL(sentMessageIdReceived(quint64,quint32)),
             SLOT(setResolvedMessageId(quint64,quint32)));
 }
@@ -165,7 +165,7 @@ void MorseTextChannel::setMessageAction(const MorseIdentifier &identifier, Teleg
     }
 }
 
-void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &message, uint contactHandle)
+void MorseTextChannel::whenMessageReceived(const Telegram::Message &message, uint contactHandle)
 {
     Tp::MessagePartList body;
     Tp::MessagePart text;
@@ -173,7 +173,7 @@ void MorseTextChannel::whenMessageReceived(const TelegramNamespace::Message &mes
     text[QLatin1String("content")] = QDBusVariant(message.text);
 
     if (message.type != TelegramNamespace::MessageTypeText) { // More, than a plain text message
-        TelegramNamespace::MessageMediaInfo info;
+        Telegram::MessageMediaInfo info;
         m_core->getMessageMediaInfo(&info, message.id);
 
         Tp::MessagePart textMessage;
@@ -256,7 +256,7 @@ void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList
     if (m_targetID.chatId() == chatId) {
         updateChatParticipants(handles);
 
-        TelegramNamespace::GroupChat info;
+        Telegram::GroupChat info;
         if (m_core->getChatInfo(&info, chatId)) {
             m_roomConfigIface->setTitle(info.title);
             m_roomConfigIface->setConfigurationRetrieved(true);
@@ -264,7 +264,7 @@ void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList
     }
 }
 
-void MorseTextChannel::setMessageInboxRead(TelegramNamespace::Peer peer, quint32 messageId)
+void MorseTextChannel::setMessageInboxRead(Telegram::Peer peer, quint32 messageId)
 {
     // We are connected to broadcast signal, so have to select only needed calls
     if (MorseIdentifier::fromPeer(peer) != m_targetID) {
@@ -299,7 +299,7 @@ void MorseTextChannel::setMessageInboxRead(TelegramNamespace::Peer peer, quint32
 #endif
 }
 
-void MorseTextChannel::setMessageOutboxRead(TelegramNamespace::Peer peer, quint32 messageId)
+void MorseTextChannel::setMessageOutboxRead(Telegram::Peer peer, quint32 messageId)
 {
     // We are connected to broadcast signal, so have to select only needed calls
     if (MorseIdentifier::fromPeer(peer) != m_targetID) {

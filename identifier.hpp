@@ -35,8 +35,8 @@ public:
 
     quint32 userId() const { return m_userId; }
     quint32 chatId() const { return m_chatId; }
-    TelegramNamespace::Peer toPeer() const;
-    static MorseIdentifier fromPeer(const TelegramNamespace::Peer &peer);
+    Telegram::Peer toPeer() const;
+    static MorseIdentifier fromPeer(const Telegram::Peer &peer);
     static MorseIdentifier fromChatId(quint32 chatId);
     static MorseIdentifier fromUserId(quint32 userId);
     static MorseIdentifier fromUserInChatId(quint32 chatId, quint32 userId);

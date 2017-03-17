@@ -221,18 +221,18 @@ void MorseConnection::doConnect(Tp::DBusError *error)
 {
     Q_UNUSED(error);
 
-    CAppInformation appInfo;
-    appInfo.setAppId(14617);
-    appInfo.setAppHash(QLatin1String("e17ac360fd072f83d5d08db45ce9a121"));
-    appInfo.setAppVersion(QLatin1String("0.1"));
-    appInfo.setDeviceInfo(QLatin1String("pc"));
-    appInfo.setOsInfo(QLatin1String("GNU/Linux"));
-    appInfo.setLanguageCode(QLatin1String("en"));
+    CAppInformation *appInfo = new CAppInformation(m_core);
+    appInfo->setAppId(14617);
+    appInfo->setAppHash(QLatin1String("e17ac360fd072f83d5d08db45ce9a121"));
+    appInfo->setAppVersion(QLatin1String("0.1"));
+    appInfo->setDeviceInfo(QLatin1String("pc"));
+    appInfo->setOsInfo(QLatin1String("GNU/Linux"));
+    appInfo->setLanguageCode(QLatin1String("en"));
 
     m_authReconnectionsCount = 0;
     m_core = new CTelegramCore(0);
     m_core->setPingInterval(m_keepaliveInterval * 1000);
-    m_core->setAppInformation(&appInfo);
+    m_core->setAppInformation(appInfo);
     m_core->setMessageReceivingFilter(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagRead);
 #ifndef TELEGRAMQT_VERSION
     m_core->setAcceptableMessageTypes(
@@ -263,8 +263,8 @@ void MorseConnection::doConnect(Tp::DBusError *error)
             this, SLOT(whenAvatarReceived(quint32,QByteArray,QString,QString)));
     connect(m_core, SIGNAL(contactListChanged()),
             this, SLOT(whenContactListChanged()));
-    connect(m_core, SIGNAL(messageReceived(TelegramNamespace::Message)),
-             this, SLOT(whenMessageReceived(TelegramNamespace::Message)));
+    connect(m_core, SIGNAL(messageReceived(Telegram::Message)),
+             this, SLOT(whenMessageReceived(Telegram::Message)));
     connect(m_core, SIGNAL(chatChanged(quint32)),
             this, SLOT(whenChatChanged(quint32)));
     connect(m_core, SIGNAL(contactStatusChanged(quint32,TelegramNamespace::ContactStatus)),
@@ -424,7 +424,7 @@ void MorseConnection::onPasswordInfoReceived(quint64 requestId)
 
     qDebug() << Q_FUNC_INFO;
 
-    m_passwordInfo = new TelegramNamespace::PasswordInfo();
+    m_passwordInfo = new Telegram::PasswordInfo();
     m_core->getPasswordInfo(m_passwordInfo, requestId);
 
     Tp::DBusError error;
@@ -791,7 +791,7 @@ Tp::ContactInfoFieldList MorseConnection::requestContactInfo(uint handle, Tp::DB
 
 Tp::ContactInfoFieldList MorseConnection::getUserInfo(const quint32 userId) const
 {
-    TelegramNamespace::UserInfo userInfo;
+    Telegram::UserInfo userInfo;
     if (!m_core->getUserInfo(&userInfo, userId)) {
         return Tp::ContactInfoFieldList();
     }
@@ -885,7 +885,7 @@ QString MorseConnection::getAlias(uint handle)
         return QLatin1String("Invalid alias");
     }
 
-    TelegramNamespace::UserInfo info;
+    Telegram::UserInfo info;
     m_core->getUserInfo(&info, identifier.userId());
 
     QString name = info.firstName() + QLatin1Char(' ') + info.lastName();
@@ -1002,7 +1002,7 @@ void MorseConnection::updateContactsStatus(const QVector<MorseIdentifier> &ident
         TelegramNamespace::ContactStatus st = TelegramNamespace::ContactStatusUnknown;
 
         if (m_core) {
-            TelegramNamespace::UserInfo info;
+            Telegram::UserInfo info;
             m_core->getUserInfo(&info, identifier.userId());
 
             st = info.status();
@@ -1067,9 +1067,9 @@ void MorseConnection::setSubscriptionState(const QVector<MorseIdentifier> &ident
 }
 
 /* Receive message from outside (telegram server) */
-void MorseConnection::whenMessageReceived(const TelegramNamespace::Message &message)
+void MorseConnection::whenMessageReceived(const Telegram::Message &message)
 {
-    bool chatMessage = message.peer().type != TelegramNamespace::Peer::User;
+    bool chatMessage = message.peer().type != Telegram::Peer::User;
 
     uint contactHandle = ensureContact(MorseIdentifier::fromUserId(message.fromId));
     uint targetHandle = ensureHandle(MorseIdentifier::fromPeer(message.peer()));
@@ -1170,7 +1170,7 @@ void MorseConnection::whenGotRooms()
 
     foreach (quint32 chatId, m_core->chatList()) {
         Tp::RoomInfo roomInfo;
-        TelegramNamespace::GroupChat chatInfo;
+        Telegram::GroupChat chatInfo;
 
         const MorseIdentifier chatID = MorseIdentifier::fromChatId(chatId);
         roomInfo.channelType = TP_QT_IFACE_CHANNEL_TYPE_TEXT;

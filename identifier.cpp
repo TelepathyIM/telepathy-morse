@@ -44,20 +44,20 @@ bool MorseIdentifier::operator!=(const MorseIdentifier &identifier) const
     return !(*this == identifier);
 }
 
-TelegramNamespace::Peer MorseIdentifier::toPeer() const
+Telegram::Peer MorseIdentifier::toPeer() const
 {
     if (m_chatId) {
-        return TelegramNamespace::Peer(m_chatId, TelegramNamespace::Peer::Chat);
+        return Telegram::Peer(m_chatId, Telegram::Peer::Chat);
     } else {
-        return TelegramNamespace::Peer(m_userId);
+        return Telegram::Peer(m_userId);
     }
 }
 
-MorseIdentifier MorseIdentifier::fromPeer(const TelegramNamespace::Peer &peer)
+MorseIdentifier MorseIdentifier::fromPeer(const Telegram::Peer &peer)
 {
     MorseIdentifier id;
 
-    if (peer.type == TelegramNamespace::Peer::User) {
+    if (peer.type == Telegram::Peer::User) {
         id.m_userId = peer.id;
     } else {
         id.m_chatId = peer.id;

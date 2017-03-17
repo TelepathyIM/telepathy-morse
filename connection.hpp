@@ -72,7 +72,7 @@ public:
     uint ensureChat(const MorseIdentifier &identifier);
 
 public slots:
-    void whenMessageReceived(const TelegramNamespace::Message &message);
+    void whenMessageReceived(const Telegram::Message &message);
     void whenChatChanged(quint32 chatId);
     void setContactStatus(quint32 userId, TelegramNamespace::ContactStatus status);
 
@@ -150,7 +150,7 @@ private:
     QHash<uint, uint> m_contactsSubscription;
 
     CTelegramCore *m_core;
-    TelegramNamespace::PasswordInfo *m_passwordInfo;
+    Telegram::PasswordInfo *m_passwordInfo;
 
     int m_authReconnectionsCount;
 

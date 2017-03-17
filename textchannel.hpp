@@ -66,14 +66,14 @@ public slots:
     void whenContactChatStateComposingChanged(quint32 userId, TelegramNamespace::MessageAction action);
     void whenContactRoomStateComposingChanged(quint32 chatId, quint32 userId, TelegramNamespace::MessageAction action);
     void setMessageAction(const MorseIdentifier &identifier, TelegramNamespace::MessageAction action);
-    void whenMessageReceived(const TelegramNamespace::Message &message, uint contactHandle);
+    void whenMessageReceived(const Telegram::Message &message, uint contactHandle);
     void updateChatParticipants(const Tp::UIntList &handles);
 
     void whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
 
 protected slots:
-    void setMessageInboxRead(TelegramNamespace::Peer peer, quint32 messageId);
-    void setMessageOutboxRead(TelegramNamespace::Peer peer, quint32 messageId);
+    void setMessageInboxRead(Telegram::Peer peer, quint32 messageId);
+    void setMessageOutboxRead(Telegram::Peer peer, quint32 messageId);
     void setResolvedMessageId(quint64 randomId, quint32 resolvedId);
     void reactivateLocalTyping();
 

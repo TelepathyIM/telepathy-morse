@@ -168,9 +168,12 @@ void MorseTextChannel::setMessageAction(const MorseIdentifier &identifier, Teleg
 void MorseTextChannel::whenMessageReceived(const Telegram::Message &message, uint contactHandle)
 {
     Tp::MessagePartList body;
-    Tp::MessagePart text;
-    text[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
-    text[QLatin1String("content")] = QDBusVariant(message.text);
+    if (!message.text.isEmpty()) {
+        Tp::MessagePart text;
+        text[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
+        text[QLatin1String("content")] = QDBusVariant(message.text);
+        body << text;
+    }
 
     if (message.type != TelegramNamespace::MessageTypeText) { // More, than a plain text message
         Telegram::MessageMediaInfo info;
@@ -181,7 +184,12 @@ void MorseTextChannel::whenMessageReceived(const Telegram::Message &message, uin
         textMessage[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));
 
         if (info.alt().isEmpty()) {
-            textMessage[QLatin1String("content")] = QDBusVariant(tr("Telepathy-Morse doesn't support multimedia messages yet."));
+            const QString notSupportedText = tr("Telepathy-Morse doesn't support multimedia messages yet.");
+            if (body.isEmpty()) {// There is no text part
+                textMessage[QLatin1String("content")] = QDBusVariant(notSupportedText);
+            } else { // There is a text part, so we need to add the notSupportedText on a new line
+                textMessage[QLatin1String("content")] = QDBusVariant(QLatin1Char('\n') + notSupportedText);
+            }
         } else {
             textMessage[QLatin1String("content")] = QDBusVariant(info.alt());
         }
@@ -201,8 +209,6 @@ void MorseTextChannel::whenMessageReceived(const Telegram::Message &message, uin
         }
         body << textMessage;
     }
-
-    body << text;
 
     Tp::MessagePartList partList;
     Tp::MessagePart header;

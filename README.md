@@ -60,7 +60,6 @@ Known issues
 ============
 
 * Initial low-level encryption sometimes generates bad random values, which rarely can leads to “connection doesn’t work” issue.
-* Unable to send long messages (Missed TelegramQt gzip packing implementation; limit is about 400 characters; telegram protocol limitation is 4095 characters).
 * Authentication doesn't work on the Sailfish OS. It is possible to copy an authorization key from your pc to the device, the directory is ~/.cache/telepathy-morse/secrets.
 
 License

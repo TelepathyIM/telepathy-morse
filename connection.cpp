@@ -1047,7 +1047,7 @@ void MorseConnection::updateSelfContactState(Tp::ConnectionStatus status)
     simplePresenceIface->setPresences(newPresences);
 }
 
-void MorseConnection::setSubscriptionState(const QVector<MorseIdentifier> &identifiers, const QList<uint> &handles, uint state)
+void MorseConnection::setSubscriptionState(const QVector<MorseIdentifier> &identifiers, const QVector<uint> &handles, uint state)
 {
     qDebug() << Q_FUNC_INFO;
     Tp::ContactSubscriptionMap changes;
@@ -1131,7 +1131,7 @@ void MorseConnection::whenContactListChanged()
 //    Tp::HandleIdentifierMap identifiers;
 //    Tp::HandleIdentifierMap removals;
 
-    QList<uint> handles;
+    QVector<uint> handles;
     QVector<MorseIdentifier> identifiers;
     handles.reserve(ids.count());
     identifiers.reserve(ids.count());

@@ -262,7 +262,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     connect(m_core, SIGNAL(avatarReceived(quint32,QByteArray,QString,QString)),
             this, SLOT(whenAvatarReceived(quint32,QByteArray,QString,QString)));
     connect(m_core, SIGNAL(contactListChanged()),
-            this, SLOT(whenContactListChanged()));
+            this, SLOT(onContactListChanged()));
     connect(m_core, SIGNAL(messageReceived(Telegram::Message)),
              this, SLOT(whenMessageReceived(Telegram::Message)));
     connect(m_core, SIGNAL(chatChanged(quint32)),
@@ -518,7 +518,7 @@ void MorseConnection::whenConnectionReady()
 
     m_core->setOnlineStatus(m_wantedPresence == c_onlineSimpleStatusKey);
     m_core->setMessageReceivingFilter(TelegramNamespace::MessageFlagNone);
-    whenContactListChanged();
+    onContactListChanged();
 }
 
 QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error)
@@ -669,11 +669,7 @@ Tp::UIntList MorseConnection::requestHandles(uint handleType, const QStringList 
 Tp::ContactAttributesMap MorseConnection::getContactListAttributes(const QStringList &interfaces, bool hold, Tp::DBusError *error)
 {
     Q_UNUSED(hold);
-
-    Tp::UIntList handles = m_handles.keys();
-    handles.removeOne(selfHandle());
-
-    return getContactAttributes(handles, interfaces, error);
+    return getContactAttributes(m_contactList.toList(), interfaces, error);
 }
 
 Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntList &handles, const QStringList &interfaces, Tp::DBusError *error)
@@ -694,8 +690,8 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
             attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = identifier.toString();
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/publish")] = Tp::SubscriptionStateYes;
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = m_contactsSubscription.value(handle, Tp::SubscriptionStateUnknown);
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/publish")] = m_contactsSubscription.value(handle, Tp::SubscriptionStateUnknown);
             }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
@@ -957,6 +953,11 @@ uint MorseConnection::ensureChat(const MorseIdentifier &identifier)
     return handle;
 }
 
+/**
+ * Add contacts with identifiers \a identifiers to known contacts list (not roster)
+ *
+ * \return the maximum handle value
+ */
 uint MorseConnection::addContacts(const QVector<MorseIdentifier> &identifiers)
 {
     qDebug() << Q_FUNC_INFO;
@@ -1115,28 +1116,52 @@ void MorseConnection::whenChatChanged(quint32 chatId)
     }
 }
 
-void MorseConnection::whenContactListChanged()
+void MorseConnection::onContactListChanged()
 {
     const QVector<quint32> ids = m_core->contactList();
 
     qDebug() << Q_FUNC_INFO << ids;
 
-//    Tp::ContactSubscriptionMap changes;
-//    Tp::HandleIdentifierMap identifiers;
-//    Tp::HandleIdentifierMap removals;
-
-    QVector<uint> handles;
-    QVector<MorseIdentifier> identifiers;
-    handles.reserve(ids.count());
-    identifiers.reserve(ids.count());
+    QVector<uint> newContactListHandles;
+    QVector<MorseIdentifier> newContactListIdentifiers;
+    newContactListHandles.reserve(ids.count());
+    newContactListIdentifiers.reserve(ids.count());
 
     foreach (quint32 id, ids) {
-        identifiers.append(MorseIdentifier::fromUserId(id));
-        handles.append(ensureContact(identifiers.last()));
+        newContactListIdentifiers.append(MorseIdentifier::fromUserId(id));
+        newContactListHandles.append(ensureContact(newContactListIdentifiers.last()));
     }
 
-    setSubscriptionState(identifiers, handles, Tp::SubscriptionStateYes);
-    updateContactsStatus(identifiers);
+    Tp::HandleIdentifierMap removals;
+    foreach (uint handle, m_contactList) {
+        if (newContactListHandles.contains(handle)) {
+            continue;
+        }
+        const MorseIdentifier identifier = m_handles.value(handle);
+        if (identifier.isNull()) {
+            qWarning() << Q_FUNC_INFO << "Internal corruption. Handle" << handle << "has invalid corresponding identifier";
+            removals.insert(handle, identifier.toString());
+        }
+    }
+
+    m_contactList = newContactListHandles;
+
+    qDebug() << Q_FUNC_INFO;
+    Tp::ContactSubscriptionMap changes;
+    Tp::HandleIdentifierMap identifiersMap;
+
+    for(int i = 0; i < newContactListIdentifiers.size(); ++i) {
+        Tp::ContactSubscriptions change;
+        change.publish = Tp::SubscriptionStateYes;
+        change.subscribe = Tp::SubscriptionStateYes;
+        changes[newContactListHandles[i]] = change;
+        identifiersMap[newContactListHandles[i]] = newContactListIdentifiers.at(i).toString();
+        m_contactsSubscription[newContactListHandles[i]] = Tp::SubscriptionStateYes;
+    }
+
+    contactListIface->contactsChangedWithID(changes, identifiersMap, removals);
+
+    updateContactsStatus(newContactListIdentifiers);
 
     contactListIface->setContactListState(Tp::ContactListStateSuccess);
 }

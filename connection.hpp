@@ -89,7 +89,7 @@ private slots:
     void onPasswordInfoReceived(quint64 requestId);
     void whenAuthSignErrorReceived(TelegramNamespace::AuthSignError errorCode, const QString &errorMessage);
     void whenConnectionReady();
-    void whenContactListChanged();
+    void onContactListChanged();
     void whenDisconnected();
 
     /* Connection.Interface.Avatars */
@@ -143,6 +143,7 @@ private:
 
     QString m_wantedPresence;
 
+    QVector<quint32> m_contactList;
     QMap<uint, MorseIdentifier> m_handles;
     QMap<uint, MorseIdentifier> m_chatHandles;
     /* Maps a contact handle to its subscription state */

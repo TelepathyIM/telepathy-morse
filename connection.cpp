@@ -937,7 +937,7 @@ uint MorseConnection::ensureContact(const MorseIdentifier &identifier)
 {
     uint handle = getHandle(identifier);
     if (!handle) {
-        handle = addContact(identifier);
+        handle = addContacts( {identifier});
     }
     return handle;
 }
@@ -980,12 +980,6 @@ uint MorseConnection::addContacts(const QVector<MorseIdentifier> &identifiers)
     }
 
     return handle;
-}
-
-uint MorseConnection::addContact(const MorseIdentifier &identifier)
-{
-    qDebug() << Q_FUNC_INFO;
-    return addContacts(QVector<MorseIdentifier>() << identifier);
 }
 
 void MorseConnection::updateContactsStatus(const QVector<MorseIdentifier> &identifiers)

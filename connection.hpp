@@ -107,7 +107,6 @@ private:
 
     uint getHandle(const MorseIdentifier &identifier) const;
     uint getChatHandle(const MorseIdentifier &identifier) const;
-    uint addContact(const MorseIdentifier &identifier);
     uint addContacts(const QVector<MorseIdentifier> &identifiers);
 
     void updateContactsStatus(const QVector<MorseIdentifier> &identifiers);

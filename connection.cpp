@@ -884,7 +884,18 @@ QString MorseConnection::getAlias(uint handle)
     Telegram::UserInfo info;
     m_core->getUserInfo(&info, identifier.userId());
 
-    QString name = info.firstName() + QLatin1Char(' ') + info.lastName();
+    QString name;
+    if (!info.firstName().isEmpty()) {
+        name = info.firstName();
+    }
+    if (!info.lastName().isEmpty()) {
+        if (!name.isEmpty()) {
+            name += QLatin1Char(' ') + info.lastName();
+        } else {
+            name = info.lastName();
+        }
+    }
+
     if (!name.simplified().isEmpty()) {
         return name;
     }

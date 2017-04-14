@@ -31,6 +31,30 @@
 #include <QDateTime>
 #include <QTimer>
 
+QString userToVCard(const Telegram::UserInfo &userInfo)
+{
+    QStringList result;
+    result.append(QStringLiteral("BEGIN:VCARD"));
+    result.append(QStringLiteral("VERSION:4.0"));
+    QString name = userInfo.firstName() + QLatin1Char(' ') + userInfo.lastName();
+    name = name.simplified();
+    if (name.isEmpty()) {
+        return QString();
+    }
+    result.append(QStringLiteral("FN:") + name);
+    if (!userInfo.phone().isEmpty()) {
+        // TEL;VALUE=uri;TYPE=cell:tel:+33-01-23-45-67
+       result.append(QStringLiteral("TEL;PREF:tel+") + userInfo.phone());
+    }
+    // N:Family Names (surnames);Given Names;Additional Names;Honorific Prefixes;Honorific Suffixes
+    // N:Stevenson;John;Philip,Paul;Dr.;Jr.,M.D.,A.C.P.
+    // N:Smith;John;;;
+    result.append(QStringLiteral("N:") + userInfo.lastName() + QLatin1Char(';') + userInfo.firstName() + QStringLiteral(";;;"));
+    result.append(QStringLiteral("END:VCARD"));
+
+    return result.join(QStringLiteral("\r\n"));
+}
+
 MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseChannel *baseChannel)
     : Tp::BaseChannelTextType(baseChannel),
       m_connection(morseConnection),
@@ -42,6 +66,7 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
 {
     QStringList supportedContentTypes = QStringList()
             << QLatin1String("text/plain")
+            << QLatin1String("text/vcard")
             << QLatin1String("application/geo+json")
                ;
     Tp::UIntList messageTypes = Tp::UIntList() << Tp::ChannelTextMessageTypeNormal << Tp::ChannelTextMessageTypeDeliveryReport;
@@ -196,6 +221,25 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
             geo[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));
             geo[QLatin1String("content")] = QDBusVariant(jsonTemplate.arg(info.latitude()).arg(info.longitude()));
             body << geo;
+        }
+            break;
+        case TelegramNamespace::MessageTypeContact: {
+            Telegram::UserInfo userInfo;
+            if (!info.getContactInfo(&userInfo)) {
+                qWarning() << Q_FUNC_INFO << "Unable to get user info from contact media message" << message.id;
+                break;
+            }
+
+            QString data = userToVCard(userInfo);
+            if (data.isEmpty()) {
+                qWarning() << Q_FUNC_INFO << "Unable to get user vcard from user info from message" << message.id;
+                break;
+            }
+            Tp::MessagePart userVCardPart;
+            userVCardPart[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/vcard"));
+            userVCardPart[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));
+            userVCardPart[QLatin1String("content")] = QDBusVariant(data);
+            body << userVCardPart;
         }
             break;
         default:

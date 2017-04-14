@@ -181,21 +181,7 @@ void MorseTextChannel::whenMessageReceived(const Telegram::Message &message, uin
         Telegram::MessageMediaInfo info;
         m_core->getMessageMediaInfo(&info, message.id);
 
-        Tp::MessagePart textMessage;
-        textMessage[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
-        textMessage[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));
-
-        if (info.alt().isEmpty()) {
-            const QString notSupportedText = tr("Telepathy-Morse doesn't support multimedia messages yet.");
-            if (body.isEmpty()) {// There is no text part
-                textMessage[QLatin1String("content")] = QDBusVariant(notSupportedText);
-            } else { // There is a text part, so we need to add the notSupportedText on a new line
-                textMessage[QLatin1String("content")] = QDBusVariant(QLatin1Char('\n') + notSupportedText);
-            }
-        } else {
-            textMessage[QLatin1String("content")] = QDBusVariant(info.alt());
-        }
-
+        bool handled = true;
         switch (message.type) {
         case TelegramNamespace::MessageTypeGeo: {
             static const QString jsonTemplate = QLatin1String("{\"type\":\"point\",\"coordinates\":\[%1, %2]}");
@@ -207,8 +193,27 @@ void MorseTextChannel::whenMessageReceived(const Telegram::Message &message, uin
         }
             break;
         default:
+            handled = false;
             break;
         }
+
+        Tp::MessagePart textMessage;
+        textMessage[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
+        textMessage[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));
+
+        if (info.alt().isEmpty()) {
+            const QString notHandledText = tr("Telepathy-Morse doesn't support this type of multimedia messages yet.");
+            const QString badAlternativeText = tr("Telepathy client doesn't support this type of multimedia messages.");
+            const QString notSupportedText = handled ? badAlternativeText : notHandledText;
+            if (body.isEmpty()) {// There is no text part
+                textMessage[QLatin1String("content")] = QDBusVariant(notSupportedText);
+            } else { // There is a text part, so we need to add the notSupportedText on a new line
+                textMessage[QLatin1String("content")] = QDBusVariant(QLatin1Char('\n') + notSupportedText);
+            }
+        } else {
+            textMessage[QLatin1String("content")] = QDBusVariant(info.alt());
+        }
+
         body << textMessage;
     }
 

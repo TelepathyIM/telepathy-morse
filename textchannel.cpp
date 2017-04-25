@@ -105,6 +105,8 @@ MorseTextChannel::MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseCha
 
     connect(m_core.data(), SIGNAL(messageReadInbox(Telegram::Peer,quint32)),
             SLOT(setMessageInboxRead(Telegram::Peer,quint32)));
+    connect(m_core.data(), SIGNAL(messageReadOutbox(Telegram::Peer,quint32)),
+            SLOT(setMessageOutboxRead(Telegram::Peer,quint32)));
     connect(m_core.data(), SIGNAL(sentMessageIdReceived(quint64,quint32)),
             SLOT(setResolvedMessageId(quint64,quint32)));
 }

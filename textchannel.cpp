@@ -24,7 +24,6 @@
 #include <TelepathyQt/RequestableChannelClassSpecList>
 #include <TelepathyQt/Types>
 
-#include <QLatin1String>
 #include <QVariantMap>
 #include <QDateTime>
 #include <QTimer>

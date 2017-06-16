@@ -81,7 +81,7 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
 
         Telegram::ChatInfo info;
 
-        m_core->getChatInfo(&info, m_targetID.chatId());
+        m_core->getChatInfo(&info, m_targetID.id);
 
         QDateTime creationTimestamp;
         if (info.date()) {
@@ -272,7 +272,7 @@ void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList
 {
     qDebug() << Q_FUNC_INFO << chatId;
 
-    if (m_targetID.chatId() == chatId) {
+    if ((m_targetID.chatId() == chatId) || (m_targetID.channelId() == chatId)) {
         updateChatParticipants(handles);
 
         Telegram::ChatInfo info;

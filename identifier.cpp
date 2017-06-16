@@ -21,6 +21,7 @@
 
 static const QLatin1String c_userPrefix = QLatin1String("user");
 static const QLatin1String c_chatPrefix = QLatin1String("chat");
+static const QLatin1String c_channelPrefix = QLatin1String("channel");
 
 MorseIdentifier::MorseIdentifier(quint32 id, Telegram::Peer::Type t) :
     Telegram::Peer(id, t)
@@ -58,14 +59,27 @@ quint32 MorseIdentifier::chatId() const
     return 0;
 }
 
-MorseIdentifier MorseIdentifier::fromChatId(quint32 chatId)
+quint32 MorseIdentifier::channelId() const
 {
-    return MorseIdentifier(chatId, Telegram::Peer::Chat);
+    if (type == Channel) {
+        return id;
+    }
+    return 0;
 }
 
 MorseIdentifier MorseIdentifier::fromUserId(quint32 userId)
 {
     return MorseIdentifier(userId, Telegram::Peer::User);
+}
+
+MorseIdentifier MorseIdentifier::fromChatId(quint32 chatId)
+{
+    return MorseIdentifier(chatId, Telegram::Peer::Chat);
+}
+
+MorseIdentifier MorseIdentifier::fromChannelId(quint32 channelId)
+{
+    return MorseIdentifier(channelId, Telegram::Peer::Channel);
 }
 
 QString MorseIdentifier::toString() const
@@ -75,6 +89,8 @@ QString MorseIdentifier::toString() const
         return c_userPrefix + QString::number(id);
     case Chat:
         return c_chatPrefix + QString::number(id);
+    case Channel:
+        return c_channelPrefix + QString::number(id);
     default:
         break;
     }
@@ -94,6 +110,11 @@ MorseIdentifier MorseIdentifier::fromString(const QString &string)
         uint chatId = string.midRef(c_chatPrefix.size()).toUInt(&ok);
         if (ok) {
             return MorseIdentifier::fromChatId(chatId);
+        }
+    } else if (string.startsWith(c_channelPrefix)) {
+        uint channelId = string.midRef(c_channelPrefix.size()).toUInt(&ok);
+        if (ok) {
+            return MorseIdentifier::fromChannelId(channelId);
         }
     }
 

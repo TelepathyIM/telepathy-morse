@@ -33,8 +33,10 @@ public:
 
     quint32 userId() const;
     quint32 chatId() const;
+    quint32 channelId() const;
     static MorseIdentifier fromUserId(quint32 userId);
     static MorseIdentifier fromChatId(quint32 chatId);
+    static MorseIdentifier fromChannelId(quint32 channelId);
 
     QString toString() const;
     static MorseIdentifier fromString(const QString &string);

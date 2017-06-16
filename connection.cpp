@@ -662,7 +662,7 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
             connect(this, SIGNAL(chatDetailsChanged(quint32,Tp::UIntList)),
                     textChannel.data(), SLOT(whenChatDetailsChanged(quint32,Tp::UIntList)));
 
-            whenChatChanged(targetID.chatId());
+            whenChatChanged(targetID.id);
         }
     }
 

@@ -165,7 +165,7 @@ void MorseTextChannel::whenContactRoomStateComposingChanged(quint32 chatId, quin
 
 void MorseTextChannel::setMessageAction(quint32 userId, TelegramNamespace::MessageAction action)
 {
-    const uint handle = m_connection->ensureContact(MorseIdentifier::fromUserId(userId));
+    const uint handle = m_connection->ensureContact(userId);
     if (action) {
         m_chatStateIface->chatStateChanged(handle, Tp::ChannelChatStateComposing);
     } else {
@@ -173,7 +173,7 @@ void MorseTextChannel::setMessageAction(quint32 userId, TelegramNamespace::Messa
     }
 }
 
-void MorseTextChannel::whenMessageReceived(const Telegram::Message &message, uint contactHandle)
+void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
 {
     Tp::MessagePartList body;
     if (!message.text.isEmpty()) {
@@ -236,7 +236,7 @@ void MorseTextChannel::whenMessageReceived(const Telegram::Message &message, uin
         header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->selfHandle());
         header[QLatin1String("message-sender-id")] = QDBusVariant(m_connection->selfID());
     } else {
-        header[QLatin1String("message-sender")]    = QDBusVariant(contactHandle);
+        header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->ensureHandle(contactID));
         header[QLatin1String("message-sender-id")] = QDBusVariant(contactID.toString());
     }
 

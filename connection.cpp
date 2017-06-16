@@ -1081,8 +1081,6 @@ void MorseConnection::setSubscriptionState(const QVector<MorseIdentifier> &ident
 void MorseConnection::whenMessageReceived(const Telegram::Message &message)
 {
     bool chatMessage = message.peer().type != Telegram::Peer::User;
-
-    uint contactHandle = ensureContact(MorseIdentifier::fromUserId(message.fromId));
     uint targetHandle = ensureHandle(message.peer());
 
     //TODO: initiator should be group creator
@@ -1121,7 +1119,7 @@ void MorseConnection::whenMessageReceived(const Telegram::Message &message)
         return;
     }
 
-    textChannel->whenMessageReceived(message, contactHandle);
+    textChannel->onMessageReceived(message);
 }
 
 void MorseConnection::whenChatChanged(quint32 chatId)

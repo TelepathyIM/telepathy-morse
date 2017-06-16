@@ -71,6 +71,8 @@ public:
     uint ensureContact(const MorseIdentifier &identifier);
     uint ensureChat(const MorseIdentifier &identifier);
 
+    CTelegramCore *core() const { return m_core; }
+
 public slots:
     void whenMessageReceived(const Telegram::Message &message);
     void whenChatChanged(quint32 chatId);

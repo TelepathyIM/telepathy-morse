@@ -1254,7 +1254,7 @@ Tp::AvatarTokenMap MorseConnection::getKnownAvatarTokens(const Tp::UIntList &con
         error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("No handles provided"));
     }
 
-    if (!coreIsReady()) {
+    if (!coreIsAuthenticated()) {
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
     }
 
@@ -1275,7 +1275,7 @@ void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError
         error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("No handles provided"));
     }
 
-    if (!coreIsReady()) {
+    if (!coreIsAuthenticated()) {
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
     }
 

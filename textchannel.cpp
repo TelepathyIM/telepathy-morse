@@ -145,25 +145,31 @@ void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)
 
 void MorseTextChannel::whenContactChatStateComposingChanged(quint32 userId, TelegramNamespace::MessageAction action)
 {
-    setMessageAction(MorseIdentifier::fromUserId(userId), action);
+    // We are connected to broadcast signal, so have to select only needed calls
+    const MorseIdentifier identifier = MorseIdentifier::fromUserId(userId);
+    if (identifier != m_targetID) {
+        return;
+    }
+    setMessageAction(userId, action);
 }
 
 void MorseTextChannel::whenContactRoomStateComposingChanged(quint32 chatId, quint32 userId, TelegramNamespace::MessageAction action)
 {
-    setMessageAction(MorseIdentifier::fromUserInChatId(chatId, userId), action);
-}
-
-void MorseTextChannel::setMessageAction(const MorseIdentifier &identifier, TelegramNamespace::MessageAction action)
-{
     // We are connected to broadcast signal, so have to select only needed calls
+    const MorseIdentifier identifier = MorseIdentifier::fromChatId(chatId);
     if (identifier != m_targetID) {
         return;
     }
+    setMessageAction(userId, action);
+}
 
+void MorseTextChannel::setMessageAction(quint32 userId, TelegramNamespace::MessageAction action)
+{
+    const uint handle = m_connection->ensureContact(MorseIdentifier::fromUserId(userId));
     if (action) {
-        m_chatStateIface->chatStateChanged(m_targetHandle, Tp::ChannelChatStateComposing);
+        m_chatStateIface->chatStateChanged(handle, Tp::ChannelChatStateComposing);
     } else {
-        m_chatStateIface->chatStateChanged(m_targetHandle, Tp::ChannelChatStateActive);
+        m_chatStateIface->chatStateChanged(handle, Tp::ChannelChatStateActive);
     }
 }
 

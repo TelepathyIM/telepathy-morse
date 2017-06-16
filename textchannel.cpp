@@ -132,7 +132,7 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
         }
     }
 
-    quint64 tmpId = m_core->sendMessage(m_targetID.toPeer(), content);
+    quint64 tmpId = m_core->sendMessage(m_targetID, content);
     m_sentMessageIds.append(SentMessageId(tmpId));
 
     return QString::number(tmpId);
@@ -140,7 +140,7 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
 
 void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)
 {
-    m_core->setMessageRead(m_targetID.toPeer(), messageId.toUInt());
+    m_core->setMessageRead(m_targetID, messageId.toUInt());
 }
 
 void MorseTextChannel::whenContactChatStateComposingChanged(quint32 userId, TelegramNamespace::MessageAction action)
@@ -286,7 +286,7 @@ void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList
 void MorseTextChannel::setMessageInboxRead(Telegram::Peer peer, quint32 messageId)
 {
     // We are connected to broadcast signal, so have to select only needed calls
-    if (MorseIdentifier::fromPeer(peer) != m_targetID) {
+    if (m_targetID != peer) {
         return;
     }
 
@@ -321,7 +321,7 @@ void MorseTextChannel::setMessageInboxRead(Telegram::Peer peer, quint32 messageI
 void MorseTextChannel::setMessageOutboxRead(Telegram::Peer peer, quint32 messageId)
 {
     // We are connected to broadcast signal, so have to select only needed calls
-    if (MorseIdentifier::fromPeer(peer) != m_targetID) {
+    if (m_targetID != peer) {
         return;
     }
 
@@ -376,7 +376,7 @@ void MorseTextChannel::setResolvedMessageId(quint64 randomId, quint32 resolvedId
 
 void MorseTextChannel::reactivateLocalTyping()
 {
-    m_core->setTyping(m_targetID.toPeer(), TelegramNamespace::MessageActionTyping);
+    m_core->setTyping(m_targetID, TelegramNamespace::MessageActionTyping);
 }
 
 void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
@@ -390,10 +390,10 @@ void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
     }
 
     if (state == Tp::ChannelChatStateComposing) {
-        m_core->setTyping(m_targetID.toPeer(), TelegramNamespace::MessageActionTyping);
+        m_core->setTyping(m_targetID, TelegramNamespace::MessageActionTyping);
         m_localTypingTimer->start();
     } else {
-        m_core->setTyping(m_targetID.toPeer(), TelegramNamespace::MessageActionNone);
+        m_core->setTyping(m_targetID, TelegramNamespace::MessageActionNone);
         m_localTypingTimer->stop();
     }
 }

@@ -656,7 +656,7 @@ Tp::UIntList MorseConnection::requestHandles(uint handleType, const QStringList 
     Tp::UIntList result;
     foreach(const QString &identify, identifiers) {
         const MorseIdentifier id = MorseIdentifier::fromString(identify);
-        if (id.isNull()) {
+        if (!id.isValid()) {
             error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("MorseConnection::requestHandles - invalid identifier"));
             return Tp::UIntList();
         }
@@ -683,7 +683,7 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
         if (m_handles.contains(handle)) {
             QVariantMap attributes;
             const MorseIdentifier identifier = m_handles.value(handle);
-            if (identifier.isNull()) {
+            if (!identifier.isValid()) {
                 qWarning() << Q_FUNC_INFO << "Handle is in map, but identifier is not valid";
                 continue;
             }
@@ -776,13 +776,13 @@ Tp::ContactInfoFieldList MorseConnection::requestContactInfo(uint handle, Tp::DB
         error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle"));
         return Tp::ContactInfoFieldList();
     }
-    MorseIdentifier id = m_handles.value(handle);
-    if (id.isNull()) {
+    MorseIdentifier identifier = m_handles.value(handle);
+    if (!identifier.isValid()) {
         error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid morse identifier"));
         return Tp::ContactInfoFieldList();
     }
 
-    return getUserInfo(id.userId());
+    return getUserInfo(identifier.userId());
 }
 
 Tp::ContactInfoFieldList MorseConnection::getUserInfo(const quint32 userId) const
@@ -877,7 +877,7 @@ QString MorseConnection::getAlias(uint handle)
 {
     const MorseIdentifier identifier = m_handles.value(handle);
 
-    if (identifier.isNull()) {
+    if (!identifier.isValid()) {
         return QLatin1String("Invalid alias");
     }
 
@@ -1078,7 +1078,7 @@ void MorseConnection::whenMessageReceived(const Telegram::Message &message)
     bool chatMessage = message.peer().type != Telegram::Peer::User;
 
     uint contactHandle = ensureContact(MorseIdentifier::fromUserId(message.fromId));
-    uint targetHandle = ensureHandle(MorseIdentifier::fromPeer(message.peer()));
+    uint targetHandle = ensureHandle(message.peer());
     uint initiatorHandle = 0;
 
     if (chatMessage) {
@@ -1162,7 +1162,7 @@ void MorseConnection::onContactListChanged()
             continue;
         }
         const MorseIdentifier identifier = m_handles.value(handle);
-        if (identifier.isNull()) {
+        if (!identifier.isValid()) {
             qWarning() << Q_FUNC_INFO << "Internal corruption. Handle" << handle << "has invalid corresponding identifier";
             removals.insert(handle, identifier.toString());
         }
@@ -1313,7 +1313,7 @@ bool MorseConnection::coreIsAuthenticated()
 
 void MorseConnection::checkConnected()
 {
-    if (coreIsAuthenticated() && !m_handles.value(selfHandle()).isNull()) {
+    if (coreIsAuthenticated() && m_handles.value(selfHandle()).isValid()) {
         setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
     }
 }

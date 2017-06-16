@@ -19,24 +19,22 @@
 
 #include "identifier.hpp"
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-static const QString c_userPrefix = QLatin1String("user");
-static const QString c_chatPrefix = QLatin1String("chat");
-#else
 static const QLatin1String c_userPrefix = QLatin1String("user");
 static const QLatin1String c_chatPrefix = QLatin1String("chat");
-#endif
 
-MorseIdentifier::MorseIdentifier() :
-    m_userId(0),
-    m_chatId(0)
+MorseIdentifier::MorseIdentifier(quint32 id, Telegram::Peer::Type t) :
+    Telegram::Peer(id, t)
 {
+}
 
+MorseIdentifier::MorseIdentifier(const Telegram::Peer &peer) :
+    Telegram::Peer(peer)
+{
 }
 
 bool MorseIdentifier::operator==(const MorseIdentifier &identifier) const
 {
-    return (m_userId == identifier.m_userId) && (m_chatId == identifier.m_chatId);
+    return (type == identifier.type) && (id == identifier.id);
 }
 
 bool MorseIdentifier::operator!=(const MorseIdentifier &identifier) const
@@ -44,92 +42,60 @@ bool MorseIdentifier::operator!=(const MorseIdentifier &identifier) const
     return !(*this == identifier);
 }
 
-Telegram::Peer MorseIdentifier::toPeer() const
+quint32 MorseIdentifier::userId() const
 {
-    if (m_chatId) {
-        return Telegram::Peer(m_chatId, Telegram::Peer::Chat);
-    } else {
-        return Telegram::Peer(m_userId);
+    if (type == User) {
+        return id;
     }
+    return 0;
 }
 
-MorseIdentifier MorseIdentifier::fromPeer(const Telegram::Peer &peer)
+quint32 MorseIdentifier::chatId() const
 {
-    MorseIdentifier id;
-
-    if (peer.type == Telegram::Peer::User) {
-        id.m_userId = peer.id;
-    } else {
-        id.m_chatId = peer.id;
+    if (type == Chat) {
+        return id;
     }
-
-    return id;
+    return 0;
 }
 
 MorseIdentifier MorseIdentifier::fromChatId(quint32 chatId)
 {
-    MorseIdentifier id;
-    id.m_chatId = chatId;
-    return id;
+    return MorseIdentifier(chatId, Telegram::Peer::Chat);
 }
 
 MorseIdentifier MorseIdentifier::fromUserId(quint32 userId)
 {
-    MorseIdentifier id;
-    id.m_userId = userId;
-    return id;
-}
-
-MorseIdentifier MorseIdentifier::fromUserInChatId(quint32 chatId, quint32 userId)
-{
-    MorseIdentifier id;
-    id.m_userId = userId;
-    id.m_chatId = chatId;
-    return id;
+    return MorseIdentifier(userId, Telegram::Peer::User);
 }
 
 QString MorseIdentifier::toString() const
 {
-    QString result;
-
-    if (m_chatId) {
-        result = c_chatPrefix + QString::number(m_chatId);
+    switch (type) {
+    case User:
+        return c_userPrefix + QString::number(id);
+    case Chat:
+        return c_chatPrefix + QString::number(id);
+    default:
+        break;
     }
-
-    if (m_userId) {
-        result = c_userPrefix + QString::number(m_userId);
-    }
-
-    Q_ASSERT(!result.isEmpty());
-
-    return result;
+    return QString();
 }
 
 MorseIdentifier MorseIdentifier::fromString(const QString &string)
 {
-    MorseIdentifier id;
-
-    // Possible schemes: user1234, chat1234, user1234_chat1234
-
-    int chatOffset = string.indexOf(c_chatPrefix);
-
-
+    // Possible schemes: user1234, chat1234
+    bool ok = true;
     if (string.startsWith(c_userPrefix)) {
-        int length = chatOffset < 0 ? -1 : chatOffset - c_userPrefix.size() - 1;
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-        id.m_userId = string.mid(c_userPrefix.size(), length).toUInt();
+        uint userId = string.midRef(c_userPrefix.size()).toUInt(&ok);
+        if (ok) {
+            return MorseIdentifier::fromUserId(userId);
+        }
+    } else if (string.startsWith(c_chatPrefix)) {
+        uint chatId = string.midRef(c_chatPrefix.size()).toUInt(&ok);
+        if (ok) {
+            return MorseIdentifier::fromChatId(chatId);
+        }
     }
 
-    if (chatOffset >= 0) {
-        id.m_chatId = string.mid(c_chatPrefix.size() + chatOffset).toUInt();
-#else
-        id.m_userId = string.midRef(c_userPrefix.size(), length).toUInt();
-    }
-
-    if (chatOffset >= 0) {
-        id.m_chatId = string.midRef(c_chatPrefix.size() + chatOffset).toUInt();
-#endif
-    }
-
-    return id;
+    return MorseIdentifier();
 }

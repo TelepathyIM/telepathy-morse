@@ -22,31 +22,22 @@
 
 #include <TelegramQt/TelegramNamespace>
 
-class MorseIdentifier
+class MorseIdentifier : public Telegram::Peer
 {
 public:
-    MorseIdentifier();
-    MorseIdentifier(const QString &string);
+    MorseIdentifier(quint32 id = 0, Telegram::Peer::Type t = User);
+    MorseIdentifier(const Telegram::Peer &peer);
 
     bool operator==(const MorseIdentifier &identifier) const;
     bool operator!=(const MorseIdentifier &identifier) const;
 
-    bool isNull() const { return !m_userId && !m_chatId; }
-
-    quint32 userId() const { return m_userId; }
-    quint32 chatId() const { return m_chatId; }
-    Telegram::Peer toPeer() const;
-    static MorseIdentifier fromPeer(const Telegram::Peer &peer);
-    static MorseIdentifier fromChatId(quint32 chatId);
+    quint32 userId() const;
+    quint32 chatId() const;
     static MorseIdentifier fromUserId(quint32 userId);
-    static MorseIdentifier fromUserInChatId(quint32 chatId, quint32 userId);
+    static MorseIdentifier fromChatId(quint32 chatId);
 
     QString toString() const;
     static MorseIdentifier fromString(const QString &string);
-
-private:
-    quint32 m_userId;
-    quint32 m_chatId;
 };
 
 #endif // MORSE_IDENTIFIER_HPP

@@ -24,13 +24,14 @@
 
 #include <TelepathyQt/BaseChannel>
 
-#include <TelegramQt/CTelegramCore>
-
 #include "identifier.hpp"
 
 class QTimer;
 
+class CTelegramCore;
+
 class MorseTextChannel;
+class MorseConnection;
 
 typedef Tp::SharedPtr<MorseTextChannel> MorseTextChannelPtr;
 
@@ -55,7 +56,7 @@ class MorseTextChannel : public Tp::BaseChannelTextType
 {
     Q_OBJECT
 public:
-    static MorseTextChannelPtr create(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfID);
+    static MorseTextChannelPtr create(MorseConnection *morseConnection, Tp::BaseChannel *baseChannel);
     virtual ~MorseTextChannel();
 
     QString sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
@@ -81,9 +82,10 @@ protected:
     void setChatState(uint state, Tp::DBusError *error);
 
 private:
-    MorseTextChannel(CTelegramCore *core, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfID);
+    MorseTextChannel(MorseConnection *morseConnection, Tp::BaseChannel *baseChannel);
 
-    QPointer<CTelegramCore> m_core;
+    MorseConnection *m_connection;
+    CTelegramCore *m_core;
 
     uint m_targetHandle;
     uint m_targetHandleType;

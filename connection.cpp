@@ -630,7 +630,7 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
     baseChannel->setInitiatorHandle(initiatorHandle);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        MorseTextChannelPtr textChannel = MorseTextChannel::create(m_core, baseChannel.data(), selfHandle(), selfID());
+        MorseTextChannelPtr textChannel = MorseTextChannel::create(this, baseChannel.data());
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
 
         if (targetHandleType == Tp::HandleTypeRoom) {

@@ -1079,13 +1079,6 @@ void MorseConnection::whenMessageReceived(const Telegram::Message &message)
 
     uint contactHandle = ensureContact(MorseIdentifier::fromUserId(message.fromId));
     uint targetHandle = ensureHandle(message.peer());
-    uint initiatorHandle = 0;
-
-    if (chatMessage) {
-        initiatorHandle = contactHandle;
-    } else {
-        initiatorHandle = targetHandle;
-    }
 
     //TODO: initiator should be group creator
     Tp::DBusError error;
@@ -1095,7 +1088,7 @@ void MorseConnection::whenMessageReceived(const Telegram::Message &message)
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = chatMessage ? Tp::HandleTypeRoom : Tp::HandleTypeContact;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = initiatorHandle;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = targetHandle;
 
 #if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 8)
     Tp::BaseChannelPtr channel;

@@ -940,6 +940,11 @@ uint MorseConnection::ensureHandle(const MorseIdentifier &identifier)
     }
 }
 
+uint MorseConnection::ensureContact(quint32 userId)
+{
+    return ensureContact(MorseIdentifier::fromUserId(userId));
+}
+
 uint MorseConnection::ensureContact(const MorseIdentifier &identifier)
 {
     uint handle = getHandle(identifier);

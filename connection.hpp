@@ -68,6 +68,7 @@ public:
     uint setPresence(const QString &status, const QString &message, Tp::DBusError *error);
 
     uint ensureHandle(const MorseIdentifier &identifier);
+    uint ensureContact(quint32 userId);
     uint ensureContact(const MorseIdentifier &identifier);
     uint ensureChat(const MorseIdentifier &identifier);
 

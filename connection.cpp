@@ -1097,6 +1097,7 @@ void MorseConnection::whenMessageReceived(const Telegram::Message &message)
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = chatMessage ? Tp::HandleTypeRoom : Tp::HandleTypeContact;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = initiatorHandle;
 
+#if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 8)
     Tp::BaseChannelPtr channel;
     if (message.fromId == m_core->selfId()) {
         channel = getExistingChannel(request, &error);
@@ -1106,6 +1107,9 @@ void MorseConnection::whenMessageReceived(const Telegram::Message &message)
     } else {
         channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
     }
+#else
+    Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
+#endif
 
     if (error.isValid()) {
         qWarning() << Q_FUNC_INFO << "ensureChannel failed:" << error.name() << " " << error.message();

@@ -27,6 +27,7 @@
 
 #include <TelegramQt/CAppInformation>
 #include <TelegramQt/CTelegramCore>
+#include <TelegramQt/Debug>
 
 #include <TelepathyQt/Constants>
 #include <TelepathyQt/BaseChannel>
@@ -42,6 +43,8 @@
 #else
 #include <QDesktopServices>
 #endif // QT_VERSION >= 0x050000
+
+#define DIALOGS_AS_CONTACTLIST
 
 #include <QDir>
 #include <QFile>
@@ -1176,7 +1179,11 @@ void MorseConnection::whenChatChanged(quint32 chatId)
 
 void MorseConnection::onContactListChanged()
 {
+#ifdef DIALOGS_AS_CONTACTLIST
+    const QVector<Telegram::Peer> ids = m_core->dialogs();
+#else
     const QVector<quint32> ids = m_core->contactList();
+#endif
 
     qDebug() << Q_FUNC_INFO << ids;
 
@@ -1185,8 +1192,16 @@ void MorseConnection::onContactListChanged()
     newContactListHandles.reserve(ids.count());
     newContactListIdentifiers.reserve(ids.count());
 
-    foreach (quint32 id, ids) {
+#ifdef DIALOGS_AS_CONTACTLIST
+    for (const Telegram::Peer peer : ids) {
+        if (peerIsRoom(peer)) {
+            continue;
+        }
+        newContactListIdentifiers.append(peer);
+#else
+    for (quint32 id : ids) {
         newContactListIdentifiers.append(MorseIdentifier::fromUserId(id));
+#endif
         newContactListHandles.append(ensureContact(newContactListIdentifiers.last()));
     }
 

@@ -1414,6 +1414,14 @@ bool MorseConnection::peerIsRoom(const Telegram::Peer peer) const
     if (peer.type == Telegram::Peer::User) {
         return false;
     }
+    if (peer.type == Telegram::Peer::Channel) {
+        Telegram::ChatInfo info;
+        if (m_core->getChatInfo(&info, peer)) {
+            if (info.broadcast()) {
+                return false;
+            }
+        }
+    }
     return true;
 }
 

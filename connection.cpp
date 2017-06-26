@@ -955,10 +955,10 @@ uint MorseConnection::setPresence(const QString &status, const QString &message,
 
 uint MorseConnection::ensureHandle(const MorseIdentifier &identifier)
 {
-    if (identifier.userId()) {
-        return ensureContact(identifier);
-    } else {
+    if (peerIsRoom(identifier)) {
         return ensureChat(identifier);
+    } else {
+        return ensureContact(identifier);
     }
 }
 
@@ -1102,7 +1102,7 @@ void MorseConnection::setSubscriptionState(const QVector<MorseIdentifier> &ident
 /* Receive message from outside (telegram server) */
 void MorseConnection::whenMessageReceived(const Telegram::Message &message)
 {
-    bool chatMessage = message.peer().type != Telegram::Peer::User;
+    bool groupChatMessage = peerIsRoom(message.peer());
     uint targetHandle = ensureHandle(message.peer());
 
     //TODO: initiator should be group creator
@@ -1112,7 +1112,7 @@ void MorseConnection::whenMessageReceived(const Telegram::Message &message)
     QVariantMap request;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = chatMessage ? Tp::HandleTypeRoom : Tp::HandleTypeContact;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = groupChatMessage ? Tp::HandleTypeRoom : Tp::HandleTypeContact;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = targetHandle;
 
 #if TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 8)
@@ -1372,6 +1372,14 @@ bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &da
 #endif // INSECURE_SAVE
 
     return false;
+}
+
+bool MorseConnection::peerIsRoom(const Telegram::Peer peer) const
+{
+    if (peer.type == Telegram::Peer::User) {
+        return false;
+    }
+    return true;
 }
 
 void MorseConnection::setContactStatus(quint32 userId, TelegramNamespace::ContactStatus status)

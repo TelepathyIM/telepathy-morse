@@ -725,7 +725,7 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
             }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_core->contactAvatarToken(identifier.userId()));
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_core->peerPictureToken(identifier));
             }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO)) {
@@ -1231,7 +1231,7 @@ void MorseConnection::whenGotRooms()
 
     foreach (quint32 chatId, m_core->chatList()) {
         Tp::RoomInfo roomInfo;
-        Telegram::GroupChat chatInfo;
+        Telegram::ChatInfo chatInfo;
 
         const MorseIdentifier chatID = MorseIdentifier::fromChatId(chatId);
         roomInfo.channelType = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
@@ -1242,8 +1242,8 @@ void MorseConnection::whenGotRooms()
         roomInfo.info[QLatin1String("password")] = false;
 
         if (m_core->getChatInfo(&chatInfo, chatId)) {
-            roomInfo.info[QLatin1String("name")] = chatInfo.title;
-            roomInfo.info[QLatin1String("members")] = chatInfo.participantsCount;
+            roomInfo.info[QLatin1String("name")] = chatInfo.title();
+            roomInfo.info[QLatin1String("members")] = chatInfo.participantsCount();
         }
 
         rooms << roomInfo;
@@ -1281,7 +1281,7 @@ Tp::AvatarTokenMap MorseConnection::getKnownAvatarTokens(const Tp::UIntList &con
         if (!m_handles.contains(handle)) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
         }
-        result.insert(handle, m_core->contactAvatarToken(m_handles.value(handle).userId()));
+        result.insert(handle, m_core->peerPictureToken(m_handles.value(handle)));
     }
 
     return result;
@@ -1301,7 +1301,7 @@ void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError
         if (!m_handles.contains(handle)) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
         }
-        m_core->requestContactAvatar(m_handles.value(handle).userId());
+        m_core->requestPeerPicture(m_handles.value(handle));
     }
 }
 

@@ -79,13 +79,13 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
         m_groupIface->setSelfHandle(m_connection->selfHandle());
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_groupIface));
 
-        Telegram::GroupChat info;
+        Telegram::ChatInfo info;
 
         m_core->getChatInfo(&info, m_targetID.chatId());
 
         QDateTime creationTimestamp;
-        if (info.date) {
-            creationTimestamp.setTime_t(info.date);
+        if (info.date()) {
+            creationTimestamp.setTime_t(info.date());
         }
 
         m_roomIface = Tp::BaseChannelRoomInterface::create(/* roomName */ m_targetID.toString(),
@@ -185,7 +185,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
 
     if (message.type != TelegramNamespace::MessageTypeText) { // More, than a plain text message
         Telegram::MessageMediaInfo info;
-        m_core->getMessageMediaInfo(&info, message.id);
+        m_core->getMessageMediaInfo(&info, message.id, message.peer());
 
         bool handled = true;
         switch (message.type) {
@@ -275,9 +275,9 @@ void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList
     if (m_targetID.chatId() == chatId) {
         updateChatParticipants(handles);
 
-        Telegram::GroupChat info;
+        Telegram::ChatInfo info;
         if (m_core->getChatInfo(&info, chatId)) {
-            m_roomConfigIface->setTitle(info.title);
+            m_roomConfigIface->setTitle(info.title());
             m_roomConfigIface->setConfigurationRetrieved(true);
         }
     }

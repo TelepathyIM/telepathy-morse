@@ -1247,22 +1247,23 @@ void MorseConnection::whenGotRooms()
         if (!peerIsRoom(peer)) {
             continue;
         }
-        Tp::RoomInfo roomInfo;
         Telegram::ChatInfo chatInfo;
-
+        if (!m_core->getChatInfo(&chatInfo, peer.id)) {
+            continue;
+        }
+        if (chatInfo.migratedTo().isValid()) {
+            continue;
+        }
         const MorseIdentifier chatID = peer;
+        Tp::RoomInfo roomInfo;
         roomInfo.channelType = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
         roomInfo.handle = ensureChat(chatID);
         roomInfo.info[QLatin1String("handle-name")] = chatID.toString();
         roomInfo.info[QLatin1String("members-only")] = true;
         roomInfo.info[QLatin1String("invite-only")] = true;
         roomInfo.info[QLatin1String("password")] = false;
-
-        if (m_core->getChatInfo(&chatInfo, peer.id)) {
-            roomInfo.info[QLatin1String("name")] = chatInfo.title();
-            roomInfo.info[QLatin1String("members")] = chatInfo.participantsCount();
-        }
-
+        roomInfo.info[QLatin1String("name")] = chatInfo.title();
+        roomInfo.info[QLatin1String("members")] = chatInfo.participantsCount();
         rooms << roomInfo;
     }
 

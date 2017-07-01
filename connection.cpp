@@ -113,8 +113,8 @@ Tp::RequestableChannelClassSpecList MorseConnection::getRequestableChannelList()
 
 MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
     Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters),
-    m_core(0),
-    m_passwordInfo(0),
+    m_core(nullptr),
+    m_passwordInfo(nullptr),
     m_authReconnectionsCount(0)
 {
     qDebug() << Q_FUNC_INFO;

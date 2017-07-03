@@ -36,6 +36,11 @@ MorseProtocol::MorseProtocol(const QDBusConnection &dbusConnection, const QStrin
     setParameters(Tp::ProtocolParameterList()
                   << Tp::ProtocolParameter(QLatin1String("account"), QLatin1String("s"), Tp::ConnMgrParamFlagRequired)
                   << Tp::ProtocolParameter(QLatin1String("keepalive-interval"), QLatin1String("u"), Tp::ConnMgrParamFlagHasDefault, 15)
+                  << Tp::ProtocolParameter(QLatin1String("proxy-type"), QLatin1String("s"), 0) // ATM we have only socks5 support, but Telegram supports http-proxy too
+                  << Tp::ProtocolParameter(QLatin1String("proxy-server"), QLatin1String("s"), 0)
+                  << Tp::ProtocolParameter(QLatin1String("proxy-port"), QLatin1String("u"), 0)
+                  << Tp::ProtocolParameter(QLatin1String("proxy-username"), QLatin1String("s"), 0)
+                  << Tp::ProtocolParameter(QLatin1String("proxy-password"), QLatin1String("s"), Tp::ConnMgrParamFlagSecret)
                   );
 
     setRequestableChannelClasses(MorseConnection::getRequestableChannelList());

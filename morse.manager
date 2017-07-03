@@ -6,6 +6,11 @@ ObjectPath = /org/freedesktop/Telepathy/ConnectionManager/morse
 [Protocol telegram]
 param-account = s required
 param-keepalive-interval=u
+param-proxy-type=s
+param-proxy-server=s
+param-proxy-port=q
+param-proxy-username=s
+param-proxy-password=s
 default-keepalive-interval=15
 
 EnglishName=Telegram

@@ -255,6 +255,30 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
             this, &MorseConnection::whenChatChanged);
     connect(m_core, &CTelegramCore::contactStatusChanged,
             this, &MorseConnection::setContactStatus);
+
+    const QString proxyType = parameters.value(QLatin1String("proxy-type")).toString();
+    if (!proxyType.isEmpty()) {
+        if (proxyType == QLatin1String("socks5")) {
+            const QString proxyServer = parameters.value(QLatin1String("proxy-server")).toString();
+            const quint16 proxyPort = parameters.value(QLatin1String("proxy-port")).toUInt();
+            const QString proxyUsername = parameters.value(QLatin1String("proxy-username")).toString();
+            const QString proxyPassword = parameters.value(QLatin1String("proxy-password")).toString();
+            if (proxyServer.isEmpty() || proxyPort == 0) {
+                qWarning() << "Invalid proxy configuration, ignored";
+            } else {
+                qDebug() << Q_FUNC_INFO << "Set proxy";
+                QNetworkProxy proxy;
+                proxy.setType(QNetworkProxy::Socks5Proxy);
+                proxy.setHostName(proxyServer);
+                proxy.setPort(proxyPort);
+                proxy.setUser(proxyUsername);
+                proxy.setPassword(proxyPassword);
+                m_core->setProxy(proxy);
+            }
+        } else {
+            qWarning() << "Unknown proxy type" << proxyType << ", ignored.";
+        }
+    }
 }
 
 MorseConnection::~MorseConnection()

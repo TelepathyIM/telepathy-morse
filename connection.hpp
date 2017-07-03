@@ -28,6 +28,7 @@
 
 #include "identifier.hpp"
 
+class CAppInformation;
 class CTelegramCore;
 
 class MorseConnection : public Tp::BaseConnection
@@ -152,6 +153,7 @@ private:
     /* Maps a contact handle to its subscription state */
     QHash<uint, uint> m_contactsSubscription;
 
+    CAppInformation *m_appInfo;
     CTelegramCore *m_core;
     Telegram::PasswordInfo *m_passwordInfo;
 

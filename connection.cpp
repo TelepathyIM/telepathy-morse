@@ -113,6 +113,7 @@ Tp::RequestableChannelClassSpecList MorseConnection::getRequestableChannelList()
 
 MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
     Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters),
+    m_appInfo(nullptr),
     m_core(nullptr),
     m_passwordInfo(nullptr),
     m_authReconnectionsCount(0)
@@ -208,31 +209,18 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     m_handles.insert(1, MorseIdentifier());
     setSelfHandle(1);
-}
 
-MorseConnection::~MorseConnection()
-{
-    if (m_core) {
-        m_core->deleteLater();
-    }
-}
+    m_appInfo = new CAppInformation(this);
+    m_appInfo->setAppId(14617);
+    m_appInfo->setAppHash(QLatin1String("e17ac360fd072f83d5d08db45ce9a121"));
+    m_appInfo->setAppVersion(QLatin1String("0.1"));
+    m_appInfo->setDeviceInfo(QLatin1String("pc"));
+    m_appInfo->setOsInfo(QLatin1String("GNU/Linux"));
+    m_appInfo->setLanguageCode(QLocale::system().name());
 
-void MorseConnection::doConnect(Tp::DBusError *error)
-{
-    Q_UNUSED(error);
-
-    CAppInformation *appInfo = new CAppInformation(m_core);
-    appInfo->setAppId(14617);
-    appInfo->setAppHash(QLatin1String("e17ac360fd072f83d5d08db45ce9a121"));
-    appInfo->setAppVersion(QLatin1String("0.1"));
-    appInfo->setDeviceInfo(QLatin1String("pc"));
-    appInfo->setOsInfo(QLatin1String("GNU/Linux"));
-    appInfo->setLanguageCode(QLatin1String("en"));
-
-    m_authReconnectionsCount = 0;
-    m_core = new CTelegramCore(0);
+    m_core = new CTelegramCore(this);
     m_core->setPingInterval(m_keepaliveInterval * 1000);
-    m_core->setAppInformation(appInfo);
+    m_core->setAppInformation(m_appInfo);
     m_core->setMessageReceivingFilter(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagRead);
 #ifndef TELEGRAMQT_VERSION
     m_core->setAcceptableMessageTypes(
@@ -245,30 +233,40 @@ void MorseConnection::doConnect(Tp::DBusError *error)
                     TelegramNamespace::MessageTypeGeo );
 #endif
 
-    setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonNoneSpecified);
+    connect(m_core, &CTelegramCore::connectionStateChanged,
+            this, &MorseConnection::whenConnectionStateChanged);
+    connect(m_core, &CTelegramCore::selfUserAvailable,
+            this, &MorseConnection::onSelfUserAvailable);
+    connect(m_core, &CTelegramCore::authorizationErrorReceived,
+            this, &MorseConnection::onAuthErrorReceived);
+    connect(m_core, &CTelegramCore::phoneCodeRequired,
+            this, &MorseConnection::whenPhoneCodeRequired);
+    connect(m_core, &CTelegramCore::authSignErrorReceived,
+            this, &MorseConnection::whenAuthSignErrorReceived);
+    connect(m_core, &CTelegramCore::passwordInfoReceived,
+            this, &MorseConnection::onPasswordInfoReceived);
+    connect(m_core, &CTelegramCore::avatarReceived,
+            this, &MorseConnection::whenAvatarReceived);
+    connect(m_core, &CTelegramCore::contactListChanged,
+            this, &MorseConnection::onContactListChanged);
+    connect(m_core, &CTelegramCore::messageReceived,
+             this, &MorseConnection::whenMessageReceived);
+    connect(m_core, &CTelegramCore::chatChanged,
+            this, &MorseConnection::whenChatChanged);
+    connect(m_core, &CTelegramCore::contactStatusChanged,
+            this, &MorseConnection::setContactStatus);
+}
 
-    connect(m_core, SIGNAL(connectionStateChanged(TelegramNamespace::ConnectionState)),
-            this, SLOT(whenConnectionStateChanged(TelegramNamespace::ConnectionState)));
-    connect(m_core, SIGNAL(selfUserAvailable(quint32)),
-            SLOT(onSelfUserAvailable()));
-    connect(m_core, SIGNAL(authorizationErrorReceived(TelegramNamespace::UnauthorizedError,QString)),
-            this, SLOT(onAuthErrorReceived(TelegramNamespace::UnauthorizedError,QString)));
-    connect(m_core, SIGNAL(phoneCodeRequired()),
-            this, SLOT(whenPhoneCodeRequired()));
-    connect(m_core, SIGNAL(authSignErrorReceived(TelegramNamespace::AuthSignError,QString)),
-            this, SLOT(whenAuthSignErrorReceived(TelegramNamespace::AuthSignError,QString)));
-    connect(m_core, SIGNAL(passwordInfoReceived(quint64)),
-            SLOT(onPasswordInfoReceived(quint64)));
-    connect(m_core, SIGNAL(avatarReceived(quint32,QByteArray,QString,QString)),
-            this, SLOT(whenAvatarReceived(quint32,QByteArray,QString,QString)));
-    connect(m_core, SIGNAL(contactListChanged()),
-            this, SLOT(onContactListChanged()));
-    connect(m_core, SIGNAL(messageReceived(Telegram::Message)),
-             this, SLOT(whenMessageReceived(Telegram::Message)));
-    connect(m_core, SIGNAL(chatChanged(quint32)),
-            this, SLOT(whenChatChanged(quint32)));
-    connect(m_core, SIGNAL(contactStatusChanged(quint32,TelegramNamespace::ContactStatus)),
-            this, SLOT(setContactStatus(quint32,TelegramNamespace::ContactStatus)));
+MorseConnection::~MorseConnection()
+{
+}
+
+void MorseConnection::doConnect(Tp::DBusError *error)
+{
+    Q_UNUSED(error);
+
+    m_authReconnectionsCount = 0;
+    setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonNoneSpecified);
 
     const QByteArray sessionData = getSessionData(m_selfPhone);
 

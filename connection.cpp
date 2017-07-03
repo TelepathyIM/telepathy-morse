@@ -1197,6 +1197,14 @@ void MorseConnection::onContactListChanged()
         if (peerIsRoom(peer)) {
             continue;
         }
+        Telegram::UserInfo info;
+        if (peer.type == Telegram::Peer::User) {
+            m_core->getUserInfo(&info, peer.id);
+            if (info.isDeleted()) {
+                qDebug() << Q_FUNC_INFO << "skip deleted user id" << peer.id;
+                continue;
+            }
+        }
         newContactListIdentifiers.append(peer);
 #else
     for (quint32 id : ids) {

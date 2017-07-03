@@ -216,7 +216,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     m_appInfo->setAppVersion(QLatin1String("0.1"));
     m_appInfo->setDeviceInfo(QLatin1String("pc"));
     m_appInfo->setOsInfo(QLatin1String("GNU/Linux"));
-    m_appInfo->setLanguageCode(QLocale::system().name());
+    m_appInfo->setLanguageCode(QLocale::system().bcp47Name());
 
     m_core = new CTelegramCore(this);
     m_core->setPingInterval(m_keepaliveInterval * 1000);

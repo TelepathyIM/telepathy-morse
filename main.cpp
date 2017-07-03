@@ -48,8 +48,14 @@ int main(int argc, char *argv[])
     proto->setIconName(QLatin1String("telegram"));
     proto->setVCardField(QLatin1String("tel"));
 
-    cm->addProtocol(proto);
-    cm->registerObject();
+    if (!cm->addProtocol(proto)) {
+        qCritical() << "Unable to add" << proto->name() << "protocol";
+        return 1;
+    }
+    if (!cm->registerObject()) {
+        qCritical() << "Unable to register the cm service";
+        return 2;
+    }
 
     return app.exec();
 }

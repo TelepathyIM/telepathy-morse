@@ -46,6 +46,8 @@
 #include <QDir>
 #include <QFile>
 
+#include "extras/CFileManager.hpp"
+
 static const QString secretsDirPath = QLatin1String("/secrets/");
 #endif // INSECURE_SAVE
 
@@ -115,6 +117,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters),
     m_appInfo(nullptr),
     m_core(nullptr),
+    m_fileManager(nullptr),
     m_passwordInfo(nullptr),
     m_authReconnectionsCount(0)
 {
@@ -245,8 +248,6 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
             this, &MorseConnection::whenAuthSignErrorReceived);
     connect(m_core, &CTelegramCore::passwordInfoReceived,
             this, &MorseConnection::onPasswordInfoReceived);
-    connect(m_core, &CTelegramCore::avatarReceived,
-            this, &MorseConnection::whenAvatarReceived);
     connect(m_core, &CTelegramCore::contactListChanged,
             this, &MorseConnection::onContactListChanged);
     connect(m_core, &CTelegramCore::messageReceived,
@@ -279,6 +280,8 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
             qWarning() << "Unknown proxy type" << proxyType << ", ignored.";
         }
     }
+    m_fileManager = new CFileManager(m_core, this);
+    connect(m_fileManager, &CFileManager::requestComplete, this, &MorseConnection::onFileRequestCompleted);
 }
 
 MorseConnection::~MorseConnection()
@@ -1218,10 +1221,20 @@ void MorseConnection::whenDisconnected()
     setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonRequested);
 }
 
-/* Connection.Interface.Avatars */
-void MorseConnection::whenAvatarReceived(quint32 userId, const QByteArray &data, const QString &mimeType, const QString &token)
+void MorseConnection::onFileRequestCompleted(const QString &uniqueId)
 {
-    avatarsIface->avatarRetrieved(ensureContact(MorseIdentifier::fromUserId(userId)), token , data, mimeType);
+    qDebug() << Q_FUNC_INFO << uniqueId;
+    if (m_peerPictureRequests.contains(uniqueId)) {
+        const Telegram::Peer peer = m_peerPictureRequests.value(uniqueId);
+        if (!peerIsRoom(peer)) {
+            const FileInfo *fileInfo = m_fileManager->getFileInfo(uniqueId);
+            avatarsIface->avatarRetrieved(peer.id, uniqueId, fileInfo->data(), fileInfo->mimeType());
+        } else {
+            qWarning() << "MorseConnection::onFileRequestCompleted(): Ignore room picture";
+        }
+    } else {
+        qWarning() << "MorseConnection::onFileRequestCompleted(): Unexpected file id";
+    }
 }
 
 void MorseConnection::whenGotRooms()
@@ -1301,7 +1314,24 @@ void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError
         if (!m_handles.contains(handle)) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
         }
-        m_core->requestPeerPicture(m_handles.value(handle));
+        const Telegram::Peer peer = m_handles.value(handle);
+        Telegram::RemoteFile pictureFile;
+        m_fileManager->getPeerPictureFileInfo(peer, &pictureFile);
+        const QString requestId = pictureFile.getUniqueId();
+        const FileInfo *fileInfo = m_fileManager->getFileInfo(requestId);
+        if (fileInfo && fileInfo->isComplete()) {
+            const QByteArray data = m_fileManager->getData(requestId);
+            if (!data.isEmpty()) {
+                // I don't see an easy way to delay the invocation; emit the signal synchronously for now. Should not be a problem for a good client.
+                avatarsIface->avatarRetrieved(handle, requestId, data, fileInfo->mimeType());
+            }
+            continue;
+        }
+        const QString newRequestId = m_fileManager->requestFile(pictureFile);
+        if (newRequestId != requestId) {
+            qWarning() << "Unexpected request id!" << newRequestId << "(expected:" << requestId;
+        }
+        m_peerPictureRequests.insert(newRequestId, peer);
     }
 }
 

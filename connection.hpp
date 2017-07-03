@@ -30,6 +30,7 @@
 
 class CAppInformation;
 class CTelegramCore;
+class CFileManager;
 
 class MorseConnection : public Tp::BaseConnection
 {
@@ -95,9 +96,7 @@ private slots:
     void whenConnectionReady();
     void onContactListChanged();
     void whenDisconnected();
-
-    /* Connection.Interface.Avatars */
-    void whenAvatarReceived(quint32 userId, const QByteArray &data, const QString &mimeType, const QString &token);
+    void onFileRequestCompleted(const QString &uniqueId);
 
     /* Channel.Type.RoomList */
     void whenGotRooms();
@@ -154,9 +153,11 @@ private:
     QMap<uint, MorseIdentifier> m_chatHandles;
     /* Maps a contact handle to its subscription state */
     QHash<uint, uint> m_contactsSubscription;
+    QHash<QString,Telegram::Peer> m_peerPictureRequests;
 
     CAppInformation *m_appInfo;
     CTelegramCore *m_core;
+    CFileManager *m_fileManager;
     Telegram::PasswordInfo *m_passwordInfo;
 
     int m_authReconnectionsCount;

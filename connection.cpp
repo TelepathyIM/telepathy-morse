@@ -1179,6 +1179,9 @@ void MorseConnection::whenChatChanged(quint32 chatId)
 
 void MorseConnection::onContactListChanged()
 {
+    if (!coreIsReady()) {
+        return;
+    }
 #ifdef DIALOGS_AS_CONTACTLIST
     const QVector<Telegram::Peer> ids = m_core->dialogs();
 #else

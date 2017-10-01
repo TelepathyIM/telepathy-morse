@@ -57,3 +57,8 @@ uint RequestDetails::getTargetHandle(Tp::BaseConnection *connection) const
     }
     return 0;
 }
+
+QString RequestDetails::fileId() const
+{
+    return value(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".FileID")).toString();
+}

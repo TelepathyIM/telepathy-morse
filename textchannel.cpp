@@ -301,6 +301,26 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
 
         bool handled = true;
         switch (message.type()) {
+        case Telegram::Namespace::MessageTypePhoto:
+        case Telegram::Namespace::MessageTypeAudio:
+        case Telegram::Namespace::MessageTypeVideo:
+        case Telegram::Namespace::MessageTypeDocument:
+        {
+            Telegram::FileInfo fileInfo;
+            info.getRemoteFileInfo(&fileInfo);
+            if (!fileInfo.isValid()) {
+                qWarning() << Q_FUNC_INFO << "Unable to file information for media message" << message.id();
+                break;
+            }
+            Tp::MessagePart fileMessage;
+            fileMessage[QLatin1String("content-type")] = QDBusVariant(fileInfo.mimeType());
+            fileMessage[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));
+            fileMessage[QLatin1String("file-id")] = QDBusVariant(fileInfo.getFileId());
+            fileMessage[QLatin1String("size")] = QDBusVariant(fileInfo.size());
+            // TODO: Add extra meta info (width, height, duration, etc...)
+            body << fileMessage;
+        }
+            break;
         case Telegram::Namespace::MessageTypeGeo: {
             static const QString jsonTemplate = QLatin1String("{\"type\":\"point\",\"coordinates\":[%1, %2]}");
             Tp::MessagePart geo;

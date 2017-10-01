@@ -53,6 +53,8 @@ public:
 
     QString getTargetIdentifier(Tp::BaseConnection *connection) const;
     uint getTargetHandle(Tp::BaseConnection *connection) const;
+
+    QString fileId() const;
 };
 
 #endif // MORSE_REQUEST_DETAILS_HPP

@@ -35,6 +35,8 @@ target_sources(telepathy-morse PRIVATE
     requestdetails.hpp
     textchannel.cpp
     textchannel.hpp
+    filetransferchannel.cpp
+    filetransferchannel.hpp
 )
 
 if (NOT BUILD_VERSION)

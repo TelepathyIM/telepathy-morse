@@ -24,6 +24,7 @@
 #include "protocol.hpp"
 #include "requestdetails.hpp"
 #include "textchannel.hpp"
+#include "filetransferchannel.hpp"
 
 #if TP_QT_VERSION < TP_QT_VERSION_CHECK(0, 9, 8)
 #include "contactgroups.hpp"
@@ -145,6 +146,22 @@ Tp::RequestableChannelClassSpecList MorseConnection::getRequestableChannelList()
     chatList.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST;
     result << Tp::RequestableChannelClassSpec(chatList);
 #endif // ENABLE_GROUP_CHAT
+
+    Tp::RequestableChannelClass fileTransfer;
+    fileTransfer.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER;
+//    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")); // Properties to send a multimedia file
+//    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType"));
+//    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
+//    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".ContentHashType"));
+    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".FileID")); // A property to get a file
+//    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".ContentType"));
+//    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Filename")); // Document filename
+//    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Size"));
+//    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".ContentHash"));
+//    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Description")); // Caption
+//    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Date"));
+//    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".URI"));
+    result << Tp::RequestableChannelClassSpec(fileTransfer);
 
     return result;
 }
@@ -642,6 +659,8 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST) {
         return createRoomListChannel();
+    } else if (channelType == TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER) {
+        return createFileTransferChannel(details, error);
     }
 
     const Tp::HandleType targetHandleType = details.targetHandleType();
@@ -1043,6 +1062,11 @@ Telegram::Peer MorseConnection::selfPeer() const
     return Peer::fromUserId(m_client->dataStorage()->selfUserId());
 }
 
+Telegram::Client::FilesApi *MorseConnection::filesApi() const
+{
+    return m_client->filesApi();
+}
+
 quint64 MorseConnection::getSentMessageToken(const Peer &dialog, quint32 messageId) const
 {
     if (m_sentMessageMap.contains(dialog)) {
@@ -1378,6 +1402,19 @@ Tp::BaseChannelPtr MorseConnection::createRoomListChannel()
     roomListChannel->setListRoomsCallback(Tp::memFun(this, &MorseConnection::roomListStartListing));
     roomListChannel->setStopListingCallback(Tp::memFun(this, &MorseConnection::roomListStopListing));
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(roomListChannel));
+
+    return baseChannel;
+}
+
+Tp::BaseChannelPtr MorseConnection::createFileTransferChannel(const RequestDetails &request, Tp::DBusError *error)
+{
+    MorseFileTransferChannelPtr fileChannel = MorseFileTransferChannel::create(this, request, error);
+    if (!fileChannel) {
+        return Tp::BaseChannelPtr();
+    }
+
+    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
+    baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(fileChannel));
 
     return baseChannel;
 }

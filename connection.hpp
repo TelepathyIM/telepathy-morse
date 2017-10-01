@@ -31,6 +31,7 @@
 class MorseDataStorage;
 class MorseInfo;
 class MorseTextChannel;
+class RequestDetails;
 
 using MorseTextChannelPtr = Tp::SharedPtr<MorseTextChannel>;
 
@@ -44,6 +45,7 @@ class Client;
 class ContactList;
 class DialogList;
 class FileOperation;
+class FilesApi;
 class InMemoryDataStorage;
 
 } // Client namespace
@@ -95,6 +97,7 @@ public:
     uint ensureChat(const Telegram::Peer &identifier);
 
     Telegram::Client::Client *core() const { return m_client; }
+    Telegram::Client::FilesApi *filesApi() const;
     Telegram::Peer selfPeer() const;
 
     quint64 getSentMessageToken(const Telegram::Peer &dialog, quint32 messageId) const;
@@ -136,6 +139,7 @@ private slots:
 
 protected:
     Tp::BaseChannelPtr createRoomListChannel();
+    Tp::BaseChannelPtr createFileTransferChannel(const RequestDetails &request, Tp::DBusError *error);
 
 private:
     uint getContactHandle(const Telegram::Peer &identifier) const;

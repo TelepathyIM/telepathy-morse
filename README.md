@@ -29,7 +29,7 @@ Requirements
 * CMake-2.8.12+ (required by TelepathyQt)
 * Qt4 or Qt5
 * TelepathyQt-0.9.7
-* TelegramQt-0.1.0
+* TelegramQt-0.2.0
 
 Note: TelegramQt is available at https://github.com/Kaffeine/telegram-qt
 Note: In order to use Morse, you need to have a complementary Telepathy Client application, such as KDE-Telepathy or Empathy.
@@ -37,7 +37,7 @@ Note: In order to use Morse, you need to have a complementary Telepathy Client a
 Installation
 ============
 
-    git clone https://github.com/TelepathyQt/telepathy-morse.git
+    git clone https://github.com/TelepathyIM/telepathy-morse.git
 
 or
 

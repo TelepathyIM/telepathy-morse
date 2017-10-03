@@ -1230,7 +1230,7 @@ void MorseConnection::onContactListChanged()
 
     m_contactList = newContactListHandles;
 
-    qDebug() << Q_FUNC_INFO;
+    qDebug() << Q_FUNC_INFO << newContactListIdentifiers;
     Tp::ContactSubscriptionMap changes;
     Tp::HandleIdentifierMap identifiersMap;
 

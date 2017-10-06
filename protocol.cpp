@@ -20,6 +20,8 @@
 #include "protocol.hpp"
 #include "connection.hpp"
 
+#include <TelegramQt/TelegramNamespace>
+
 #include <TelepathyQt/BaseConnection>
 #include <TelepathyQt/Constants>
 #include <TelepathyQt/RequestableChannelClassSpec>
@@ -82,7 +84,7 @@ uint MorseProtocol::getKeepAliveInterval(const QVariantMap &parameters, uint def
 
 Tp::BaseConnectionPtr MorseProtocol::createConnection(const QVariantMap &parameters, Tp::DBusError *error)
 {
-    qDebug() << Q_FUNC_INFO << parameters;
+    qDebug() << Q_FUNC_INFO << Telegram::Utils::maskPhoneNumber(parameters, QStringLiteral("account"));
     Q_UNUSED(error)
 
     Tp::BaseConnectionPtr newConnection = Tp::BaseConnection::create<MorseConnection>(QLatin1String("morse"), name(), parameters);

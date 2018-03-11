@@ -108,6 +108,7 @@ private:
     static QByteArray getSessionData(const QString &phone);
     static bool saveSessionData(const QString &phone, const QByteArray &data);
 
+    void tryToSaveData();
     bool peerIsRoom(const Telegram::Peer peer) const;
 
     uint getHandle(const MorseIdentifier &identifier) const;

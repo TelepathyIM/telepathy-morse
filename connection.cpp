@@ -320,12 +320,12 @@ void MorseConnection::whenConnectionStateChanged(TelegramNamespace::ConnectionSt
         whenAuthenticated();
         break;
     case TelegramNamespace::ConnectionStateReady:
+        tryToSaveData();
         whenConnectionReady();
         updateSelfContactState(Tp::ConnectionStatusConnected);
         break;
     case TelegramNamespace::ConnectionStateDisconnected:
         if (status() == Tp::ConnectionStatusConnected) {
-            saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
             setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNetworkError);
             updateSelfContactState(Tp::ConnectionStatusDisconnected);
             emit disconnected();
@@ -541,9 +541,6 @@ void MorseConnection::startMechanismWithData_password(const QString &mechanism, 
 void MorseConnection::whenConnectionReady()
 {
     qDebug() << Q_FUNC_INFO;
-
-    saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
-
     m_core->setOnlineStatus(m_wantedPresence == c_onlineSimpleStatusKey);
     m_core->setMessageReceivingFilter(TelegramNamespace::MessageFlagNone);
     onContactListChanged();
@@ -1255,8 +1252,7 @@ void MorseConnection::whenDisconnected()
     qDebug() << Q_FUNC_INFO;
 
     m_core->setOnlineStatus(false); // TODO: Real disconnect
-
-    saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
+    tryToSaveData();
     setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonRequested);
 }
 
@@ -1446,6 +1442,13 @@ bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &da
 #endif // INSECURE_SAVE
 
     return false;
+}
+
+void MorseConnection::tryToSaveData()
+{
+    if (m_core->connectionState() == TelegramNamespace::ConnectionStateReady) {
+        saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
+    }
 }
 
 bool MorseConnection::peerIsRoom(const Telegram::Peer peer) const

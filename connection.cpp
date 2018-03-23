@@ -1417,8 +1417,11 @@ QByteArray MorseConnection::getSessionData(const QString &phone)
 #endif // QT_VERSION >= 0x050000
 
     if (secretFile.open(QIODevice::ReadOnly)) {
-        return secretFile.readAll();
+        const QByteArray data = secretFile.readAll();
+        qDebug() << Q_FUNC_INFO << phone << "(" << data.size() << "bytes)";
+        return data;
     }
+    qDebug() << Q_FUNC_INFO << "Unable to open file" << "for account" << phone;
 #endif // INSECURE_SAVE
 
     return QByteArray();
@@ -1437,8 +1440,10 @@ bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &da
 #endif // QT_VERSION >= 0x050000
 
     if (secretFile.open(QIODevice::WriteOnly)) {
+        qDebug() << Q_FUNC_INFO << phone << "(" << data.size() << "bytes)";
         return secretFile.write(data) == data.size();
     }
+    qWarning() << Q_FUNC_INFO << "Unable to save the session data to file" << "for account" << phone;
 #endif // INSECURE_SAVE
 
     return false;
@@ -1446,7 +1451,9 @@ bool MorseConnection::saveSessionData(const QString &phone, const QByteArray &da
 
 void MorseConnection::tryToSaveData()
 {
+    qDebug() << Q_FUNC_INFO;
     if (m_core->connectionState() == TelegramNamespace::ConnectionStateReady) {
+        qDebug() << "Session is ready";
         saveSessionData(m_selfPhone, m_core->connectionSecretInfo());
     }
 }

@@ -906,46 +906,27 @@ QString MorseConnection::getAlias(uint handle)
 QString MorseConnection::getAlias(const MorseIdentifier identifier)
 {
     if (!identifier.isValid()) {
-        return QLatin1String("Invalid alias");
+        return QString();
     }
-
     if (identifier.type == Telegram::Peer::User) {
         Telegram::UserInfo info;
-        if (!m_core->getUserInfo(&info, identifier.userId())) {
-            return tr("Unknown name");
-        }
-
-        QString name;
-        if (!info.firstName().isEmpty()) {
-            name = info.firstName();
-        }
-        if (!info.lastName().isEmpty()) {
-            if (!name.isEmpty()) {
-                name += QLatin1Char(' ') + info.lastName();
-            } else {
-                name = info.lastName();
+        if (m_core->getUserInfo(&info, identifier.userId())) {
+            if (!info.firstName().isEmpty() || !info.lastName().isEmpty()) {
+                if (!info.firstName().isEmpty() && !info.lastName().isEmpty()) {
+                    return info.firstName() + QLatin1Char(' ') + info.lastName();
+                }
+                return !info.firstName().isEmpty() ? info.firstName() : info.lastName();
             }
-        }
-
-        if (!name.simplified().isEmpty()) {
-            return name;
-        }
-
-        if (!info.userName().isEmpty()) {
             return info.userName();
         }
     } else {
         Telegram::ChatInfo info;
-        if (!m_core->getChatInfo(&info, identifier)) {
-            return tr("Unknown title");
-        }
-        QString name = info.title();
-        if (!name.isEmpty()) {
-            return name;
+        if (m_core->getChatInfo(&info, identifier)) {
+            return info.title();
         }
     }
 
-    return tr("Unknown name");
+    return QString();
 }
 
 Tp::SimplePresence MorseConnection::getPresence(uint handle)

@@ -200,6 +200,51 @@ void MorseTextChannel::setMessageAction(quint32 userId, TelegramNamespace::Messa
 
 void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
 {
+    Tp::MessagePartList partList;
+    Tp::MessagePart header;
+
+    const QString token = QString::number(message.id);
+    header[QLatin1String("message-token")] = QDBusVariant(token);
+    header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
+    header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
+
+    bool broadcast = false;
+    if (m_targetID.type == Telegram::Peer::Channel) {
+        Telegram::ChatInfo info;
+        if (!m_core->getChatInfo(&info, m_targetID.id)) {
+            qWarning() << "Unable to get chat info" << m_targetID.toString();
+        }
+        broadcast = info.broadcast();
+    }
+
+    if (broadcast) {
+        header[QLatin1String("message-sender")]    = QDBusVariant(m_targetHandle);
+        header[QLatin1String("message-sender-id")] = QDBusVariant(m_targetID.toString());
+    } else if (message.flags & TelegramNamespace::MessageFlagOut) {
+        header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->selfHandle());
+        header[QLatin1String("message-sender-id")] = QDBusVariant(m_connection->selfID());
+    } else {
+        const MorseIdentifier senderId = MorseIdentifier::fromUserId(message.fromId);
+        header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->ensureHandle(senderId));
+        header[QLatin1String("message-sender-id")] = QDBusVariant(senderId.toString());
+    }
+
+    // messageReceived signal is always emitted before maxMessageId update, so
+    // the message is a new one, if its id is bigger, than the last known message id,
+    // This works for both, In and Out messages.
+    const bool scrollback = message.id <= m_core->maxMessageId();
+    if (scrollback) {
+        header[QLatin1String("scrollback")] = QDBusVariant(true);
+        // Telegram has no timestamp for message read, only sent.
+        // Fallback to the message sent timestamp to keep received messages in chronological order.
+        // Alternatively, client can sort messages in order of message-sent.
+        header[QLatin1String("message-received")]  = QDBusVariant(message.timestamp);
+    } else {
+        uint currentTimestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
+        header[QLatin1String("message-received")]  = QDBusVariant(currentTimestamp);
+    }
+    partList << header;
+
     Tp::MessagePartList body;
     if (!message.text.isEmpty()) {
         Tp::MessagePart text;
@@ -267,51 +312,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         body << textMessage;
     }
 
-    Tp::MessagePartList partList;
-    Tp::MessagePart header;
-
-    const QString token = QString::number(message.id);
-    header[QLatin1String("message-token")] = QDBusVariant(token);
-    header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
-    header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
-
-    bool broadcast = false;
-    if (m_targetID.type == Telegram::Peer::Channel) {
-        Telegram::ChatInfo info;
-        if (!m_core->getChatInfo(&info, m_targetID.id)) {
-            qWarning() << "Unable to get chat info" << m_targetID.toString();
-        }
-        broadcast = info.broadcast();
-    }
-
-    if (broadcast) {
-        header[QLatin1String("message-sender")]    = QDBusVariant(m_targetHandle);
-        header[QLatin1String("message-sender-id")] = QDBusVariant(m_targetID.toString());
-    } else if (message.flags & TelegramNamespace::MessageFlagOut) {
-        header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->selfHandle());
-        header[QLatin1String("message-sender-id")] = QDBusVariant(m_connection->selfID());
-    } else {
-        const MorseIdentifier senderId = MorseIdentifier::fromUserId(message.fromId);
-        header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->ensureHandle(senderId));
-        header[QLatin1String("message-sender-id")] = QDBusVariant(senderId.toString());
-    }
-
-    // messageReceived signal is always emitted before maxMessageId update, so
-    // the message is a new one, if its id is bigger, than the last known message id,
-    // This works for both, In and Out messages.
-    const bool scrollback = message.id <= m_core->maxMessageId();
-
-    if (scrollback) {
-        header[QLatin1String("scrollback")] = QDBusVariant(true);
-        // Telegram has no timestamp for message read, only sent.
-        // Fallback to the message sent timestamp to keep received messages in chronological order.
-        // Alternatively, client can sort messages in order of message-sent.
-        header[QLatin1String("message-received")]  = QDBusVariant(message.timestamp);
-    } else {
-        uint currentTimestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
-        header[QLatin1String("message-received")]  = QDBusVariant(currentTimestamp);
-    }
-    partList << header << body;
+    partList << body;
     addReceivedMessage(partList);
 }
 

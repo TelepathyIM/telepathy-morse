@@ -65,6 +65,7 @@ public:
     void setAliases(const Tp::AliasMap &aliases, Tp::DBusError *error);
 
     QString getAlias(uint handle);
+    QString getAlias(const MorseIdentifier identifier);
 
     Tp::SimplePresence getPresence(uint handle);
     uint setPresence(const QString &status, const QString &message, Tp::DBusError *error);

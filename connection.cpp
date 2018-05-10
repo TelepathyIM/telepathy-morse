@@ -900,8 +900,11 @@ void MorseConnection::setAliases(const Tp::AliasMap &aliases, Tp::DBusError *err
 
 QString MorseConnection::getAlias(uint handle)
 {
-    const MorseIdentifier identifier = m_handles.value(handle);
+    return getAlias(m_handles.value(handle));
+}
 
+QString MorseConnection::getAlias(const MorseIdentifier identifier)
+{
     if (!identifier.isValid()) {
         return QLatin1String("Invalid alias");
     }

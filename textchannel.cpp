@@ -287,6 +287,18 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
             body << userVCardPart;
         }
             break;
+        case TelegramNamespace::MessageTypeWebPage: {
+            Tp::MessagePart webPart;
+            webPart[QLatin1String("interface")] = QDBusVariant(TP_QT_IFACE_CHANNEL + QLatin1String(".Interface.WebPage"));
+            webPart[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));
+            webPart[QLatin1String("title")] = QDBusVariant(info.title());
+            webPart[QLatin1String("url")] = QDBusVariant(info.url());
+            webPart[QLatin1String("displayUrl")] = QDBusVariant(info.displayUrl());
+            webPart[QLatin1String("siteName")] = QDBusVariant(info.siteName());
+            webPart[QLatin1String("description")] = QDBusVariant(info.description());
+            body << webPart;
+        }
+            break;
         default:
             handled = false;
             break;

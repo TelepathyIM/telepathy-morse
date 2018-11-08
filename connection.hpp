@@ -75,7 +75,7 @@ public:
     uint ensureContact(const MorseIdentifier &identifier);
     uint ensureChat(const MorseIdentifier &identifier);
 
-    CTelegramCore *core() const { return m_core; }
+    CTelegramCore *client() const { return m_client; }
 
 public slots:
     void whenMessageReceived(const Telegram::Message &message);
@@ -158,7 +158,7 @@ private:
     QHash<QString,Telegram::Peer> m_peerPictureRequests;
 
     CAppInformation *m_appInfo;
-    CTelegramCore *m_core;
+    CTelegramCore *m_client;
     CFileManager *m_fileManager;
     Telegram::PasswordInfo *m_passwordInfo;
 

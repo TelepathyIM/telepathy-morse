@@ -85,7 +85,7 @@ private:
     MorseTextChannel(MorseConnection *morseConnection, Tp::BaseChannel *baseChannel);
 
     MorseConnection *m_connection;
-    CTelegramCore *m_core;
+    CTelegramCore *m_client;
 
     uint m_targetHandle;
     uint m_targetHandleType;

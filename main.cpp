@@ -32,6 +32,7 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
+    app.setOrganizationName(QLatin1String("TelepathyIM"));
     app.setApplicationName(QLatin1String("telepathy-morse"));
 
     Tp::registerTypes();
@@ -43,10 +44,6 @@ int main(int argc, char *argv[])
 
     Tp::BaseProtocolPtr proto = Tp::BaseProtocol::create<MorseProtocol>(QLatin1String("telegram"));
     Tp::BaseConnectionManagerPtr cm = Tp::BaseConnectionManager::create(QLatin1String("morse"));
-
-    proto->setEnglishName(QLatin1String("Telegram"));
-    proto->setIconName(QLatin1String("telegram"));
-    proto->setVCardField(QLatin1String("tel"));
 
     if (!cm->addProtocol(proto)) {
         qCritical() << "Unable to add" << proto->name() << "protocol";

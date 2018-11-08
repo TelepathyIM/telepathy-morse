@@ -4,13 +4,18 @@ BusName = org.freedesktop.Telepathy.ConnectionManager.morse
 ObjectPath = /org/freedesktop/Telepathy/ConnectionManager/morse
 
 [Protocol telegram]
-param-account = s required
+param-account=s required
+param-server-address=s
+param-server-port=q
+param-server-key=s
+param-keepalive=b
 param-keepalive-interval=u
 param-proxy-type=s
-param-proxy-server=s
+param-proxy-address=s
 param-proxy-port=q
 param-proxy-username=s
 param-proxy-password=s
+default-keepalive=true
 default-keepalive-interval=15
 
 EnglishName=Telegram

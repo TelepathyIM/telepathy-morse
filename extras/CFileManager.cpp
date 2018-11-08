@@ -1,6 +1,6 @@
 #include "CFileManager.hpp"
 
-#include <TelegramQt/CTelegramCore>
+#include <TelegramQt/Client>
 #include <TelegramQt/Debug>
 
 #include <QDir>
@@ -24,14 +24,14 @@ void FileInfo::completeDownload(const Telegram::RemoteFile &result)
     m_complete = true;
 }
 
-CFileManager::CFileManager(CTelegramCore *backend, QObject *parent) :
+CFileManager::CFileManager(Telegram::Client::Client *backend, QObject *parent) :
     QObject(parent),
     m_backend(backend)
 {
-    connect(m_backend, SIGNAL(filePartReceived(quint32,QByteArray,QString,quint32,quint32)),
-            SLOT(onFilePartReceived(quint32,QByteArray,QString,quint32,quint32)));
-    connect(m_backend, SIGNAL(fileRequestFinished(quint32,Telegram::RemoteFile)),
-            this, SLOT(onFileRequestFinished(quint32,Telegram::RemoteFile)));
+//    connect(m_backend, SIGNAL(filePartReceived(quint32,QByteArray,QString,quint32,quint32)),
+//            SLOT(onFilePartReceived(quint32,QByteArray,QString,quint32,quint32)));
+//    connect(m_backend, SIGNAL(fileRequestFinished(quint32,Telegram::RemoteFile)),
+//            this, SLOT(onFileRequestFinished(quint32,Telegram::RemoteFile)));
 }
 
 QString CFileManager::requestFile(const Telegram::RemoteFile &file)
@@ -51,7 +51,7 @@ QString CFileManager::requestFile(const Telegram::RemoteFile &file)
         return key;
     }
 
-    const quint32 requestId = m_backend->requestFile(&file);
+    const quint32 requestId = 0;//m_backend->requestFile(&file);
     if (!requestId) {
         qDebug() << Q_FUNC_INFO << "File is not available" << key;
         return QString();
@@ -98,14 +98,14 @@ bool CFileManager::getPeerPictureFileInfo(const Telegram::Peer &peer, Telegram::
     case Telegram::Peer::User:
     {
         Telegram::UserInfo info;
-        m_backend->getUserInfo(&info, peer.id);
+        //m_backend->getUserInfo(&info, peer.id);
         return info.getPeerPicture(file, size);
     }
     case Telegram::Peer::Chat:
     case Telegram::Peer::Channel:
     {
         Telegram::ChatInfo info;
-        m_backend->getChatInfo(&info, peer);
+        //m_backend->getChatInfo(&info, peer);
         return info.getPeerPicture(file, size);
     }
     default:
@@ -168,7 +168,7 @@ QString CFileManager::unqueuePendingRequest()
     const Telegram::RemoteFile info = m_pendingRequests.take(key);
     qDebug() << Q_FUNC_INFO << "took key:" << key;
 
-    const quint32 requestId = m_backend->requestFile(&info);
+    const quint32 requestId = 0;//m_backend->requestFile(&info);
     if (!requestId) {
         qDebug() << Q_FUNC_INFO << "File is not available" << key;
         return QString();

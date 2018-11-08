@@ -70,6 +70,16 @@ MorseProtocol::~MorseProtocol()
 {
 }
 
+QString MorseProtocol::getAccount(const QVariantMap &parameters)
+{
+    return parameters.value(QStringLiteral("account")).toString();
+}
+
+uint MorseProtocol::getKeepAliveInterval(const QVariantMap &parameters, uint defaultValue)
+{
+    return parameters.value(QLatin1String("keepalive-interval"), defaultValue).toUInt();
+}
+
 Tp::BaseConnectionPtr MorseProtocol::createConnection(const QVariantMap &parameters, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << parameters;

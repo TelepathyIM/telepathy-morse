@@ -18,6 +18,7 @@
 */
 
 #include "connection.hpp"
+#include "protocol.hpp"
 
 #include "textchannel.hpp"
 
@@ -134,6 +135,9 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     m_authReconnectionsCount(0)
 {
     qDebug() << Q_FUNC_INFO;
+    m_selfPhone = MorseProtocol::getAccount(parameters);
+    m_keepAliveInterval = MorseProtocol::getKeepAliveInterval(parameters, CTelegramCore::defaultPingInterval() / 1000);
+
     /* Connection.Interface.Contacts */
     contactsIface = Tp::BaseConnectionContactsInterface::create();
     contactsIface->setGetContactAttributesCallback(Tp::memFun(this, &MorseConnection::getContactAttributes));
@@ -209,9 +213,6 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(requestsIface));
 
-    m_selfPhone = parameters.value(QLatin1String("account")).toString();
-    m_keepaliveInterval = parameters.value(QLatin1String("keepalive-interval"), CTelegramCore::defaultPingInterval() / 1000).toUInt();
-
     setConnectCallback(Tp::memFun(this, &MorseConnection::doConnect));
     setInspectHandlesCallback(Tp::memFun(this, &MorseConnection::inspectHandles));
     setCreateChannelCallback(Tp::memFun(this, &MorseConnection::createChannelCB));
@@ -231,7 +232,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     m_appInfo->setLanguageCode(QLocale::system().bcp47Name());
 
     m_client = new CTelegramCore(this);
-    m_client->setPingInterval(m_keepaliveInterval * 1000);
+    m_client->setPingInterval(m_keepAliveInterval * 1000);
     m_client->setAppInformation(m_appInfo);
     m_client->setMessageReceivingFilter(TelegramNamespace::MessageFlagOut|TelegramNamespace::MessageFlagRead);
 #ifndef TELEGRAMQT_VERSION

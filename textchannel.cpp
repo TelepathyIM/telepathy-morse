@@ -20,7 +20,9 @@
 #include "textchannel.hpp"
 #include "connection.hpp"
 
-#include <TelegramQt/CTelegramCore>
+#include <TelegramQt/Client>
+#include <TelegramQt/DataStorage>
+#include <TelegramQt/MessagingApi>
 
 #include <TelepathyQt/Constants>
 #include <TelepathyQt/RequestableChannelClassSpec>
@@ -58,12 +60,14 @@ QString userToVCard(const Telegram::UserInfo &userInfo)
 MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseChannel *baseChannel)
     : Tp::BaseChannelTextType(baseChannel),
       m_connection(morseConnection),
-      m_client(morseConnection->client()),
+      m_client(morseConnection->core()),
       m_targetHandle(baseChannel->targetHandle()),
       m_targetHandleType(baseChannel->targetHandleType()),
       m_targetPeer(MorseIdentifier::fromString(baseChannel->targetID())),
       m_localTypingTimer(nullptr)
 {
+    m_api = m_client->messagingApi();
+
     QStringList supportedContentTypes = QStringList()
             << QLatin1String("text/plain")
             << QLatin1String("text/vcard")
@@ -89,10 +93,10 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
     m_chatStateIface->setSetChatStateCallback(Tp::memFun(this, &MorseTextChannel::setChatState));
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_chatStateIface));
 
-    if (m_targetHandleType == Tp::HandleTypeContact) {
-        connect(m_client, SIGNAL(contactMessageActionChanged(quint32,TelegramNamespace::MessageAction)),
-                SLOT(whenContactChatStateComposingChanged(quint32,TelegramNamespace::MessageAction)));
-    } else if (m_targetHandleType == Tp::HandleTypeRoom) {
+    connect(m_api, &Telegram::Client::MessagingApi::messageActionChanged,
+            this, &MorseTextChannel::onMessageActionChanged);
+
+    if (m_targetHandleType == Tp::HandleTypeRoom) {
 #ifdef ENABLE_GROUP_CHAT
         Tp::ChannelGroupFlags groupFlags = Tp::ChannelGroupFlagProperties;
 
@@ -105,8 +109,7 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_groupIface));
 
         Telegram::ChatInfo info;
-
-        m_client->getChatInfo(&info, m_targetPeer.id);
+        m_client->dataStorage()->getChatInfo(&info, m_targetPeer);
 
         QDateTime creationTimestamp;
         if (info.date()) {
@@ -118,22 +121,21 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
                                                            /* creator */ QString(),
                                                            /* creatorHandle */ 0,
                                                            creationTimestamp);
-
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_roomIface));
 
         m_roomConfigIface = Tp::BaseChannelRoomConfigInterface::create();
+        m_roomConfigIface->setTitle(info.title());
+        m_roomConfigIface->setConfigurationRetrieved(true);
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_roomConfigIface));
-        connect(m_client, SIGNAL(contactChatMessageActionChanged(quint32,quint32,TelegramNamespace::MessageAction)),
-                SLOT(whenContactRoomStateComposingChanged(quint32,quint32,TelegramNamespace::MessageAction)));
 #endif
     }
 
-    connect(m_client, SIGNAL(messageReadInbox(Telegram::Peer,quint32)),
-            SLOT(setMessageInboxRead(Telegram::Peer,quint32)));
-    connect(m_client, SIGNAL(messageReadOutbox(Telegram::Peer,quint32)),
-            SLOT(setMessageOutboxRead(Telegram::Peer,quint32)));
-    connect(m_client, SIGNAL(sentMessageIdReceived(quint64,quint32)),
-            SLOT(setResolvedMessageId(quint64,quint32)));
+    // connect(m_core, SIGNAL(messageReadInbox(Telegram::Peer,quint32)),
+    //         SLOT(setMessageInboxRead(Telegram::Peer,quint32)));
+    // connect(m_core, SIGNAL(messageReadOutbox(Telegram::Peer,quint32)),
+    //         SLOT(setMessageOutboxRead(Telegram::Peer,quint32)));
+    connect(m_client->messagingApi(), &Telegram::Client::MessagingApi::messageSent,
+            this, &MorseTextChannel::setResolvedMessageId);
 }
 
 MorseTextChannelPtr MorseTextChannel::create(MorseConnection *morseConnection, Tp::BaseChannel *baseChannel)
@@ -157,7 +159,7 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
         }
     }
 
-    quint64 tmpId = m_client->sendMessage(m_targetPeer, content);
+    quint64 tmpId = m_api->sendMessage(m_targetPeer, content);
     m_sentMessageIds.append(SentMessageId(tmpId));
 
     return QString::number(tmpId);
@@ -165,23 +167,13 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
 
 void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)
 {
-    m_client->setMessageRead(m_targetPeer, messageId.toUInt());
+    m_api->readHistory(m_targetPeer, messageId.toUInt());
 }
 
-void MorseTextChannel::whenContactChatStateComposingChanged(quint32 userId, TelegramNamespace::MessageAction action)
+void MorseTextChannel::onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, TelegramNamespace::MessageAction action)
 {
     // We are connected to broadcast signal, so have to select only needed calls
-    const MorseIdentifier identifier = MorseIdentifier::fromUserId(userId);
-    if (identifier != m_targetPeer) {
-        return;
-    }
-    setMessageAction(userId, action);
-}
-
-void MorseTextChannel::whenContactRoomStateComposingChanged(quint32 chatId, quint32 userId, TelegramNamespace::MessageAction action)
-{
-    // We are connected to broadcast signal, so have to select only needed calls
-    const MorseIdentifier identifier = MorseIdentifier::fromChatId(chatId);
+    const MorseIdentifier identifier = peer;
     if (identifier != m_targetPeer) {
         return;
     }
@@ -209,9 +201,11 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
     header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
 
     bool broadcast = false;
+    bool isOut = message.flags & TelegramNamespace::MessageFlagOut;
+
     if (m_targetPeer.type == Telegram::Peer::Channel) {
         Telegram::ChatInfo info;
-        if (!m_client->getChatInfo(&info, m_targetPeer.id)) {
+        if (!m_client->dataStorage()->getChatInfo(&info, m_targetPeer.id)) {
             qWarning() << "Unable to get chat info" << m_targetPeer.toString();
         }
         broadcast = info.broadcast();
@@ -220,7 +214,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
     if (broadcast) {
         header[QLatin1String("message-sender")]    = QDBusVariant(m_targetHandle);
         header[QLatin1String("message-sender-id")] = QDBusVariant(m_targetPeer.toString());
-    } else if (message.flags & TelegramNamespace::MessageFlagOut) {
+    } else if (isOut) {
         header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->selfHandle());
         header[QLatin1String("message-sender-id")] = QDBusVariant(m_connection->selfID());
     } else {
@@ -229,10 +223,18 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         header[QLatin1String("message-sender-id")] = QDBusVariant(senderId.toString());
     }
 
-    // messageReceived signal is always emitted before maxMessageId update, so
-    // the message is a new one, if its id is bigger, than the last known message id,
-    // This works for both, In and Out messages.
-    const bool scrollback = message.id <= m_client->maxMessageId();
+    Telegram::DialogInfo dialogInfo;
+    m_client->dataStorage()->getDialogInfo(&dialogInfo, m_targetPeer);
+
+    const bool isRead = isOut
+            ? (dialogInfo.readOutboxMaxId() >= message.id)
+            : (dialogInfo.readInboxMaxId() >= message.id);
+
+    header[QLatin1String("delivery-status")] = QDBusVariant(isRead
+                                                            ? Tp::DeliveryStatusRead
+                                                            : Tp::DeliveryStatusAccepted);
+
+    const bool scrollback = isRead || isOut;
     if (scrollback) {
         header[QLatin1String("scrollback")] = QDBusVariant(true);
         // Telegram has no timestamp for message read, only sent.
@@ -240,7 +242,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         // Alternatively, client can sort messages in order of message-sent.
         header[QLatin1String("message-received")]  = QDBusVariant(message.timestamp);
     } else {
-        uint currentTimestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
+        uint currentTimestamp = static_cast<uint>(QDateTime::currentMSecsSinceEpoch() / 1000ll);
         header[QLatin1String("message-received")]  = QDBusVariant(currentTimestamp);
     }
     partList << header;
@@ -255,7 +257,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
 
     if (message.type != TelegramNamespace::MessageTypeText) { // More, than a plain text message
         Telegram::MessageMediaInfo info;
-        m_client->getMessageMediaInfo(&info, message.id, message.peer());
+        m_client->dataStorage()->getMessageMediaInfo(&info, message.peer(), message.id);
 
         bool handled = true;
         switch (message.type) {
@@ -337,7 +339,7 @@ void MorseTextChannel::updateChatParticipants(const Tp::UIntList &handles)
 #endif
 }
 
-void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles)
+void MorseTextChannel::onChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles)
 {
     qDebug() << Q_FUNC_INFO << chatId;
 
@@ -345,7 +347,7 @@ void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList
         updateChatParticipants(handles);
 
         Telegram::ChatInfo info;
-        if (m_client->getChatInfo(&info, chatId)) {
+        if (m_client->dataStorage()->getChatInfo(&info, chatId)) {
             m_roomConfigIface->setTitle(info.title());
             m_roomConfigIface->setConfigurationRetrieved(true);
         }
@@ -419,16 +421,20 @@ void MorseTextChannel::setMessageOutboxRead(Telegram::Peer peer, quint32 message
     addReceivedMessage(partList);
 }
 
-void MorseTextChannel::setResolvedMessageId(quint64 randomId, quint32 resolvedId)
+void MorseTextChannel::setResolvedMessageId(Telegram::Peer peer, quint64 messageRandomId, quint32 messageId)
 {
-    int index = m_sentMessageIds.indexOf(SentMessageId(randomId));
+    if (m_targetPeer != peer) {
+        return;
+    }
+
+    int index = m_sentMessageIds.indexOf(SentMessageId(messageRandomId));
     if (index < 0) {
         return;
     }
 
-    m_sentMessageIds[index].id = resolvedId;
+    m_sentMessageIds[index].id = messageId;
 
-    const QString token = QString::number(randomId);
+    const QString token = QString::number(messageRandomId);
 
     Tp::MessagePartList partList;
 
@@ -445,7 +451,7 @@ void MorseTextChannel::setResolvedMessageId(quint64 randomId, quint32 resolvedId
 
 void MorseTextChannel::reactivateLocalTyping()
 {
-    m_client->setTyping(m_targetPeer, TelegramNamespace::MessageActionTyping);
+    m_api->setMessageAction(m_targetPeer, TelegramNamespace::MessageActionTyping);
 }
 
 void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
@@ -454,15 +460,15 @@ void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
 
     if (!m_localTypingTimer) {
         m_localTypingTimer = new QTimer(this);
-        m_localTypingTimer->setInterval(CTelegramCore::localTypingRecommendedRepeatInterval());
-        connect(m_localTypingTimer, SIGNAL(timeout()), this, SLOT(reactivateLocalTyping()));
+        m_localTypingTimer->setInterval(Telegram::Client::MessagingApi::messageActionRepeatInterval());
+        connect(m_localTypingTimer, &QTimer::timeout, this, &MorseTextChannel::reactivateLocalTyping);
     }
 
     if (state == Tp::ChannelChatStateComposing) {
-        m_client->setTyping(m_targetPeer, TelegramNamespace::MessageActionTyping);
+        m_api->setMessageAction(m_targetPeer, TelegramNamespace::MessageActionTyping);
         m_localTypingTimer->start();
     } else {
-        m_client->setTyping(m_targetPeer, TelegramNamespace::MessageActionNone);
+        m_api->setMessageAction(m_targetPeer, TelegramNamespace::MessageActionNone);
         m_localTypingTimer->stop();
     }
 }

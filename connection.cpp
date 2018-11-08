@@ -52,7 +52,9 @@
 
 #include "extras/CFileManager.hpp"
 
+static constexpr int c_selfHandle = 1;
 static const QString secretsDirPath = QLatin1String("/secrets/");
+
 #endif // INSECURE_SAVE
 
 static const QString c_onlineSimpleStatusKey = QLatin1String("available");
@@ -370,10 +372,9 @@ void MorseConnection::onSelfUserAvailable()
 
     MorseIdentifier selfIdentifier = MorseIdentifier::fromUserId(m_client->selfId());
 
-    m_handles.insert(1, selfIdentifier);
+    m_handles.insert(c_selfHandle, selfIdentifier);
 
-    int selfHandle = 1;
-    setSelfContact(selfHandle, selfIdentifier.toString());
+    setSelfContact(c_selfHandle, selfIdentifier.toString());
 
     Tp::SimpleContactPresences presences;
     Tp::SimplePresence presence;
@@ -385,7 +386,7 @@ void MorseConnection::onSelfUserAvailable()
     presence.status = m_wantedPresence;
     presence.statusMessage = QString();
     presence.type = simplePresenceIface->statuses().value(m_wantedPresence).type;
-    presences[selfHandle] = presence;
+    presences[c_selfHandle] = presence;
     simplePresenceIface->setPresences(presences);
 
     checkConnected();

@@ -41,6 +41,7 @@ public:
             const QVariantMap &parameters);
     ~MorseConnection();
 
+    static Tp::AvatarSpec avatarDetails();
     static Tp::SimpleStatusSpecMap getSimpleStatusSpecMap();
     static Tp::RequestableChannelClassSpecList getRequestableChannelList();
 

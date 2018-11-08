@@ -57,6 +57,15 @@ static const QString secretsDirPath = QLatin1String("/secrets/");
 static const QString c_onlineSimpleStatusKey = QLatin1String("available");
 static const QString c_saslMechanismTelepathyPassword = QLatin1String("X-TELEPATHY-PASSWORD");
 
+Tp::AvatarSpec MorseConnection::avatarDetails()
+{
+    static const auto spec = Tp::AvatarSpec(/* supportedMimeTypes */ QStringList() << QLatin1String("image/jpeg"),
+                                            /* minHeight */ 0, /* maxHeight */ 160, /* recommendedHeight */ 160,
+                                            /* minWidth */ 0, /* maxWidth */ 160, /* recommendedWidth */ 160,
+                                            /* maxBytes */ 10240);
+    return spec;
+}
+
 Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
 {
     //Presence
@@ -180,10 +189,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     /* Connection.Interface.Avatars */
     avatarsIface = Tp::BaseConnectionAvatarsInterface::create();
-    avatarsIface->setAvatarDetails(Tp::AvatarSpec(/* supportedMimeTypes */ QStringList() << QLatin1String("image/jpeg"),
-                                                  /* minHeight */ 0, /* maxHeight */ 160, /* recommendedHeight */ 160,
-                                                  /* minWidth */ 0, /* maxWidth */ 160, /* recommendedWidth */ 160,
-                                                  /* maxBytes */ 10240));
+    avatarsIface->setAvatarDetails(avatarDetails());
     avatarsIface->setGetKnownAvatarTokensCallback(Tp::memFun(this, &MorseConnection::getKnownAvatarTokens));
     avatarsIface->setRequestAvatarsCallback(Tp::memFun(this, &MorseConnection::requestAvatars));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(avatarsIface));

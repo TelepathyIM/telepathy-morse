@@ -260,7 +260,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         bool handled = true;
         switch (message.type) {
         case TelegramNamespace::MessageTypeGeo: {
-            static const QString jsonTemplate = QLatin1String("{\"type\":\"point\",\"coordinates\":\[%1, %2]}");
+            static const QString jsonTemplate = QLatin1String("{\"type\":\"point\",\"coordinates\":[%1, %2]}");
             Tp::MessagePart geo;
             geo[QLatin1String("content-type")] = QDBusVariant(QLatin1String("application/geo+json"));
             geo[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));

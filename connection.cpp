@@ -38,12 +38,7 @@
 #define INSECURE_SAVE
 
 #ifdef INSECURE_SAVE
-
-#if QT_VERSION >= 0x050000
 #include <QStandardPaths>
-#else
-#include <QDesktopServices>
-#endif // QT_VERSION >= 0x050000
 
 #define DIALOGS_AS_CONTACTLIST
 

@@ -124,33 +124,32 @@ Tp::RequestableChannelClassSpecList MorseConnection::getRequestableChannelList()
 }
 
 MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
-    Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters),
-    m_appInfo(nullptr),
-    m_client(nullptr),
-    m_fileManager(nullptr),
-    m_passwordInfo(nullptr),
-    m_authReconnectionsCount(0)
+    Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters)
 {
     qDebug() << Q_FUNC_INFO;
     m_selfPhone = MorseProtocol::getAccount(parameters);
-    m_keepAliveInterval = MorseProtocol::getKeepAliveInterval(parameters, CTelegramCore::defaultPingInterval() / 1000);
+    m_serverAddress = MorseProtocol::getServerAddress(parameters);
+    m_serverPort = MorseProtocol::getServerPort(parameters);
+    m_serverKeyFile = MorseProtocol::getServerKey(parameters);
+    m_keepAliveInterval = MorseProtocol::getKeepAliveInterval(parameters, Client::Settings::defaultPingInterval() / 1000);
 
     /* Connection.Interface.Contacts */
     contactsIface = Tp::BaseConnectionContactsInterface::create();
     contactsIface->setGetContactAttributesCallback(Tp::memFun(this, &MorseConnection::getContactAttributes));
-    contactsIface->setContactAttributeInterfaces(QStringList()
-                                                 << TP_QT_IFACE_CONNECTION
-                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST
-                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO
-                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE
-                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING
-                                                 << TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS);
+    contactsIface->setContactAttributeInterfaces({
+                                                     TP_QT_IFACE_CONNECTION,
+                                                     TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST,
+                                                     TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO,
+                                                     TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+                                                     TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING,
+                                                     TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS,
+                                                 });
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactsIface));
 
     /* Connection.Interface.SimplePresence */
     simplePresenceIface = Tp::BaseConnectionSimplePresenceInterface::create();
     simplePresenceIface->setStatuses(getSimpleStatusSpecMap());
-    simplePresenceIface->setSetPresenceCallback(Tp::memFun(this,&MorseConnection::setPresence));
+    simplePresenceIface->setSetPresenceCallback(Tp::memFun(this, &MorseConnection::setPresence));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(simplePresenceIface));
 
     /* Connection.Interface.ContactList */
@@ -215,10 +214,10 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     setCreateChannelCallback(Tp::memFun(this, &MorseConnection::createChannelCB));
     setRequestHandlesCallback(Tp::memFun(this, &MorseConnection::requestHandles));
 
-    connect(this, SIGNAL(disconnected()), SLOT(whenDisconnected()));
+    connect(this, &BaseConnection::disconnected, this, &MorseConnection::onDisconnected);
 
-    m_handles.insert(1, MorseIdentifier());
-    setSelfHandle(1);
+    m_contactHandles.insert(c_selfHandle, MorseIdentifier());
+    setSelfHandle(c_selfHandle);
 
     m_appInfo = new CAppInformation(this);
     m_appInfo->setAppId(14617);
@@ -244,33 +243,33 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 #endif
 
     connect(m_client, &CTelegramCore::connectionStateChanged,
-            this, &MorseConnection::whenConnectionStateChanged);
+            this, &MorseConnection::onConnectionStateChanged);
     connect(m_client, &CTelegramCore::selfUserAvailable,
             this, &MorseConnection::onSelfUserAvailable);
     connect(m_client, &CTelegramCore::authorizationErrorReceived,
             this, &MorseConnection::onAuthErrorReceived);
     connect(m_client, &CTelegramCore::phoneCodeRequired,
-            this, &MorseConnection::whenPhoneCodeRequired);
+            this, &MorseConnection::onAuthCodeRequired);
     connect(m_client, &CTelegramCore::authSignErrorReceived,
-            this, &MorseConnection::whenAuthSignErrorReceived);
+            this, &MorseConnection::onAuthSignErrorReceived);
     connect(m_client, &CTelegramCore::passwordInfoReceived,
             this, &MorseConnection::onPasswordInfoReceived);
     connect(m_client, &CTelegramCore::contactListChanged,
             this, &MorseConnection::onContactListChanged);
     connect(m_client, &CTelegramCore::messageReceived,
-             this, &MorseConnection::whenMessageReceived);
+             this, &MorseConnection::onMessageReceived);
     connect(m_client, &CTelegramCore::chatChanged,
-            this, &MorseConnection::whenChatChanged);
+            this, &MorseConnection::onChatChanged);
     connect(m_client, &CTelegramCore::contactStatusChanged,
             this, &MorseConnection::setContactStatus);
 
-    const QString proxyType = parameters.value(QLatin1String("proxy-type")).toString();
+    const QString proxyType = MorseProtocol::getProxyType(parameters);
     if (!proxyType.isEmpty()) {
         if (proxyType == QLatin1String("socks5")) {
-            const QString proxyServer = parameters.value(QLatin1String("proxy-server")).toString();
-            const quint16 proxyPort = parameters.value(QLatin1String("proxy-port")).toUInt();
-            const QString proxyUsername = parameters.value(QLatin1String("proxy-username")).toString();
-            const QString proxyPassword = parameters.value(QLatin1String("proxy-password")).toString();
+            const QString proxyServer = MorseProtocol::getProxyAddress(parameters);
+            const quint16 proxyPort = MorseProtocol::getProxyPort(parameters);
+            const QString proxyUsername = MorseProtocol::getProxyUsername(parameters);
+            const QString proxyPassword = MorseProtocol::getProxyPassword(parameters);
             if (proxyServer.isEmpty() || proxyPort == 0) {
                 qWarning() << "Invalid proxy configuration, ignored";
             } else {
@@ -291,10 +290,6 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     connect(m_fileManager, &CFileManager::requestComplete, this, &MorseConnection::onFileRequestCompleted);
 }
 
-MorseConnection::~MorseConnection()
-{
-}
-
 void MorseConnection::doConnect(Tp::DBusError *error)
 {
     Q_UNUSED(error);
@@ -313,7 +308,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     }
 }
 
-void MorseConnection::whenConnectionStateChanged(TelegramNamespace::ConnectionState state)
+void MorseConnection::onConnectionStateChanged(TelegramNamespace::ConnectionState state)
 {
     qDebug() << Q_FUNC_INFO << state;
     switch (state) {
@@ -321,11 +316,11 @@ void MorseConnection::whenConnectionStateChanged(TelegramNamespace::ConnectionSt
         m_client->requestPhoneCode(m_selfPhone);
         break;
     case TelegramNamespace::ConnectionStateAuthenticated:
-        whenAuthenticated();
+        onAuthenticated();
         break;
     case TelegramNamespace::ConnectionStateReady:
         tryToSaveData();
-        whenConnectionReady();
+        onConnectionReady();
         updateSelfContactState(Tp::ConnectionStatusConnected);
         break;
     case TelegramNamespace::ConnectionStateDisconnected:
@@ -340,7 +335,7 @@ void MorseConnection::whenConnectionStateChanged(TelegramNamespace::ConnectionSt
     }
 }
 
-void MorseConnection::whenAuthenticated()
+void MorseConnection::onAuthenticated()
 {
     qDebug() << Q_FUNC_INFO;
 
@@ -367,14 +362,14 @@ void MorseConnection::onSelfUserAvailable()
 
     MorseIdentifier selfIdentifier = MorseIdentifier::fromUserId(m_client->selfId());
 
-    m_handles.insert(c_selfHandle, selfIdentifier);
+    m_contactHandles.insert(c_selfHandle, selfIdentifier);
 
     setSelfContact(c_selfHandle, selfIdentifier.toString());
 
     Tp::SimpleContactPresences presences;
     Tp::SimplePresence presence;
 
-    if (m_wantedPresence.isNull()) {
+    if (m_wantedPresence.isEmpty()) {
         m_wantedPresence = c_onlineSimpleStatusKey;
     }
 
@@ -403,18 +398,18 @@ void MorseConnection::onAuthErrorReceived(TelegramNamespace::UnauthorizedError e
     static const int reconnectionsLimit = 1;
 
     if (m_authReconnectionsCount < reconnectionsLimit) {
-        qDebug() << "MorseConnection::whenAuthErrorReceived(): Auth error received. Trying to re-init connection without session data..." << m_authReconnectionsCount + 1 << " attempt.";
+        qDebug() << "MorseConnection::onAuthErrorReceived(): Auth error received. Trying to re-init connection without session data..." << m_authReconnectionsCount + 1 << " attempt.";
         setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonAuthenticationFailed);
         ++m_authReconnectionsCount;
         m_client->closeConnection();
         m_client->initConnection();
     } else {
-        qDebug() << "MorseConnection::whenAuthErrorReceived(): Auth error received. Can not connect (tried" << m_authReconnectionsCount << " times).";
+        qDebug() << "MorseConnection::onAuthErrorReceived(): Auth error received. Can not connect (tried" << m_authReconnectionsCount << " times).";
         setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonAuthenticationFailed);
     }
 }
 
-void MorseConnection::whenPhoneCodeRequired()
+void MorseConnection::onAuthCodeRequired()
 {
     qDebug() << Q_FUNC_INFO;
 
@@ -488,7 +483,7 @@ void MorseConnection::onPasswordInfoReceived(quint64 requestId)
     }
 }
 
-void MorseConnection::whenAuthSignErrorReceived(TelegramNamespace::AuthSignError errorCode, const QString &errorMessage)
+void MorseConnection::onAuthSignErrorReceived(TelegramNamespace::AuthSignError errorCode, const QString &errorMessage)
 {
     qDebug() << Q_FUNC_INFO << errorCode << errorMessage;
 
@@ -532,7 +527,7 @@ void MorseConnection::startMechanismWithData_password(const QString &mechanism, 
     qDebug() << Q_FUNC_INFO << mechanism << data;
 
     if (!saslIface_password->availableMechanisms().contains(mechanism)) {
-        error->set(TP_QT_ERROR_NOT_IMPLEMENTED, QString(QLatin1String("Given SASL mechanism \"%1\" is not implemented")).arg(mechanism));
+        error->set(TP_QT_ERROR_NOT_IMPLEMENTED, QStringLiteral("Given SASL mechanism \"%1\" is not implemented").arg(mechanism));
         return;
     }
 
@@ -541,7 +536,7 @@ void MorseConnection::startMechanismWithData_password(const QString &mechanism, 
     m_client->tryPassword(m_passwordInfo->currentSalt(), data);
 }
 
-void MorseConnection::whenConnectionReady()
+void MorseConnection::onConnectionReady()
 {
     qDebug() << Q_FUNC_INFO;
     m_client->setOnlineStatus(m_wantedPresence == c_onlineSimpleStatusKey);
@@ -562,12 +557,11 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
             error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported handle type"));
         }
         return QStringList();
-        break;
     }
 
     QStringList result;
 
-    const QMap<uint, MorseIdentifier> handlesContainer = handleType == Tp::HandleTypeContact ? m_handles : m_chatHandles;
+    const QMap<uint, MorseIdentifier> handlesContainer = handleType == Tp::HandleTypeContact ? m_contactHandles : m_chatHandles;
 
     foreach (uint handle, handles) {
         if (!handlesContainer.contains(handle)) {
@@ -599,7 +593,7 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
     case Tp::HandleTypeContact:
         if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"))) {
             targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
-            targetID = m_handles.value(targetHandle);
+            targetID = m_contactHandles.value(targetHandle);
         } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
             targetID = MorseIdentifier::fromString(request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString());
             targetHandle = ensureHandle(targetID);
@@ -613,6 +607,7 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
             targetID = MorseIdentifier::fromString(request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString());
             targetHandle = ensureHandle(targetID);
         }
+        break;
     default:
         break;
     }
@@ -640,11 +635,10 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
             error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unknown target handle type"));
         }
         return Tp::BaseChannelPtr();
-        break;
     }
 
     if (!targetHandle
-            || ((targetHandleType == Tp::HandleTypeContact) && !m_handles.contains(targetHandle))
+            || ((targetHandleType == Tp::HandleTypeContact) && !m_contactHandles.contains(targetHandle))
             || ((targetHandleType == Tp::HandleTypeRoom) && !m_chatHandles.contains(targetHandle))
             ) {
         if (error) {
@@ -665,7 +659,7 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
             connect(this, SIGNAL(chatDetailsChanged(quint32,Tp::UIntList)),
                     textChannel.data(), SLOT(whenChatDetailsChanged(quint32,Tp::UIntList)));
 
-            whenChatChanged(targetID.id);
+            onChatChanged(targetID.id);
         }
     }
 
@@ -682,7 +676,7 @@ Tp::UIntList MorseConnection::requestHandles(uint handleType, const QStringList 
     }
 
     Tp::UIntList result;
-    foreach(const QString &identify, identifiers) {
+    for(const QString &identify : identifiers) {
         const MorseIdentifier id = MorseIdentifier::fromString(identify);
         if (!id.isValid()) {
             error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("MorseConnection::requestHandles - invalid identifier"));
@@ -708,9 +702,9 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
     Tp::ContactAttributesMap contactAttributes;
 
     foreach (const uint handle, handles) {
-        if (m_handles.contains(handle)) {
+        if (m_contactHandles.contains(handle)) {
             QVariantMap attributes;
-            const MorseIdentifier identifier = m_handles.value(handle);
+            const MorseIdentifier identifier = m_contactHandles.value(handle);
             if (!identifier.isValid()) {
                 qWarning() << Q_FUNC_INFO << "Handle is in map, but identifier is not valid";
                 continue;
@@ -779,12 +773,12 @@ void MorseConnection::removeContacts(const Tp::UIntList &handles, Tp::DBusError 
     QVector<quint32> ids;
 
     foreach (uint handle, handles) {
-        if (!m_handles.contains(handle)) {
+        if (!m_contactHandles.contains(handle)) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
             return;
         }
 
-        quint32 id = m_handles.value(handle).userId();
+        quint32 id = m_contactHandles.value(handle).userId();
 
         if (!id) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Internal error (invalid handle)"));
@@ -800,11 +794,11 @@ Tp::ContactInfoFieldList MorseConnection::requestContactInfo(uint handle, Tp::DB
 {
     qDebug() << Q_FUNC_INFO << handle;
 
-    if (!m_handles.contains(handle)) {
+    if (!m_contactHandles.contains(handle)) {
         error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle"));
         return Tp::ContactInfoFieldList();
     }
-    MorseIdentifier identifier = m_handles.value(handle);
+    MorseIdentifier identifier = m_contactHandles.value(handle);
     if (!identifier.isValid()) {
         error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid morse identifier"));
         return Tp::ContactInfoFieldList();
@@ -903,7 +897,7 @@ void MorseConnection::setAliases(const Tp::AliasMap &aliases, Tp::DBusError *err
 
 QString MorseConnection::getAlias(uint handle)
 {
-    return getAlias(m_handles.value(handle));
+    return getAlias(m_contactHandles.value(handle));
 }
 
 QString MorseConnection::getAlias(const MorseIdentifier identifier)
@@ -1004,19 +998,19 @@ uint MorseConnection::addContacts(const QVector<MorseIdentifier> &identifiers)
     qDebug() << Q_FUNC_INFO;
     uint handle = 0;
 
-    if (!m_handles.isEmpty()) {
-        handle = m_handles.keys().last();
+    if (!m_contactHandles.isEmpty()) {
+        handle = m_contactHandles.keys().last();
     }
 
     QList<uint> newHandles;
     QVector<MorseIdentifier> newIdentifiers;
-    foreach (const MorseIdentifier &identifier, identifiers) {
+    for (const MorseIdentifier &identifier : identifiers) {
         if (getHandle(identifier)) {
             continue;
         }
 
         ++handle;
-        m_handles.insert(handle, identifier);
+        m_contactHandles.insert(handle, identifier);
         newHandles << handle;
         newIdentifiers << identifier;
     }
@@ -1028,7 +1022,7 @@ void MorseConnection::updateContactsStatus(const QVector<MorseIdentifier> &ident
 {
     qDebug() << Q_FUNC_INFO;
     Tp::SimpleContactPresences newPresences;
-    foreach (const MorseIdentifier &identifier, identifiers) {
+    for (const MorseIdentifier &identifier : identifiers) {
         uint handle = ensureContact(identifier);
 
         if (handle == selfHandle()) {
@@ -1055,7 +1049,6 @@ void MorseConnection::updateContactsStatus(const QVector<MorseIdentifier> &ident
             presence.status = QLatin1String("offline");
             presence.type = Tp::ConnectionPresenceTypeOffline;
             break;
-        default:
         case TelegramNamespace::ContactStatusUnknown:
             presence.status = QLatin1String("unknown");
             presence.type = Tp::ConnectionPresenceTypeUnknown;
@@ -1086,6 +1079,9 @@ void MorseConnection::updateSelfContactState(Tp::ConnectionStatus status)
 void MorseConnection::setSubscriptionState(const QVector<MorseIdentifier> &identifiers, const QVector<uint> &handles, uint state)
 {
     qDebug() << Q_FUNC_INFO;
+    if (identifiers.isEmpty()) {
+        return;
+    }
     Tp::ContactSubscriptionMap changes;
     Tp::HandleIdentifierMap identifiersMap;
 
@@ -1103,7 +1099,7 @@ void MorseConnection::setSubscriptionState(const QVector<MorseIdentifier> &ident
 }
 
 /* Receive message from outside (telegram server) */
-void MorseConnection::whenMessageReceived(const Telegram::Message &message)
+void MorseConnection::onMessageReceived(const Telegram::Message &message)
 {
     bool groupChatMessage = peerIsRoom(message.peer());
     uint targetHandle = ensureHandle(message.peer());
@@ -1140,14 +1136,14 @@ void MorseConnection::whenMessageReceived(const Telegram::Message &message)
     MorseTextChannelPtr textChannel = MorseTextChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_TEXT));
 
     if (!textChannel) {
-        qDebug() << Q_FUNC_INFO << "Error, channel is not a morseTextChannel?";
+        qCritical() << Q_FUNC_INFO << "Error, channel is not a morseTextChannel?";
         return;
     }
 
     textChannel->onMessageReceived(message);
 }
 
-void MorseConnection::whenChatChanged(quint32 chatId)
+void MorseConnection::onChatChanged(quint32 chatId)
 {
     QVector<quint32> participants;
     if (m_client->getChatParticipants(&participants, chatId) && !participants.isEmpty()) {
@@ -1205,7 +1201,7 @@ void MorseConnection::onContactListChanged()
         if (newContactListHandles.contains(handle)) {
             continue;
         }
-        const MorseIdentifier identifier = m_handles.value(handle);
+        const MorseIdentifier identifier = m_contactHandles.value(handle);
         if (!identifier.isValid()) {
             qWarning() << Q_FUNC_INFO << "Internal corruption. Handle" << handle << "has invalid corresponding identifier";
             removals.insert(handle, identifier.toString());
@@ -1234,7 +1230,7 @@ void MorseConnection::onContactListChanged()
     contactListIface->setContactListState(Tp::ContactListStateSuccess);
 }
 
-void MorseConnection::whenDisconnected()
+void MorseConnection::onDisconnected()
 {
     qDebug() << Q_FUNC_INFO;
 
@@ -1259,7 +1255,7 @@ void MorseConnection::onFileRequestCompleted(const QString &uniqueId)
     }
 }
 
-void MorseConnection::whenGotRooms()
+void MorseConnection::onGotRooms()
 {
     qDebug() << Q_FUNC_INFO;
     Tp::RoomInfoList rooms;
@@ -1318,10 +1314,10 @@ Tp::AvatarTokenMap MorseConnection::getKnownAvatarTokens(const Tp::UIntList &con
 
     Tp::AvatarTokenMap result;
     foreach (quint32 handle, contacts) {
-        if (!m_handles.contains(handle)) {
+        if (!m_contactHandles.contains(handle)) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
         }
-        result.insert(handle, m_client->peerPictureToken(m_handles.value(handle)));
+        result.insert(handle, m_client->peerPictureToken(m_contactHandles.value(handle)));
     }
 
     return result;
@@ -1338,10 +1334,10 @@ void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError
     }
 
     foreach (quint32 handle, contacts) {
-        if (!m_handles.contains(handle)) {
+        if (!m_contactHandles.contains(handle)) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
         }
-        const Telegram::Peer peer = m_handles.value(handle);
+        const Telegram::Peer peer = m_contactHandles.value(handle);
         Telegram::RemoteFile pictureFile;
         m_fileManager->getPeerPictureFileInfo(peer, &pictureFile);
         const QString requestId = pictureFile.getUniqueId();
@@ -1366,7 +1362,7 @@ void MorseConnection::roomListStartListing(Tp::DBusError *error)
 {
     Q_UNUSED(error)
 
-    QTimer::singleShot(0, this, SLOT(whenGotRooms()));
+    QTimer::singleShot(0, this, SLOT(onGotRooms()));
     roomListChannel->setListingRooms(true);
 }
 
@@ -1388,7 +1384,7 @@ bool MorseConnection::coreIsAuthenticated()
 
 void MorseConnection::checkConnected()
 {
-    if (coreIsAuthenticated() && m_handles.value(selfHandle()).isValid()) {
+    if (coreIsAuthenticated() && m_contactHandles.value(selfHandle()).isValid()) {
         setStatus(Tp::ConnectionStatusConnected, Tp::ConnectionStatusReasonRequested);
     }
 }
@@ -1483,7 +1479,6 @@ void MorseConnection::setContactStatus(quint32 userId, TelegramNamespace::Contac
         presence.status = QLatin1String("offline");
         presence.type = Tp::ConnectionPresenceTypeOffline;
         break;
-    default:
     case TelegramNamespace::ContactStatusUnknown:
         presence.status = QLatin1String("unknown");
         presence.type = Tp::ConnectionPresenceTypeUnknown;
@@ -1497,7 +1492,7 @@ void MorseConnection::setContactStatus(quint32 userId, TelegramNamespace::Contac
 
 uint MorseConnection::getHandle(const MorseIdentifier &identifier) const
 {
-    return m_handles.key(identifier, 0);
+    return m_contactHandles.key(identifier, 0);
 }
 
 uint MorseConnection::getChatHandle(const MorseIdentifier &identifier) const

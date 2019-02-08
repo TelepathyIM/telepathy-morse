@@ -90,8 +90,8 @@ private:
     uint m_targetHandle;
     uint m_targetHandleType;
     uint m_selfHandle;
-    MorseIdentifier m_targetID;
-    MorseIdentifier m_selfID;
+    MorseIdentifier m_targetPeer;
+    MorseIdentifier m_selfPeer;
 
     Tp::BaseChannelTextTypePtr m_channelTextType;
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;

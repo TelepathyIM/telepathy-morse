@@ -31,18 +31,27 @@
 #include <QLatin1String>
 #include <QVariantMap>
 
+static const QLatin1String c_account = QLatin1String("account");
+static const QLatin1String c_proxyType = QLatin1String("proxy-type");
+static const QLatin1String c_proxyAddress = QLatin1String("proxy-server");
+static const QLatin1String c_proxyPort = QLatin1String("proxy-port");
+static const QLatin1String c_proxyUsername= QLatin1String("proxy-username");
+static const QLatin1String c_proxyPassword = QLatin1String("proxy-password");
+static const QLatin1String c_keepaliveInterval = QLatin1String("keepalive-interval");
+
 MorseProtocol::MorseProtocol(const QDBusConnection &dbusConnection, const QString &name)
     : BaseProtocol(dbusConnection, name)
 {
     qDebug() << Q_FUNC_INFO;
+
     setParameters(Tp::ProtocolParameterList()
-                  << Tp::ProtocolParameter(QLatin1String("account"), QLatin1String("s"), Tp::ConnMgrParamFlagRequired)
-                  << Tp::ProtocolParameter(QLatin1String("keepalive-interval"), QLatin1String("u"), Tp::ConnMgrParamFlagHasDefault, 15)
-                  << Tp::ProtocolParameter(QLatin1String("proxy-type"), QLatin1String("s"), 0) // ATM we have only socks5 support, but Telegram supports http-proxy too
-                  << Tp::ProtocolParameter(QLatin1String("proxy-server"), QLatin1String("s"), 0)
-                  << Tp::ProtocolParameter(QLatin1String("proxy-port"), QLatin1String("u"), 0)
-                  << Tp::ProtocolParameter(QLatin1String("proxy-username"), QLatin1String("s"), 0)
-                  << Tp::ProtocolParameter(QLatin1String("proxy-password"), QLatin1String("s"), Tp::ConnMgrParamFlagSecret)
+                  << Tp::ProtocolParameter(c_account, QLatin1String("s"), Tp::ConnMgrParamFlagRequired)
+                  << Tp::ProtocolParameter(c_keepaliveInterval, QLatin1String("u"), Tp::ConnMgrParamFlagHasDefault, 15)
+                  << Tp::ProtocolParameter(c_proxyType, QLatin1String("s"), 0) // ATM we have only socks5 support, but Telegram supports http-proxy too
+                  << Tp::ProtocolParameter(c_proxyAddress, QLatin1String("s"), 0)
+                  << Tp::ProtocolParameter(c_proxyPort, QLatin1String("u"), 0)
+                  << Tp::ProtocolParameter(c_proxyUsername, QLatin1String("s"), 0)
+                  << Tp::ProtocolParameter(c_proxyPassword, QLatin1String("s"), Tp::ConnMgrParamFlagSecret)
                   );
 
     setRequestableChannelClasses(MorseConnection::getRequestableChannelList());
@@ -74,17 +83,42 @@ MorseProtocol::~MorseProtocol()
 
 QString MorseProtocol::getAccount(const QVariantMap &parameters)
 {
-    return parameters.value(QStringLiteral("account")).toString();
+    return parameters.value(c_account).toString();
+}
+
+QString MorseProtocol::getProxyType(const QVariantMap &parameters)
+{
+    return parameters.value(c_proxyType).toString();
+}
+
+QString MorseProtocol::getProxyAddress(const QVariantMap &parameters)
+{
+    return parameters.value(c_proxyAddress).toString();
+}
+
+quint16 MorseProtocol::getProxyPort(const QVariantMap &parameters)
+{
+    return parameters.value(c_proxyPort, 0u).toUInt();
+}
+
+QString MorseProtocol::getProxyUsername(const QVariantMap &parameters)
+{
+    return parameters.value(c_proxyUsername).toString();
+}
+
+QString MorseProtocol::getProxyPassword(const QVariantMap &parameters)
+{
+    return parameters.value(c_proxyPassword).toString();
 }
 
 uint MorseProtocol::getKeepAliveInterval(const QVariantMap &parameters, uint defaultValue)
 {
-    return parameters.value(QLatin1String("keepalive-interval"), defaultValue).toUInt();
+    return parameters.value(c_keepaliveInterval, defaultValue).toUInt();
 }
 
 Tp::BaseConnectionPtr MorseProtocol::createConnection(const QVariantMap &parameters, Tp::DBusError *error)
 {
-    qDebug() << Q_FUNC_INFO << Telegram::Utils::maskPhoneNumber(parameters, QStringLiteral("account"));
+    qDebug() << Q_FUNC_INFO << Telegram::Utils::maskPhoneNumber(parameters, c_account);
     Q_UNUSED(error)
 
     Tp::BaseConnectionPtr newConnection = Tp::BaseConnection::create<MorseConnection>(QLatin1String("morse"), name(), parameters);

@@ -39,7 +39,6 @@ public:
     MorseConnection(const QDBusConnection &dbusConnection,
             const QString &cmName, const QString &protocolName,
             const QVariantMap &parameters);
-    ~MorseConnection();
 
     static Tp::AvatarSpec avatarDetails();
     static Tp::SimpleStatusSpecMap getSimpleStatusSpecMap();
@@ -62,7 +61,7 @@ public:
     Tp::ContactInfoFieldList getUserInfo(const quint32 userId) const;
     Tp::ContactInfoMap getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error);
 
-    Tp::AliasMap getAliases(const Tp::UIntList &handles, Tp::DBusError *error = 0);
+    Tp::AliasMap getAliases(const Tp::UIntList &handles, Tp::DBusError *error = nullptr);
     void setAliases(const Tp::AliasMap &aliases, Tp::DBusError *error);
 
     QString getAlias(uint handle);
@@ -79,29 +78,28 @@ public:
     CTelegramCore *client() const { return m_client; }
 
 public slots:
-    void whenMessageReceived(const Telegram::Message &message);
-    void whenChatChanged(quint32 chatId);
+    void onMessageReceived(const Telegram::Message &message);
+    void onChatChanged(quint32 chatId);
     void setContactStatus(quint32 userId, TelegramNamespace::ContactStatus status);
 
 signals:
-    void messageReceived(const QString &sender, const QString &message);
     void chatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
 
 private slots:
-    void whenConnectionStateChanged(TelegramNamespace::ConnectionState state);
-    void whenAuthenticated();
+    void onConnectionStateChanged(TelegramNamespace::ConnectionState state);
+    void onAuthenticated();
     void onSelfUserAvailable();
     void onAuthErrorReceived(TelegramNamespace::UnauthorizedError errorCode, const QString &errorMessage);
-    void whenPhoneCodeRequired();
+    void onAuthCodeRequired();
     void onPasswordInfoReceived(quint64 requestId);
-    void whenAuthSignErrorReceived(TelegramNamespace::AuthSignError errorCode, const QString &errorMessage);
-    void whenConnectionReady();
+    void onAuthSignErrorReceived(TelegramNamespace::AuthSignError errorCode, const QString &errorMessage);
+    void onConnectionReady();
     void onContactListChanged();
-    void whenDisconnected();
+    void onDisconnected();
     void onFileRequestCompleted(const QString &uniqueId);
 
     /* Channel.Type.RoomList */
-    void whenGotRooms();
+    void onGotRooms();
 
 protected:
     Tp::BaseChannelPtr createRoomListChannel();
@@ -152,7 +150,7 @@ private:
     QString m_wantedPresence;
 
     QVector<quint32> m_contactList;
-    QMap<uint, MorseIdentifier> m_handles;
+    QMap<uint, MorseIdentifier> m_contactHandles;
     QMap<uint, MorseIdentifier> m_chatHandles;
     /* Maps a contact handle to its subscription state */
     QHash<uint, uint> m_contactsSubscription;

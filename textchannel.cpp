@@ -61,8 +61,8 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
       m_client(morseConnection->client()),
       m_targetHandle(baseChannel->targetHandle()),
       m_targetHandleType(baseChannel->targetHandleType()),
-      m_targetID(MorseIdentifier::fromString(baseChannel->targetID())),
-      m_localTypingTimer(0)
+      m_targetPeer(MorseIdentifier::fromString(baseChannel->targetID())),
+      m_localTypingTimer(nullptr)
 {
     QStringList supportedContentTypes = QStringList()
             << QLatin1String("text/plain")
@@ -106,14 +106,14 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
 
         Telegram::ChatInfo info;
 
-        m_client->getChatInfo(&info, m_targetID.id);
+        m_client->getChatInfo(&info, m_targetPeer.id);
 
         QDateTime creationTimestamp;
         if (info.date()) {
             creationTimestamp.setTime_t(info.date());
         }
 
-        m_roomIface = Tp::BaseChannelRoomInterface::create(/* roomName */ m_targetID.toString(),
+        m_roomIface = Tp::BaseChannelRoomInterface::create(/* roomName */ m_targetPeer.toString(),
                                                            /* server */ QString(),
                                                            /* creator */ QString(),
                                                            /* creatorHandle */ 0,
@@ -148,7 +148,7 @@ MorseTextChannel::~MorseTextChannel()
 QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error)
 {
     QString content;
-    foreach (const Tp::MessagePart &part, messageParts) {
+    for (const Tp::MessagePart &part : messageParts) {
         if (part.contains(QLatin1String("content-type"))
                 && part.value(QLatin1String("content-type")).variant().toString() == QLatin1String("text/plain")
                 && part.contains(QLatin1String("content"))) {
@@ -157,7 +157,7 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
         }
     }
 
-    quint64 tmpId = m_client->sendMessage(m_targetID, content);
+    quint64 tmpId = m_client->sendMessage(m_targetPeer, content);
     m_sentMessageIds.append(SentMessageId(tmpId));
 
     return QString::number(tmpId);
@@ -165,14 +165,14 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
 
 void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)
 {
-    m_client->setMessageRead(m_targetID, messageId.toUInt());
+    m_client->setMessageRead(m_targetPeer, messageId.toUInt());
 }
 
 void MorseTextChannel::whenContactChatStateComposingChanged(quint32 userId, TelegramNamespace::MessageAction action)
 {
     // We are connected to broadcast signal, so have to select only needed calls
     const MorseIdentifier identifier = MorseIdentifier::fromUserId(userId);
-    if (identifier != m_targetID) {
+    if (identifier != m_targetPeer) {
         return;
     }
     setMessageAction(userId, action);
@@ -182,7 +182,7 @@ void MorseTextChannel::whenContactRoomStateComposingChanged(quint32 chatId, quin
 {
     // We are connected to broadcast signal, so have to select only needed calls
     const MorseIdentifier identifier = MorseIdentifier::fromChatId(chatId);
-    if (identifier != m_targetID) {
+    if (identifier != m_targetPeer) {
         return;
     }
     setMessageAction(userId, action);
@@ -209,17 +209,17 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
     header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
 
     bool broadcast = false;
-    if (m_targetID.type == Telegram::Peer::Channel) {
+    if (m_targetPeer.type == Telegram::Peer::Channel) {
         Telegram::ChatInfo info;
-        if (!m_client->getChatInfo(&info, m_targetID.id)) {
-            qWarning() << "Unable to get chat info" << m_targetID.toString();
+        if (!m_client->getChatInfo(&info, m_targetPeer.id)) {
+            qWarning() << "Unable to get chat info" << m_targetPeer.toString();
         }
         broadcast = info.broadcast();
     }
 
     if (broadcast) {
         header[QLatin1String("message-sender")]    = QDBusVariant(m_targetHandle);
-        header[QLatin1String("message-sender-id")] = QDBusVariant(m_targetID.toString());
+        header[QLatin1String("message-sender-id")] = QDBusVariant(m_targetPeer.toString());
     } else if (message.flags & TelegramNamespace::MessageFlagOut) {
         header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->selfHandle());
         header[QLatin1String("message-sender-id")] = QDBusVariant(m_connection->selfID());
@@ -341,7 +341,7 @@ void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList
 {
     qDebug() << Q_FUNC_INFO << chatId;
 
-    if ((m_targetID.chatId() == chatId) || (m_targetID.channelId() == chatId)) {
+    if ((m_targetPeer.chatId() == chatId) || (m_targetPeer.channelId() == chatId)) {
         updateChatParticipants(handles);
 
         Telegram::ChatInfo info;
@@ -355,7 +355,7 @@ void MorseTextChannel::whenChatDetailsChanged(quint32 chatId, const Tp::UIntList
 void MorseTextChannel::setMessageInboxRead(Telegram::Peer peer, quint32 messageId)
 {
     // We are connected to broadcast signal, so have to select only needed calls
-    if (m_targetID != peer) {
+    if (m_targetPeer != peer) {
         return;
     }
 
@@ -390,7 +390,7 @@ void MorseTextChannel::setMessageInboxRead(Telegram::Peer peer, quint32 messageI
 void MorseTextChannel::setMessageOutboxRead(Telegram::Peer peer, quint32 messageId)
 {
     // We are connected to broadcast signal, so have to select only needed calls
-    if (m_targetID != peer) {
+    if (m_targetPeer != peer) {
         return;
     }
 
@@ -434,7 +434,7 @@ void MorseTextChannel::setResolvedMessageId(quint64 randomId, quint32 resolvedId
 
     Tp::MessagePart header;
     header[QLatin1String("message-sender")]    = QDBusVariant(m_targetHandle);
-    header[QLatin1String("message-sender-id")] = QDBusVariant(m_targetID.toString());
+    header[QLatin1String("message-sender-id")] = QDBusVariant(m_targetPeer.toString());
     header[QLatin1String("message-type")]      = QDBusVariant(Tp::ChannelTextMessageTypeDeliveryReport);
     header[QLatin1String("delivery-status")]   = QDBusVariant(Tp::DeliveryStatusAccepted);
     header[QLatin1String("delivery-token")]    = QDBusVariant(token);
@@ -445,7 +445,7 @@ void MorseTextChannel::setResolvedMessageId(quint64 randomId, quint32 resolvedId
 
 void MorseTextChannel::reactivateLocalTyping()
 {
-    m_client->setTyping(m_targetID, TelegramNamespace::MessageActionTyping);
+    m_client->setTyping(m_targetPeer, TelegramNamespace::MessageActionTyping);
 }
 
 void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
@@ -459,10 +459,10 @@ void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
     }
 
     if (state == Tp::ChannelChatStateComposing) {
-        m_client->setTyping(m_targetID, TelegramNamespace::MessageActionTyping);
+        m_client->setTyping(m_targetPeer, TelegramNamespace::MessageActionTyping);
         m_localTypingTimer->start();
     } else {
-        m_client->setTyping(m_targetID, TelegramNamespace::MessageActionNone);
+        m_client->setTyping(m_targetPeer, TelegramNamespace::MessageActionNone);
         m_localTypingTimer->stop();
     }
 }

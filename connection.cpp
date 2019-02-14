@@ -953,7 +953,7 @@ uint MorseConnection::setPresence(const QString &status, const QString &message,
         m_client->setOnlineStatus(status == c_onlineSimpleStatusKey);
     }
 
-    return 0;
+    return c_selfHandle;
 }
 
 uint MorseConnection::ensureHandle(const MorseIdentifier &identifier)

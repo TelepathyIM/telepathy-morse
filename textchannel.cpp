@@ -324,6 +324,17 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         }
 
         body << textMessage;
+
+        if (!info.caption().isEmpty()) {
+            Tp::MessagePart captionPart;
+            captionPart[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
+            captionPart[QLatin1String("alternative")] = QDBusVariant(QLatin1String("caption"));
+            // We want to show the caption on the next line in both cases:
+            // if there is an image
+            // if there is an alt text
+            captionPart[QLatin1String("content")] = QDBusVariant(QLatin1Char('\n') + info.caption());
+            body << captionPart;
+        }
     }
 
     partList << body;

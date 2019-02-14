@@ -300,7 +300,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     Q_UNUSED(error);
 
     m_authReconnectionsCount = 0;
-    setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonNoneSpecified);
+    setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
 
     const QByteArray sessionData = getSessionData(m_selfPhone);
 

@@ -23,6 +23,8 @@
 #include <TelepathyQt/Constants>
 #include <TelepathyQt/Debug>
 
+#include <TelegramQt/TelegramNamespace>
+
 #include "protocol.hpp"
 
 #ifdef ENABLE_DEBUG_IFACE
@@ -35,6 +37,7 @@ int main(int argc, char *argv[])
     app.setOrganizationName(QLatin1String("TelepathyIM"));
     app.setApplicationName(QLatin1String("telepathy-morse"));
 
+    Telegram::initialize();
     Tp::registerTypes();
     Tp::enableDebug(true);
     Tp::enableWarnings(true);

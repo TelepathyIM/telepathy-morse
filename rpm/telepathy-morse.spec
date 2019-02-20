@@ -9,8 +9,6 @@ Source0:    https://github.com/TelepathyIM/telepathy-morse/archive/%{name}-%{ver
 Requires:   telepathy-mission-control
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
-# Requires: rpmlib(telegram-qt-qt5 >= 0.2.0
-Requires: rpmlib(libTelegramQt5.so.0.2)
 BuildRequires: pkgconfig(dbus-1) >= 1.1.0
 BuildRequires: pkgconfig(Qt5Core)
 BuildRequires: pkgconfig(Qt5Network)

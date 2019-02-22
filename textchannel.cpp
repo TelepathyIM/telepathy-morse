@@ -306,6 +306,16 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
             break;
         }
 
+        const QByteArray cachedContent = info.getCachedPhoto();
+        if (!cachedContent.isEmpty()) {
+            Tp::MessagePart thumbnailMessage;
+            thumbnailMessage[QLatin1String("content-type")] = QDBusVariant(QLatin1String("image/jpeg"));
+            thumbnailMessage[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));
+            thumbnailMessage[QLatin1String("thumbnail")] = QDBusVariant(true);
+            thumbnailMessage[QLatin1String("content")] = QDBusVariant(cachedContent);
+            body << thumbnailMessage;
+        }
+
         Tp::MessagePart textMessage;
         textMessage[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
         textMessage[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));

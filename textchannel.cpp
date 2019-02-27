@@ -467,6 +467,7 @@ void MorseTextChannel::setResolvedMessageId(Telegram::Peer peer, quint64 message
     header[QLatin1String("delivery-token")]    = QDBusVariant(token);
     partList << header;
 
+    m_connection->updateDialogLastMessageId(m_targetPeer, messageId);
     addReceivedMessage(partList);
 }
 

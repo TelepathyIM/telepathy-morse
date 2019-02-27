@@ -45,6 +45,29 @@ class MessagesOperation;
 
 } // Telegram namespace
 
+struct DialogState {
+    // The most recent message id we ever know for this dialog
+    // The last message id that we sent to Telepathy Client for this dialog
+    quint32 syncedMessageId = 0;
+
+    // This dialog is synced
+    bool synced = false;
+};
+
+struct MessagingState {
+//    enum State {
+//        NotInitiated,
+//        InProgress,
+//        Complete,
+//    };
+    QHash<Telegram::Peer, DialogState> dialogs;
+    QHash<Telegram::Peer, quint32> pendingMessages;
+    bool syncFinished = false;
+
+    void load(const QByteArray &data);
+    QByteArray save() const;
+};
+
 class MorseConnection : public Tp::BaseConnection
 {
     Q_OBJECT
@@ -89,9 +112,12 @@ public:
 
     Telegram::Client::Client *core() const { return m_client; }
 
+    void updateDialogLastMessageId(const Telegram::Peer &peer, quint32 lastMessageId);
+    DialogState getDialogState(const Telegram::Peer &peer) const;
+
 public slots:
-    void onMessageReceived(const Telegram::Peer peer, quint32 messageId);
-    void onMessagesReceived(const Telegram::Peer peer, const QVector<quint32> &messageIds);
+    void onNewMessageReceived(const Telegram::Peer peer, quint32 messageId);
+    void addMessages(const Telegram::Peer peer, const QVector<quint32> &messageIds);
 
 signals:
     void chatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
@@ -112,6 +138,7 @@ private slots:
     void onDialogsReady();
     void onDisconnected();
     void onFileRequestCompleted(const QString &uniqueId);
+    void onHistoryReceived(Telegram::Client::MessagesOperation *operation);
 
     /* Channel.Type.RoomList */
     void onGotRooms();
@@ -140,6 +167,10 @@ private:
     void roomListStartListing(Tp::DBusError *error);
     void roomListStopListing(Tp::DBusError *error);
 
+    const MessagingState *getConstSyncState() const;
+    MessagingState *getSyncState();
+    void loadState();
+    void saveState();
     QString getAccountDataDirectory() const;
 
     Tp::BaseConnectionContactsInterfacePtr contactsIface;
@@ -160,6 +191,8 @@ private:
     QMap<uint, Telegram::Peer> m_contactHandles;
     QMap<uint, Telegram::Peer> m_chatHandles;
     QHash<QString,Telegram::Peer> m_peerPictureRequests;
+    MessagingState m_state;
+    QTimer *m_stateSaveTimer = nullptr;
 
     CAppInformation *m_appInfo = nullptr;
     Telegram::Client::Client *m_client = nullptr;

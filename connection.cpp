@@ -280,7 +280,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     connect(m_client->connectionApi(), &Telegram::Client::ConnectionApi::statusChanged,
             this, &MorseConnection::onConnectionStatusChanged);
     connect(m_client->messagingApi(), &Telegram::Client::MessagingApi::messageReceived,
-             this, &MorseConnection::onMessageReceived);
+             this, &MorseConnection::onNewMessageReceived);
 //    connect(m_core, &CTelegramCore::chatChanged,
 //            this, &MorseConnection::whenChatChanged);
 //    connect(m_core, &CTelegramCore::contactStatusChanged,
@@ -311,6 +311,8 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     }
     m_fileManager = new CFileManager(m_client, this);
     connect(m_fileManager, &CFileManager::requestComplete, this, &MorseConnection::onFileRequestCompleted);
+
+    loadState();
 }
 
 void MorseConnection::doConnect(Tp::DBusError *error)
@@ -981,6 +983,18 @@ uint MorseConnection::ensureChat(const Telegram::Peer &identifier)
     return handle;
 }
 
+void MorseConnection::updateDialogLastMessageId(const Telegram::Peer &peer, quint32 lastMessageId)
+{
+    if (getConstSyncState()->dialogs.value(peer).syncedMessageId < lastMessageId) {
+        getSyncState()->dialogs[peer].syncedMessageId = lastMessageId;
+    }
+}
+
+DialogState MorseConnection::getDialogState(const Peer &peer) const
+{
+    return getConstSyncState()->dialogs.value(peer);
+}
+
 /**
  * Add contacts with identifiers \a identifiers to known contacts list (not roster)
  *
@@ -1074,12 +1088,19 @@ void MorseConnection::updateSelfContactState(Tp::ConnectionStatus status)
 }
 
 /* Receive message from outside (telegram server) */
-void MorseConnection::onMessageReceived(const Peer peer, quint32 messageId)
+void MorseConnection::onNewMessageReceived(const Peer peer, quint32 messageId)
 {
-    return onMessagesReceived(peer, {messageId});
+    const MessagingState *syncState = getConstSyncState();
+    // Process messages only if dialogs loaded;
+    // Check only known dialogs (an unknown dialog probably new and has no history)
+    if (!syncState->syncFinished || (syncState->dialogs.contains(peer) && !syncState->dialogs.value(peer).synced)) {
+        getSyncState()->pendingMessages.insertMulti(peer, messageId);
+        return;
+    }
+    addMessages(peer, {messageId});
 }
 
-void MorseConnection::onMessagesReceived(const Peer peer, const QVector<quint32> &messageIds)
+void MorseConnection::addMessages(const Peer peer, const QVector<quint32> &messageIds)
 {
     bool groupChatMessage = peerIsRoom(peer);
 
@@ -1089,7 +1110,16 @@ void MorseConnection::onMessagesReceived(const Peer peer, const QVector<quint32>
 
     uint targetHandle = ensureHandle(peer);
 
-    QVector<quint32> newIds = messageIds;
+    DialogState dialogState = getDialogState(peer);
+    QVector<quint32> newIds;
+    for (const quint32 id : messageIds) {
+        if (id <= dialogState.syncedMessageId) {
+            // Ignore duplicates (we can receive the same message from GetHistory and then from Update
+            continue;
+        }
+        newIds.append(id);
+    }
+
     if (newIds.isEmpty()) {
         return;
     }
@@ -1116,10 +1146,11 @@ void MorseConnection::onMessagesReceived(const Peer peer, const QVector<quint32>
         return;
     }
 
-    for (const quint32 id : newIds) {
+    for (const quint32 messageId : newIds) {
         Telegram::Message message;
-        m_client->dataStorage()->getMessage(&message, peer, id);
+        m_client->dataStorage()->getMessage(&message, peer, messageId);
         textChannel->onMessageReceived(message);
+        updateDialogLastMessageId(peer, messageId);
     }
 }
 
@@ -1192,12 +1223,49 @@ void MorseConnection::onContactListChanged()
 
 void MorseConnection::onDialogsReady()
 {
+    bool m_omitGroupChats = true;
+    Telegram::Client::DataStorage *dataStorage = m_client->dataStorage();
+    for (const Telegram::Peer &peer : m_dialogs->peers()) {
+        if (m_omitGroupChats) {
+            if (peerIsRoom(peer)) {
+                continue;
+            }
+        }
+        Telegram::DialogInfo info;
+        dataStorage->getDialogInfo(&info, peer);
+        Telegram::Client::MessageFetchOptions options;
+        options.limit = 20;
+        MessagingState *syncState = getSyncState();
+        if (syncState->dialogs.contains(peer)) {
+            const quint32 lastSyncedMessageId = syncState->dialogs.value(peer).syncedMessageId;
+            if (lastSyncedMessageId < info.lastMessageId()) {
+                options.minId = lastSyncedMessageId;
+                qDebug() << Q_FUNC_INFO << "Update dialog with" << peer << "from" << lastSyncedMessageId << "to" << info.lastMessageId();
+            } else {
+                qDebug() << Q_FUNC_INFO << "Update is not needed for dialog with" << peer;
+                syncState->dialogs[peer].synced = true;
+                continue;
+            }
+        } else {
+            qDebug() << Q_FUNC_INFO << "New dialog" << peer;
+            syncState->dialogs.insert(peer, DialogState());
+        }
+#ifdef FETCH_NEW_DIALOG_MESSAGES
+        qDebug() << this << __func__ << "Request history for" << peer;
+        Telegram::Client::MessagesOperation *historyOp = m_client->messagingApi()->getHistory(peer, options);
+        historyOp->connectToFinished(this, &MorseConnection::onHistoryReceived, historyOp);
+#endif
+    }
+
     onContactListChanged();
+
+    m_state.syncFinished = true;
 }
 
 void MorseConnection::onDisconnected()
 {
     qDebug() << Q_FUNC_INFO;
+    saveState();
     m_client->connectionApi()->disconnectFromServer();
 }
 
@@ -1215,6 +1283,36 @@ void MorseConnection::onFileRequestCompleted(const QString &uniqueId)
     } else {
         qWarning() << "MorseConnection::onFileRequestCompleted(): Unexpected file id";
     }
+}
+
+void MorseConnection::onHistoryReceived(Telegram::Client::MessagesOperation *operation)
+{
+    const Peer peer = operation->peer();
+    addMessages(peer, operation->messages());
+
+    Telegram::DialogInfo dialogInfo;
+    m_client->dataStorage()->getDialogInfo(&dialogInfo, peer);
+
+    const MessagingState *constSyncState = getConstSyncState();
+
+    qDebug() << this << __func__
+             << "synced up to message:" << constSyncState->dialogs.value(peer).syncedMessageId
+             << "Telegram last message:" << dialogInfo.lastMessageId();
+    if (constSyncState->dialogs.value(peer).syncedMessageId == dialogInfo.lastMessageId()) {
+        MessagingState *syncState = getSyncState();
+        syncState->dialogs[peer].synced = true;
+        qDebug() << "Holded messages for the synced peer" << peer << ":" << syncState->pendingMessages.values(peer);
+        syncState->pendingMessages.remove(peer);
+    } else {
+        Telegram::Client::MessageFetchOptions options;
+        options.limit = 20;
+        options.minId = constSyncState->dialogs.value(peer).syncedMessageId;
+        qDebug() << "Continue the fetch for peer" << peer << "minId" << options.minId;
+
+        Telegram::Client::MessagesOperation *historyOp = m_client->messagingApi()->getHistory(peer, options);
+        historyOp->connectToFinished(this, &MorseConnection::onHistoryReceived, historyOp);
+    }
+    operation->deleteLater();
 }
 
 void MorseConnection::onGotRooms()
@@ -1332,6 +1430,149 @@ void MorseConnection::roomListStopListing(Tp::DBusError *error)
 {
     Q_UNUSED(error)
     roomListChannel->setListingRooms(false);
+}
+
+const MessagingState *MorseConnection::getConstSyncState() const
+{
+    return &m_state;
+}
+
+MessagingState *MorseConnection::getSyncState()
+{
+    if (!m_stateSaveTimer) {
+        m_stateSaveTimer = new QTimer(this);
+        m_stateSaveTimer->setInterval(200);
+        m_stateSaveTimer->setSingleShot(true);
+        connect(m_stateSaveTimer, &QTimer::timeout, this, &MorseConnection::saveState);
+    }
+    if (!m_stateSaveTimer->isActive()) {
+        qDebug() << this << "activate sync save timer";
+        m_stateSaveTimer->start();
+    }
+    return &m_state;
+}
+
+/*!
+    \class MessagingState
+    \brief The MessagingState class keeps messages in sync across connections.
+
+    The idea is to get messages since last connection (as scrollback) and hold
+    new messages until the dialog history is fetched.
+
+    On connection initiated: load the state.
+    On disconnected: save the state if needed.
+
+    On dialoglist received: {
+        foreach dialog {
+            if state[dialog] does not exist {
+                processNewDialog(dialog)
+                continue
+            }
+            if dialog.topMessage > state[dialog].syncedId {
+                request last N messages newer than state[dialog].syncedId
+            } else {
+                state[dialog].synced = true
+            }
+        }
+    }
+
+    processNewDialog(dialog): {
+        add state[dialog]
+        request last N messages from the dialog
+    }
+
+    onHistoryReceived: {
+        onMessageReceived()
+    }
+
+    onMessageReceived: {
+        if dialog exists but not synced {
+            hold the message
+            return
+        }
+
+        propogate the message to the appropriate channel
+        update state[dialog].syncedId
+        schedule save()
+    }
+ */
+
+void MessagingState::load(const QByteArray &data)
+{
+    syncFinished = false;
+    dialogs.clear();
+    pendingMessages.clear();
+
+    const QJsonObject root = QJsonDocument::fromJson(data).object();
+    const QJsonArray dialogArray = root.value(QLatin1String("dialogs")).toArray();
+    for (const QJsonValue &dialogValue : dialogArray) {
+        const QJsonObject dialogObject = dialogValue.toObject();
+        const Telegram::Peer peer = Telegram::Peer::fromString(dialogObject.value(QLatin1String("peer")).toString());
+        if (!peer.isValid()) {
+            qWarning() << Q_FUNC_INFO << "Invalid dialog peer:" << dialogObject.value(QLatin1String("peer"));
+            continue;
+        }
+        DialogState state;
+        state.syncedMessageId = static_cast<quint32>(dialogObject.value(QLatin1String("lastMessageId")).toInt());
+        dialogs.insert(peer, state);
+    }
+
+    qDebug() << "Loaded dialogs:";
+    for (const Telegram::Peer &dialog : dialogs.keys()) {
+        DialogState state = dialogs.value(dialog);
+        qDebug() << "dialog:" << dialog.toString() << "last message id:" << state.syncedMessageId;
+    }
+}
+
+QByteArray MessagingState::save() const
+{
+    QJsonArray dialogArray;
+    qDebug() << "Dialogs to save:";
+    for (const Telegram::Peer &dialog : dialogs.keys()) {
+        DialogState state = dialogs.value(dialog);
+        qWarning() << "dialog:" << dialog.toString() << "last message id:" << state.syncedMessageId;
+        QJsonObject dialogObject;
+        dialogObject[QLatin1String("peer")] = dialog.toString();
+        dialogObject[QLatin1String("lastMessageId")] = static_cast<int>(state.syncedMessageId);
+        dialogArray.append(dialogObject);
+    }
+    QJsonObject root;
+    root[QLatin1String("version")] = 1;
+    root[QLatin1String("dialogs")] = dialogArray;
+    return QJsonDocument(root).toJson();
+}
+
+void MorseConnection::loadState()
+{
+    QFile stateFile(getAccountDataDirectory() + QLatin1Char('/') + c_stateFile);
+
+    if (!stateFile.open(QIODevice::ReadOnly)) {
+        qDebug() << Q_FUNC_INFO << "Unable to open state file" << stateFile.fileName();
+        return;
+    }
+
+    const QByteArray data = stateFile.readAll();
+    qDebug() << Q_FUNC_INFO << m_selfPhone << "(" << data.size() << "bytes)";
+    m_state.load(data);
+}
+
+void MorseConnection::saveState()
+{
+    m_client->accountStorage()->sync();
+    const QByteArray data = getConstSyncState()->save();
+
+    QDir dir;
+    dir.mkpath(getAccountDataDirectory());
+    QFile stateFile(getAccountDataDirectory() + QLatin1Char('/') + c_stateFile);
+
+    if (!stateFile.open(QIODevice::WriteOnly)) {
+        qWarning() << Q_FUNC_INFO << "Unable to open state file" << stateFile.fileName();
+    }
+
+    if (stateFile.write(data) != data.size()) {
+        qWarning() << Q_FUNC_INFO << "Unable to save the session data to file" << "for account" << Utils::maskPhoneNumber(m_selfPhone);
+    }
+    qDebug() << Q_FUNC_INFO << "State saved to file" << stateFile.fileName();
 }
 
 QString MorseConnection::getAccountDataDirectory() const

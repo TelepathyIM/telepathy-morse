@@ -236,7 +236,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     connect(this, &BaseConnection::disconnected, this, &MorseConnection::onDisconnected);
 
-    m_contactHandles.insert(c_selfHandle, MorseIdentifier());
+    m_contactHandles.insert(c_selfHandle, Telegram::Peer());
     setSelfHandle(c_selfHandle);
 
     m_appInfo = new CAppInformation(this);
@@ -580,7 +580,7 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
 
     QStringList result;
 
-    const QMap<uint, MorseIdentifier> handlesContainer = handleType == Tp::HandleTypeContact ? m_contactHandles : m_chatHandles;
+    const QMap<uint, Telegram::Peer> handlesContainer = handleType == Tp::HandleTypeContact ? m_contactHandles : m_chatHandles;
 
     foreach (uint handle, handles) {
         if (!handlesContainer.contains(handle)) {
@@ -606,7 +606,7 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
 
     uint targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
     uint targetHandle = 0;
-    MorseIdentifier targetID;
+    Telegram::Peer targetID;
 
     switch (targetHandleType) {
     case Tp::HandleTypeContact:
@@ -614,7 +614,7 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
             targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
             targetID = m_contactHandles.value(targetHandle);
         } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
-            targetID = MorseIdentifier::fromString(request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString());
+            targetID = Telegram::Peer::fromString(request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString());
             targetHandle = ensureHandle(targetID);
         }
         break;
@@ -623,7 +623,7 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
             targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
             targetID = m_chatHandles.value(targetHandle);
         } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
-            targetID = MorseIdentifier::fromString(request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString());
+            targetID = Telegram::Peer::fromString(request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString());
             targetHandle = ensureHandle(targetID);
         }
         break;
@@ -696,7 +696,7 @@ Tp::UIntList MorseConnection::requestHandles(uint handleType, const QStringList 
 
     Tp::UIntList result;
     for(const QString &identify : identifiers) {
-        const MorseIdentifier id = MorseIdentifier::fromString(identify);
+        const Telegram::Peer id = Telegram::Peer::fromString(identify);
         if (!id.isValid()) {
             error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("MorseConnection::requestHandles - invalid identifier"));
             return Tp::UIntList();
@@ -722,7 +722,7 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
     foreach (const uint handle, handles) {
         if (m_contactHandles.contains(handle)) {
             QVariantMap attributes;
-            const MorseIdentifier identifier = m_contactHandles.value(handle);
+            const Telegram::Peer identifier = m_contactHandles.value(handle);
             if (!identifier.isValid()) {
                 qWarning() << Q_FUNC_INFO << "Handle is in map, but identifier is not valid";
                 continue;
@@ -747,7 +747,7 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
             //}
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO + QLatin1String("/info")] = QVariant::fromValue(getUserInfo(identifier.userId()));
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO + QLatin1String("/info")] = QVariant::fromValue(getUserInfo(identifier.id));
             }
 
             contactAttributes[handle] = attributes;
@@ -774,13 +774,13 @@ void MorseConnection::removeContacts(const Tp::UIntList &handles, Tp::DBusError 
             return;
         }
 
-        quint32 id = m_contactHandles.value(handle).userId();
+        quint32 userId = m_contactHandles.value(handle).id;
 
-        if (!id) {
+        if (!userId) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Internal error (invalid handle)"));
         }
 
-        ids.append(id);
+        ids.append(userId);
     }
 
     m_client->contactsApi()->deleteContacts(ids);
@@ -794,13 +794,13 @@ Tp::ContactInfoFieldList MorseConnection::requestContactInfo(uint handle, Tp::DB
         error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle"));
         return Tp::ContactInfoFieldList();
     }
-    MorseIdentifier identifier = m_contactHandles.value(handle);
+    Telegram::Peer identifier = m_contactHandles.value(handle);
     if (!identifier.isValid()) {
         error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid morse identifier"));
         return Tp::ContactInfoFieldList();
     }
 
-    return getUserInfo(identifier.userId());
+    return getUserInfo(identifier.id);
 }
 
 Tp::ContactInfoFieldList MorseConnection::getUserInfo(const quint32 userId) const
@@ -896,14 +896,14 @@ QString MorseConnection::getAlias(uint handle)
     return getAlias(m_contactHandles.value(handle));
 }
 
-QString MorseConnection::getAlias(const MorseIdentifier identifier)
+QString MorseConnection::getAlias(const Telegram::Peer identifier)
 {
     if (!identifier.isValid()) {
         return QString();
     }
     if (identifier.type == Telegram::Peer::User) {
         Telegram::UserInfo info;
-        if (m_client->dataStorage()->getUserInfo(&info, identifier.userId())) {
+        if (m_client->dataStorage()->getUserInfo(&info, identifier.id)) {
             if (!info.firstName().isEmpty() || !info.lastName().isEmpty()) {
                 if (!info.firstName().isEmpty() && !info.lastName().isEmpty()) {
                     return info.firstName() + QLatin1Char(' ') + info.lastName();
@@ -946,7 +946,7 @@ uint MorseConnection::setPresence(const QString &status, const QString &message,
     return c_selfHandle;
 }
 
-uint MorseConnection::ensureHandle(const MorseIdentifier &identifier)
+uint MorseConnection::ensureHandle(const Telegram::Peer &identifier)
 {
     if (peerIsRoom(identifier)) {
         return ensureChat(identifier);
@@ -957,10 +957,10 @@ uint MorseConnection::ensureHandle(const MorseIdentifier &identifier)
 
 uint MorseConnection::ensureContact(quint32 userId)
 {
-    return ensureContact(MorseIdentifier::fromUserId(userId));
+    return ensureContact(Telegram::Peer::fromUserId(userId));
 }
 
-uint MorseConnection::ensureContact(const MorseIdentifier &identifier)
+uint MorseConnection::ensureContact(const Telegram::Peer &identifier)
 {
     uint handle = getContactHandle(identifier);
     if (!handle) {
@@ -969,7 +969,7 @@ uint MorseConnection::ensureContact(const MorseIdentifier &identifier)
     return handle;
 }
 
-uint MorseConnection::ensureChat(const MorseIdentifier &identifier)
+uint MorseConnection::ensureChat(const Telegram::Peer &identifier)
 {
     uint handle = getChatHandle(identifier);
     if (!handle) {
@@ -989,7 +989,7 @@ uint MorseConnection::ensureChat(const MorseIdentifier &identifier)
  *
  * \return the maximum handle value
  */
-uint MorseConnection::addContacts(const QVector<MorseIdentifier> &identifiers)
+uint MorseConnection::addContacts(const QVector<Telegram::Peer> &identifiers)
 {
     qDebug() << Q_FUNC_INFO;
     uint handle = 0;
@@ -999,8 +999,8 @@ uint MorseConnection::addContacts(const QVector<MorseIdentifier> &identifiers)
     }
 
     QList<uint> newHandles;
-    QVector<MorseIdentifier> newIdentifiers;
-    for (const MorseIdentifier &identifier : identifiers) {
+    QVector<Telegram::Peer> newIdentifiers;
+    for (const Telegram::Peer &identifier : identifiers) {
         if (getContactHandle(identifier)) {
             continue;
         }
@@ -1014,11 +1014,11 @@ uint MorseConnection::addContacts(const QVector<MorseIdentifier> &identifiers)
     return handle;
 }
 
-void MorseConnection::updateContactsStatus(const QVector<MorseIdentifier> &identifiers)
+void MorseConnection::updateContactsStatus(const QVector<Telegram::Peer> &identifiers)
 {
     qDebug() << Q_FUNC_INFO;
     Tp::SimpleContactPresences newPresences;
-    for (const MorseIdentifier &identifier : identifiers) {
+    for (const Telegram::Peer &identifier : identifiers) {
         uint handle = ensureContact(identifier);
 
         if (handle == selfHandle()) {
@@ -1031,7 +1031,7 @@ void MorseConnection::updateContactsStatus(const QVector<MorseIdentifier> &ident
             // We list broadcast channels as Contacts
             if (identifier.type == Telegram::Peer::User) {
                 Telegram::UserInfo info;
-                m_client->dataStorage()->getUserInfo(&info, identifier.userId());
+                m_client->dataStorage()->getUserInfo(&info, identifier.id);
                 st = info.status();
             }
         }
@@ -1076,7 +1076,7 @@ void MorseConnection::updateSelfContactState(Tp::ConnectionStatus status)
     simplePresenceIface->setPresences(newPresences);
 }
 
-void MorseConnection::setSubscriptionState(const QVector<MorseIdentifier> &identifiers, const QVector<uint> &handles, uint state)
+void MorseConnection::setSubscriptionState(const QVector<Telegram::Peer> &identifiers, const QVector<uint> &handles, uint state)
 {
     qDebug() << Q_FUNC_INFO;
     if (identifiers.isEmpty()) {
@@ -1162,7 +1162,7 @@ void MorseConnection::onContactListChanged()
     qDebug() << Q_FUNC_INFO << "ids:" << ids;
 
     QVector<uint> newContactListHandles;
-    QVector<MorseIdentifier> newContactListIdentifiers;
+    QVector<Telegram::Peer> newContactListIdentifiers;
     newContactListHandles.reserve(ids.count());
     newContactListIdentifiers.reserve(ids.count());
 
@@ -1187,7 +1187,7 @@ void MorseConnection::onContactListChanged()
         if (newContactListHandles.contains(handle)) {
             continue;
         }
-        const MorseIdentifier identifier = m_contactHandles.value(handle);
+        const Telegram::Peer identifier = m_contactHandles.value(handle);
         if (!identifier.isValid()) {
             qWarning() << Q_FUNC_INFO << "Internal corruption. Handle" << handle << "has invalid corresponding identifier";
             removals.insert(handle, identifier.toString());
@@ -1260,7 +1260,7 @@ void MorseConnection::onGotRooms()
         if (chatInfo.migratedTo().isValid()) {
             continue;
         }
-        const MorseIdentifier chatID = peer;
+        const Telegram::Peer chatID = peer;
         Tp::RoomInfo roomInfo;
         roomInfo.channelType = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
         roomInfo.handle = ensureChat(chatID);
@@ -1387,12 +1387,12 @@ bool MorseConnection::peerIsRoom(const Telegram::Peer peer) const
     return true;
 }
 
-uint MorseConnection::getContactHandle(const MorseIdentifier &identifier) const
+uint MorseConnection::getContactHandle(const Telegram::Peer &identifier) const
 {
     return m_contactHandles.key(identifier, 0);
 }
 
-uint MorseConnection::getChatHandle(const MorseIdentifier &identifier) const
+uint MorseConnection::getChatHandle(const Telegram::Peer &identifier) const
 {
     return m_chatHandles.key(identifier, 0);
 }

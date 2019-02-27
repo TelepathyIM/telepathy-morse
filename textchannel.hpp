@@ -22,9 +22,9 @@
 
 #include <QPointer>
 
-#include <TelepathyQt/BaseChannel>
+#include <TelegramQt/TelegramNamespace>
 
-#include "identifier.hpp"
+#include <TelepathyQt/BaseChannel>
 
 class QTimer;
 
@@ -101,8 +101,8 @@ private:
     uint m_targetHandle;
     uint m_targetHandleType;
     uint m_selfHandle;
-    MorseIdentifier m_targetPeer;
-    MorseIdentifier m_selfPeer;
+    Telegram::Peer m_targetPeer;
+    Telegram::Peer m_selfPeer;
 
     Tp::BaseChannelTextTypePtr m_channelTextType;
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;

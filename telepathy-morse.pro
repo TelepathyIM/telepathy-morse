@@ -13,13 +13,11 @@ PKGCONFIG += TelegramQt5
 
 SOURCES = main.cpp \
     connection.cpp \
-    identifier.cpp \
     protocol.cpp \
     textchannel.cpp
 
 HEADERS = \
     connection.hpp \
-    identifier.hpp \
     protocol.hpp \
     textchannel.hpp
 

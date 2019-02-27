@@ -28,8 +28,6 @@
 #include <TelegramQt/ConnectionApi>
 #include <TelegramQt/TelegramNamespace>
 
-#include "identifier.hpp"
-
 class CAppInformation;
 class CFileManager;
 
@@ -80,15 +78,15 @@ public:
     void setAliases(const Tp::AliasMap &aliases, Tp::DBusError *error);
 
     QString getAlias(uint handle);
-    QString getAlias(const MorseIdentifier identifier);
+    QString getAlias(const Telegram::Peer identifier);
 
     Tp::SimplePresence getPresence(uint handle);
     uint setPresence(const QString &status, const QString &message, Tp::DBusError *error);
 
-    uint ensureHandle(const MorseIdentifier &identifier);
+    uint ensureHandle(const Telegram::Peer &identifier);
     uint ensureContact(quint32 userId);
-    uint ensureContact(const MorseIdentifier &identifier);
-    uint ensureChat(const MorseIdentifier &identifier);
+    uint ensureContact(const Telegram::Peer &identifier);
+    uint ensureChat(const Telegram::Peer &identifier);
 
     Telegram::Client::Client *core() const { return m_client; }
 
@@ -125,13 +123,13 @@ protected:
 private:
     bool peerIsRoom(const Telegram::Peer peer) const;
 
-    uint getContactHandle(const MorseIdentifier &identifier) const;
-    uint getChatHandle(const MorseIdentifier &identifier) const;
-    uint addContacts(const QVector<MorseIdentifier> &identifiers);
+    uint getContactHandle(const Telegram::Peer &identifier) const;
+    uint getChatHandle(const Telegram::Peer &identifier) const;
+    uint addContacts(const QVector<Telegram::Peer> &identifiers);
 
-    void updateContactsStatus(const QVector<MorseIdentifier> &identifiers);
+    void updateContactsStatus(const QVector<Telegram::Peer> &identifiers);
     void updateSelfContactState(Tp::ConnectionStatus status);
-    void setSubscriptionState(const QVector<MorseIdentifier> &identifiers, const QVector<uint> &handles, uint state);
+    void setSubscriptionState(const QVector<Telegram::Peer> &identifiers, const QVector<uint> &handles, uint state);
 
     void startMechanismWithData_authCode(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
     void startMechanismWithData_password(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
@@ -161,8 +159,8 @@ private:
     QString m_wantedPresence;
 
     QVector<quint32> m_contactList;
-    QMap<uint, MorseIdentifier> m_contactHandles;
-    QMap<uint, MorseIdentifier> m_chatHandles;
+    QMap<uint, Telegram::Peer> m_contactHandles;
+    QMap<uint, Telegram::Peer> m_chatHandles;
     /* Maps a contact handle to its subscription state */
     QHash<uint, uint> m_contactsSubscription;
     QHash<QString,Telegram::Peer> m_peerPictureRequests;

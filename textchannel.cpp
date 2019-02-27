@@ -63,7 +63,7 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
       m_client(morseConnection->core()),
       m_targetHandle(baseChannel->targetHandle()),
       m_targetHandleType(baseChannel->targetHandleType()),
-      m_targetPeer(MorseIdentifier::fromString(baseChannel->targetID())),
+      m_targetPeer(Telegram::Peer::fromString(baseChannel->targetID())),
       m_localTypingTimer(nullptr)
 {
     m_api = m_client->messagingApi();
@@ -173,7 +173,7 @@ void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)
 void MorseTextChannel::onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, TelegramNamespace::MessageAction action)
 {
     // We are connected to broadcast signal, so have to select only needed calls
-    const MorseIdentifier identifier = peer;
+    const Telegram::Peer identifier = peer;
     if (identifier != m_targetPeer) {
         return;
     }
@@ -218,7 +218,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->selfHandle());
         header[QLatin1String("message-sender-id")] = QDBusVariant(m_connection->selfID());
     } else {
-        const MorseIdentifier senderId = MorseIdentifier::fromUserId(message.fromId);
+        const Telegram::Peer senderId = Telegram::Peer::fromUserId(message.fromId);
         header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->ensureHandle(senderId));
         header[QLatin1String("message-sender-id")] = QDBusVariant(senderId.toString());
     }
@@ -364,7 +364,7 @@ void MorseTextChannel::onChatDetailsChanged(quint32 chatId, const Tp::UIntList &
 {
     qDebug() << Q_FUNC_INFO << chatId;
 
-    if ((m_targetPeer.chatId() == chatId) || (m_targetPeer.channelId() == chatId)) {
+    if (m_targetPeer.id == chatId) {
         updateChatParticipants(handles);
 
         Telegram::ChatInfo info;

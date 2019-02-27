@@ -1288,6 +1288,12 @@ void MorseConnection::onFileRequestCompleted(const QString &uniqueId)
 void MorseConnection::onHistoryReceived(Telegram::Client::MessagesOperation *operation)
 {
     const Peer peer = operation->peer();
+    // Telegram always sort messages from new to old.
+    // Workaround KTp not sorting messages by timestamp
+    // by reversing the order from old to new.
+
+    QVector<quint32> reversedMessages = operation->messages();
+    std::reverse(reversedMessages.begin(), reversedMessages.end());
     addMessages(peer, operation->messages());
 
     Telegram::DialogInfo dialogInfo;

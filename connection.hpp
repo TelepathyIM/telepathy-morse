@@ -75,7 +75,6 @@ public:
     Tp::ContactInfoMap getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error);
 
     Tp::AliasMap getAliases(const Tp::UIntList &handles, Tp::DBusError *error = nullptr);
-    void setAliases(const Tp::AliasMap &aliases, Tp::DBusError *error);
 
     QString getAlias(uint handle);
     QString getAlias(const Telegram::Peer identifier);

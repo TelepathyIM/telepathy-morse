@@ -1199,8 +1199,8 @@ void MorseConnection::updateContactList()
         const Telegram::Peer identifier = m_contactHandles.value(handle);
         if (!identifier.isValid()) {
             qWarning() << Q_FUNC_INFO << "Internal corruption. Handle" << handle << "has invalid corresponding identifier";
-            removals.insert(handle, identifier.toString());
         }
+        removals.insert(handle, identifier.toString());
     }
 
     m_contactList = newContactListHandles;

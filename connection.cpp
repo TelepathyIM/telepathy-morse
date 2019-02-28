@@ -202,7 +202,6 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     /* Connection.Interface.Aliasing */
     aliasingIface = Tp::BaseConnectionAliasingInterface::create();
     aliasingIface->setGetAliasesCallback(Tp::memFun(this, &MorseConnection::getAliases));
-    aliasingIface->setSetAliasesCallback(Tp::memFun(this, &MorseConnection::setAliases));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(aliasingIface));
 
 #if 0
@@ -883,12 +882,6 @@ Tp::AliasMap MorseConnection::getAliases(const Tp::UIntList &handles, Tp::DBusEr
     }
 
     return aliases;
-}
-
-void MorseConnection::setAliases(const Tp::AliasMap &aliases, Tp::DBusError *error)
-{
-    qDebug() << Q_FUNC_INFO << aliases;
-    error->set(TP_QT_ERROR_NOT_IMPLEMENTED, QLatin1String("Not implemented"));
 }
 
 QString MorseConnection::getAlias(uint handle)

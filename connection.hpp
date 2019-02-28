@@ -134,7 +134,7 @@ private slots:
     void onSignInFinished();
     void onCheckInFinished(Telegram::Client::AuthOperation *checkInOperation);
     void onConnectionReady();
-    void onContactListChanged();
+    void updateContactList();
     void onDialogsReady();
     void onDisconnected();
     void onFileRequestCompleted(const QString &uniqueId);

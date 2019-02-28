@@ -1154,7 +1154,7 @@ void MorseConnection::addMessages(const Peer peer, const QVector<quint32> &messa
     }
 }
 
-void MorseConnection::onContactListChanged()
+void MorseConnection::updateContactList()
 {
     if (m_client->connectionApi()->status() != Client::ConnectionApi::StatusReady) {
         return;
@@ -1257,7 +1257,7 @@ void MorseConnection::onDialogsReady()
 #endif
     }
 
-    onContactListChanged();
+    updateContactList();
 
     m_state.syncFinished = true;
 }

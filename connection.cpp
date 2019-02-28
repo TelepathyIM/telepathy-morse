@@ -1097,6 +1097,9 @@ void MorseConnection::onNewMessageReceived(const Peer peer, quint32 messageId)
         getSyncState()->pendingMessages.insertMulti(peer, messageId);
         return;
     }
+    if (!syncState->dialogs.contains(peer)) {
+        updateContactList();
+    }
     addMessages(peer, {messageId});
 }
 

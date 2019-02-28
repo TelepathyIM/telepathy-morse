@@ -76,7 +76,7 @@ public:
 
     Tp::AliasMap getAliases(const Tp::UIntList &handles, Tp::DBusError *error = nullptr);
 
-    QString getAlias(uint handle);
+    QString getContactAlias(uint handle);
     QString getAlias(const Telegram::Peer identifier);
 
     Tp::SimplePresence getPresence(uint handle);
@@ -126,7 +126,7 @@ private:
     uint getChatHandle(const Telegram::Peer &identifier) const;
     uint addContacts(const QVector<Telegram::Peer> &identifiers);
 
-    void updateContactsStatus(const QVector<Telegram::Peer> &identifiers);
+    void updateContactsPresence(const QVector<Telegram::Peer> &identifiers);
     void updateSelfContactState(Tp::ConnectionStatus status);
     void setSubscriptionState(const QVector<Telegram::Peer> &identifiers, const QVector<uint> &handles, uint state);
 

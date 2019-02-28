@@ -738,7 +738,7 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
             }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(getAlias(handle));
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(getAlias(identifier));
             }
 
             //if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
@@ -878,13 +878,13 @@ Tp::AliasMap MorseConnection::getAliases(const Tp::UIntList &handles, Tp::DBusEr
     Tp::AliasMap aliases;
 
     foreach (uint handle, handles) {
-        aliases[handle] = getAlias(handle);
+        aliases[handle] = getContactAlias(handle);
     }
 
     return aliases;
 }
 
-QString MorseConnection::getAlias(uint handle)
+QString MorseConnection::getContactAlias(uint handle)
 {
     return getAlias(m_contactHandles.value(handle));
 }
@@ -1007,7 +1007,7 @@ uint MorseConnection::addContacts(const QVector<Telegram::Peer> &identifiers)
     return handle;
 }
 
-void MorseConnection::updateContactsStatus(const QVector<Telegram::Peer> &identifiers)
+void MorseConnection::updateContactsPresence(const QVector<Telegram::Peer> &identifiers)
 {
     qDebug() << Q_FUNC_INFO;
     Tp::SimpleContactPresences newPresences;
@@ -1204,7 +1204,7 @@ void MorseConnection::onContactListChanged()
 
     contactListIface->contactsChangedWithID(changes, identifiersMap, removals);
 
-    updateContactsStatus(newContactListIdentifiers);
+    updateContactsPresence(newContactListIdentifiers);
 
     contactListIface->setContactListState(Tp::ContactListStateSuccess);
 }

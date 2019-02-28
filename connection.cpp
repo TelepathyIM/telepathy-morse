@@ -1153,7 +1153,7 @@ void MorseConnection::updateContactList()
     const QVector<Telegram::Peer> ids = m_contacts->peers();
 #endif
 
-    qDebug() << Q_FUNC_INFO << "ids:" << ids;
+    qDebug() << this << __func__ << "ids:" << ids;
 
     QVector<uint> newContactListHandles;
     QVector<Telegram::Peer> newContactListIdentifiers;
@@ -1168,7 +1168,7 @@ void MorseConnection::updateContactList()
         if (peer.type == Telegram::Peer::User) {
             m_client->dataStorage()->getUserInfo(&info, peer.id);
             if (info.isDeleted()) {
-                qDebug() << Q_FUNC_INFO << "skip deleted user id" << peer.id;
+                qDebug() << this << __func__ << "skip deleted user id" << peer.id;
                 continue;
             }
         }
@@ -1183,14 +1183,15 @@ void MorseConnection::updateContactList()
         }
         const Telegram::Peer identifier = m_contactHandles.value(handle);
         if (!identifier.isValid()) {
-            qWarning() << Q_FUNC_INFO << "Internal corruption. Handle" << handle << "has invalid corresponding identifier";
+            qWarning() << this << __func__ << "Internal corruption. Handle" << handle << "has invalid corresponding identifier";
         }
         removals.insert(handle, identifier.toString());
     }
 
     m_contactList = newContactListHandles;
 
-    qDebug() << Q_FUNC_INFO << "new:" << newContactListIdentifiers;
+    qDebug() << this << __func__ << "new:" << newContactListIdentifiers;
+    qDebug() << this << __func__ << "removals:" << removals;
     Tp::ContactSubscriptionMap changes;
     Tp::HandleIdentifierMap identifiersMap;
 

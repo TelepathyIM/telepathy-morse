@@ -68,6 +68,9 @@ struct MessagingState {
     QByteArray save() const;
 };
 
+class MorseConnection;
+using MorseConnectionPtr = Tp::SharedPtr<MorseConnection>;
+
 class MorseConnection : public Tp::BaseConnection
 {
     Q_OBJECT
@@ -128,7 +131,7 @@ private slots:
     void onAuthenticated();
     void onSelfUserAvailable();
     void onAuthCodeRequired();
-    void onAuthCodeCheckFailed(int status);
+    void onAuthErrorOccurred(TelegramNamespace::AuthenticationError errorCode, const QByteArray &errorMessage);
     void onPasswordRequired();
     void onPasswordCheckFailed();
     void onSignInFinished();

@@ -337,8 +337,8 @@ void MorseConnection::signInOrUp()
 
     connect(m_signOperation, &Client::AuthOperation::authCodeRequired,
             this, &MorseConnection::onAuthCodeRequired);
-    connect(m_signOperation, &Client::AuthOperation::authCodeCheckFailed,
-            this, &MorseConnection::onAuthCodeCheckFailed);
+    connect(m_signOperation, &Client::AuthOperation::errorOccurred,
+            this, &MorseConnection::onAuthErrorOccurred);
     connect(m_signOperation, &Client::AuthOperation::passwordRequired,
             this, &MorseConnection::onPasswordRequired);
     connect(m_signOperation, &Client::AuthOperation::passwordCheckFailed,
@@ -439,18 +439,19 @@ void MorseConnection::onAuthCodeRequired()
     }
 }
 
-void MorseConnection::onAuthCodeCheckFailed(int status)
+void MorseConnection::onAuthErrorOccurred(TelegramNamespace::AuthenticationError errorCode,
+                                          const QByteArray &errorMessage)
 {
     QVariantMap details;
-    switch (status) {
-    case Telegram::Client::AuthOperation::AuthCodeStatusExpired:
+    switch (errorCode) {
+    case TelegramNamespace::AuthenticationErrorPhoneCodeExpired:
         details[QLatin1String("server-message")] = QStringLiteral("Auth code expired");
         break;
-    case Telegram::Client::AuthOperation::AuthCodeStatusInvalid:
+    case TelegramNamespace::AuthenticationErrorPhoneCodeInvalid:
         details[QLatin1String("server-message")] = QStringLiteral("Invalid auth code");
         break;
     default:
-        details[QLatin1String("server-message")] = QStringLiteral("Unknown error");
+        details[QLatin1String("server-message")] = QStringLiteral("Unexpected error: ") + QString::fromLatin1(errorMessage);
         break;
     }
     if (!saslIface_authCode.isNull()) {

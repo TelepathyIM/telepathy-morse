@@ -22,6 +22,9 @@
 
 #include <TelepathyQt/BaseProtocol>
 
+class MorseProtocol;
+using MorseProtocolPtr = Tp::SharedPtr<MorseProtocol>;
+
 class MorseProtocol : public Tp::BaseProtocol
 {
     Q_OBJECT
@@ -30,6 +33,8 @@ class MorseProtocol : public Tp::BaseProtocol
 public:
     MorseProtocol(const QDBusConnection &dbusConnection, const QString &name);
     virtual ~MorseProtocol();
+
+    void setManagerName(const QString &name);
 
     static QString getAccount(const QVariantMap &parameters);
     static QString getServerAddress(const QVariantMap &parameters);
@@ -42,7 +47,6 @@ public:
     static QString getProxyPassword(const QVariantMap &parameters);
     static uint getKeepAliveInterval(const QVariantMap &parameters, uint defaultValue);
 
-private:
     Tp::BaseConnectionPtr createConnection(const QVariantMap &parameters, Tp::DBusError *error);
     QString identifyAccount(const QVariantMap &parameters, Tp::DBusError *error);
     QString normalizeContact(const QString &contactId, Tp::DBusError *error);
@@ -52,6 +56,8 @@ private:
             Tp::DBusError *error);
     QString normalizeContactUri(const QString &uri, Tp::DBusError *error);
 
+private:
+    QString cmName;
     Tp::BaseProtocolAddressingInterfacePtr addrIface;
     Tp::BaseProtocolAvatarsInterfacePtr avatarsIface;
     Tp::BaseProtocolPresenceInterfacePtr presenceIface;

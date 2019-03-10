@@ -6,8 +6,10 @@ find_package(TelepathyQt5 0.9.6 REQUIRED)
 find_package(TelepathyQt5Service 0.9.6 REQUIRED)
 set(TELEPATHY_QT_VERSION ${TELEPATHY_QT5_VERSION})
 
-find_package(TelegramQt5 REQUIRED)
+# Add an option for building tests
+option(ENABLE_TESTS "Enable compilation of automated tests" FALSE)
 
+set(QT_VERSION_MAJOR "5")
 find_package(Qt5 REQUIRED COMPONENTS Core DBus Xml Network)
 
 include(GNUInstallDirs)
@@ -21,7 +23,6 @@ add_definitions(-DQT_NO_CAST_FROM_ASCII)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 
 set(morse_SOURCES
-    main.cpp
     connection.cpp
     connection.hpp
     protocol.cpp
@@ -32,9 +33,11 @@ set(morse_SOURCES
 
 if (TELEPATHY_QT_VERSION VERSION_LESS "0.9.7")
     message(WARNING "TelepathyQt version < 0.9.7, so group chat and debug interface support will be disabled.")
+    set(ENABLE_GROUP_CHAT FALSE)
+    set(ENABLE_DEBUG_IFACE FALSE)
 else()
-    set(ENABLE_GROUP_CHAT TRUE)
-    set(ENABLE_DEBUG_IFACE TRUE)
+    option(ENABLE_GROUP_CHAT "Enable group chat support" TRUE)
+    option(ENABLE_DEBUG_IFACE "Enable debug interface" TRUE)
 endif()
 
 if (ENABLE_DEBUG_IFACE)
@@ -66,13 +69,19 @@ list(APPEND morse_SOURCES
     extras/CFileManager.cpp
 )
 
-add_executable(telepathy-morse ${morse_SOURCES})
+if (ENABLE_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+add_executable(telepathy-morse main.cpp ${morse_SOURCES})
 
 set_target_properties(telepathy-morse PROPERTIES AUTOMOC TRUE)
 
 target_include_directories(telepathy-morse PRIVATE
     ${TELEPATHY_QT5_INCLUDE_DIR}
-    ${TELEGRAM_QT5_INCLUDE_DIR})
+    telegram-qt/TelegramQt
+)
 
 target_link_libraries(telepathy-morse
     Qt5::Core
@@ -80,7 +89,7 @@ target_link_libraries(telepathy-morse
     Qt5::Network
     ${TELEPATHY_QT5_LIBRARIES}
     ${TELEPATHY_QT5_SERVICE_LIBRARIES}
-    ${TELEGRAM_QT5_LIBRARIES}
+    TelegramQt${QT_VERSION_MAJOR}
     -lcrypto
     -lz
 )
@@ -106,3 +115,4 @@ install(FILES
 #    FILES morse.png
 #    DESTINATION share/icons/hicolor/48x48/apps
 #)
+add_subdirectory(telegram-qt)

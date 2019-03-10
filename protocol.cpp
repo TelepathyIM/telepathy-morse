@@ -92,6 +92,11 @@ MorseProtocol::~MorseProtocol()
 {
 }
 
+void MorseProtocol::setManagerName(const QString &name)
+{
+    cmName = name;
+}
+
 QString MorseProtocol::getAccount(const QVariantMap &parameters)
 {
     return parameters.value(c_account).toString();
@@ -147,7 +152,7 @@ Tp::BaseConnectionPtr MorseProtocol::createConnection(const QVariantMap &paramet
     qDebug() << Q_FUNC_INFO << Telegram::Utils::maskPhoneNumber(parameters, c_account);
     Q_UNUSED(error)
 
-    Tp::BaseConnectionPtr newConnection = Tp::BaseConnection::create<MorseConnection>(QLatin1String("morse"), name(), parameters);
+    Tp::BaseConnectionPtr newConnection = Tp::BaseConnection::create<MorseConnection>(cmName, name(), parameters);
 
     return newConnection;
 }

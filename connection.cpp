@@ -63,7 +63,7 @@
 #include "extras/CFileManager.hpp"
 
 static constexpr int c_selfHandle = 1;
-static const QString c_telegramAccountSubdir = QLatin1String("telegram-qt/accounts");
+static const QString c_telegramAccountSubdir = QLatin1String("telepathy/morse");
 static const QString c_accountFile = QLatin1String("account.bin");
 static const QString c_stateFile = QLatin1String("state.json");
 

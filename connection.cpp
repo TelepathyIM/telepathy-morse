@@ -238,7 +238,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     m_contactHandles.insert(c_selfHandle, Telegram::Peer());
     setSelfHandle(c_selfHandle);
 
-    m_appInfo = new CAppInformation(this);
+    m_appInfo = new Client::AppInformation(this);
     m_appInfo->setAppId(14617);
     m_appInfo->setAppHash(QLatin1String("e17ac360fd072f83d5d08db45ce9a121"));
     m_appInfo->setAppVersion(QLatin1String("0.2"));

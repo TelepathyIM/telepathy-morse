@@ -28,18 +28,17 @@
 #include <TelegramQt/ConnectionApi>
 #include <TelegramQt/TelegramNamespace>
 
-class CAppInformation;
 class CFileManager;
 
 namespace Telegram {
 
 namespace Client {
 
+class AppInformation;
 class AuthOperation;
 class Client;
 class ContactList;
 class DialogList;
-class MessagesOperation;
 
 } // Client namespace
 
@@ -164,7 +163,7 @@ private:
     QHash<uint, uint> m_contactsSubscription;
     QHash<QString,Telegram::Peer> m_peerPictureRequests;
 
-    CAppInformation *m_appInfo = nullptr;
+    Telegram::Client::AppInformation *m_appInfo = nullptr;
     Telegram::Client::Client *m_client = nullptr;
     Telegram::Client::AuthOperation *m_signOperation = nullptr;
     Telegram::Client::DialogList *m_dialogs = nullptr;

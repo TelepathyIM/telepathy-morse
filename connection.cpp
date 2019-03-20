@@ -48,14 +48,8 @@
 
 #include <QStandardPaths>
 
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
-
 #define DIALOGS_AS_CONTACTLIST
-//#define LOCAL_SERVER
 //#define BROADCAST_AS_CONTACT
-#define FETCH_NEW_DIALOG_MESSAGES
 
 #include <QDir>
 #include <QFile>

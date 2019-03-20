@@ -89,8 +89,8 @@ public:
     Telegram::Client::Client *core() const { return m_client; }
 
 public slots:
-    void onMessageReceived(const Telegram::Peer peer, quint32 messageId);
-    void onMessagesReceived(const Telegram::Peer peer, const QVector<quint32> &messageIds);
+    void onNewMessageReceived(const Telegram::Peer peer, quint32 messageId);
+    void addMessages(const Telegram::Peer peer, const QVector<quint32> &messageIds);
 
 signals:
     void chatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
@@ -107,7 +107,7 @@ private slots:
     void onSignInFinished();
     void onCheckInFinished(Telegram::Client::AuthOperation *checkInOperation);
     void onConnectionReady();
-    void onContactListChanged();
+    void updateContactList();
     void onDialogsReady();
     void onDisconnected();
     void onFileRequestCompleted(const QString &uniqueId);

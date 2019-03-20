@@ -280,7 +280,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     connect(m_client->connectionApi(), &Telegram::Client::ConnectionApi::statusChanged,
             this, &MorseConnection::onConnectionStatusChanged);
     connect(m_client->messagingApi(), &Telegram::Client::MessagingApi::messageReceived,
-             this, &MorseConnection::onMessageReceived);
+             this, &MorseConnection::onNewMessageReceived);
 //    connect(m_core, &CTelegramCore::chatChanged,
 //            this, &MorseConnection::whenChatChanged);
 //    connect(m_core, &CTelegramCore::contactStatusChanged,
@@ -1093,12 +1093,12 @@ void MorseConnection::setSubscriptionState(const QVector<Telegram::Peer> &identi
 }
 
 /* Receive message from outside (telegram server) */
-void MorseConnection::onMessageReceived(const Peer peer, quint32 messageId)
+void MorseConnection::onNewMessageReceived(const Peer peer, quint32 messageId)
 {
-    return onMessagesReceived(peer, {messageId});
+    addMessages(peer, {messageId});
 }
 
-void MorseConnection::onMessagesReceived(const Peer peer, const QVector<quint32> &messageIds)
+void MorseConnection::addMessages(const Peer peer, const QVector<quint32> &messageIds)
 {
     bool groupChatMessage = peerIsRoom(peer);
 
@@ -1135,14 +1135,14 @@ void MorseConnection::onMessagesReceived(const Peer peer, const QVector<quint32>
         return;
     }
 
-    for (const quint32 id : newIds) {
+    for (const quint32 messageId : newIds) {
         Telegram::Message message;
-        m_client->dataStorage()->getMessage(&message, peer, id);
+        m_client->dataStorage()->getMessage(&message, peer, messageId);
         textChannel->onMessageReceived(message);
     }
 }
 
-void MorseConnection::onContactListChanged()
+void MorseConnection::updateContactList()
 {
     if (m_client->connectionApi()->status() != Client::ConnectionApi::StatusReady) {
         return;
@@ -1212,7 +1212,7 @@ void MorseConnection::onContactListChanged()
 
 void MorseConnection::onDialogsReady()
 {
-    onContactListChanged();
+    updateContactList();
 }
 
 void MorseConnection::onDisconnected()

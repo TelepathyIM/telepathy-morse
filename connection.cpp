@@ -38,7 +38,7 @@
 #include <TelegramQt/DataStorage>
 #include <TelegramQt/Debug>
 #include <TelegramQt/DialogList>
-#include <TelegramQt/MessagesOperation>
+#include <TelegramQt/PendingMessages>
 #include <TelegramQt/MessagingApi>
 
 #include <TelepathyQt/Constants>

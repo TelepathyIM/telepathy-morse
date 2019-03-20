@@ -254,10 +254,10 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     accountStorage->setFileName(getAccountDataDirectory() + QLatin1Char('/') + c_accountFile);
 
     Client::Settings *clientSettings = new Client::Settings(m_client);
-    Client::InMemoryDataStorage *dataStorage = new Client::InMemoryDataStorage(m_client);
+    m_dataStorage = new Client::InMemoryDataStorage(m_client);
     m_client->setSettings(clientSettings);
     m_client->setAccountStorage(accountStorage);
-    m_client->setDataStorage(dataStorage);
+    m_client->setDataStorage(m_dataStorage);
 
     if (!m_serverAddress.isEmpty()) {
         if ((m_serverPort == 0) || (m_serverKeyFile.isEmpty())) {

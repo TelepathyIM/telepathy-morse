@@ -39,6 +39,7 @@ class AuthOperation;
 class Client;
 class ContactList;
 class DialogList;
+class InMemoryDataStorage;
 
 } // Client namespace
 
@@ -165,6 +166,7 @@ private:
 
     Telegram::Client::AppInformation *m_appInfo = nullptr;
     Telegram::Client::Client *m_client = nullptr;
+    Telegram::Client::InMemoryDataStorage *m_dataStorage = nullptr;
     Telegram::Client::AuthOperation *m_signOperation = nullptr;
     Telegram::Client::DialogList *m_dialogs = nullptr;
     Telegram::Client::ContactList *m_contacts = nullptr;

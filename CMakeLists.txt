@@ -34,6 +34,8 @@ set(morse_SOURCES
     main.cpp
     connection.cpp
     connection.hpp
+    datastorage.cpp
+    datastorage.hpp
     info.cpp
     info.hpp
     protocol.cpp

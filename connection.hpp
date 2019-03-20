@@ -29,6 +29,8 @@
 #include <TelegramQt/TelegramNamespace>
 
 class CFileManager;
+class MorseDataStorage;
+class MorseInfo;
 class MorseTextChannel;
 
 using MorseTextChannelPtr = Tp::SharedPtr<MorseTextChannel>;
@@ -95,6 +97,7 @@ public:
     Telegram::Peer selfPeer() const;
 
 public slots:
+    void onSyncMessagesReceived(const Telegram::Peer &peer, const QVector<quint32> &messages);
     void onNewMessageReceived(const Telegram::Peer peer, quint32 messageId);
     void addMessages(const Telegram::Peer peer, const QVector<quint32> &messageIds);
 
@@ -146,6 +149,8 @@ private:
     void roomListStartListing(Tp::DBusError *error);
     void roomListStopListing(Tp::DBusError *error);
 
+    void loadState();
+    void saveState();
     QString getAccountDataDirectory() const;
 
     Tp::BaseConnectionContactsInterfacePtr contactsIface;
@@ -167,9 +172,11 @@ private:
     QMap<uint, Telegram::Peer> m_chatHandles;
     QHash<QString,Telegram::Peer> m_peerPictureRequests;
 
+    MorseInfo *m_info = nullptr;
     Telegram::Client::AppInformation *m_appInfo = nullptr;
     Telegram::Client::Client *m_client = nullptr;
-    Telegram::Client::InMemoryDataStorage *m_dataStorage = nullptr;
+    MorseDataStorage *m_dataStorage = nullptr;
+
     Telegram::Client::AuthOperation *m_signOperation = nullptr;
     Telegram::Client::DialogList *m_dialogs = nullptr;
     Telegram::Client::ContactList *m_contacts = nullptr;

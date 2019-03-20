@@ -18,8 +18,10 @@
 */
 
 #include "connection.hpp"
-#include "protocol.hpp"
 
+#include "datastorage.hpp"
+#include "info.hpp"
+#include "protocol.hpp"
 #include "textchannel.hpp"
 
 #if TP_QT_VERSION < TP_QT_VERSION_CHECK(0, 9, 8)
@@ -35,7 +37,6 @@
 #include <TelegramQt/ConnectionError>
 #include <TelegramQt/ContactsApi>
 #include <TelegramQt/ContactList>
-#include <TelegramQt/DataStorage>
 #include <TelegramQt/Debug>
 #include <TelegramQt/DialogList>
 #include <TelegramQt/PendingMessages>
@@ -59,7 +60,6 @@
 static constexpr int c_selfHandle = 1;
 static const QString c_telegramAccountSubdir = QLatin1String("telepathy/morse");
 static const QString c_accountFile = QLatin1String("account.bin");
-static const QString c_stateFile = QLatin1String("state.json");
 
 static const QString c_onlineSimpleStatusKey = QLatin1String("available");
 static const QString c_saslMechanismTelepathyPassword = QLatin1String("X-TELEPATHY-PASSWORD");
@@ -242,6 +242,9 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     m_client = new Client::Client(this);
 
+    m_info = new MorseInfo(this);
+    m_info->setAccountIdentifier(m_selfPhone);
+
     Client::Settings *clientSettings = new Client::Settings(m_client);
     m_client->setSettings(clientSettings);
 
@@ -258,24 +261,31 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
         customServer.port = m_serverPort;
         clientSettings->setServerConfiguration({customServer});
         clientSettings->setServerRsaKey(key);
+
+        m_info->setServerIdentifier(m_serverAddress + QLatin1Char(':') + QString::number(m_serverPort));
     }
 
     Client::FileAccountStorage *accountStorage = new Client::FileAccountStorage(m_client);
     accountStorage->setPhoneNumber(m_selfPhone);
-    accountStorage->setAccountIdentifier(m_selfPhone);
-    accountStorage->setFileName(getAccountDataDirectory()() + QLatin1Char('/') + c_accountFile);
+    accountStorage->setAccountIdentifier(m_info->accountIdentifier());
+    accountStorage->setFileName(m_info->accountDataDirectory() + QLatin1Char('/') + c_accountFile);
     m_client->setAccountStorage(accountStorage);
 
-    m_dataStorage = new Client::InMemoryDataStorage(m_client);
+    m_dataStorage = new MorseDataStorage(m_client);
+    m_dataStorage->setInfo(m_info);
     m_client->setDataStorage(m_dataStorage);
 
     clientSettings->setPingInterval(m_keepAliveInterval * 1000);
     m_client->setAppInformation(m_appInfo);
+    m_client->messagingApi()->setSyncMode(Client::MessagingApi::ManualSync);
+    m_client->messagingApi()->setSyncLimit(30);
 
     connect(m_client->connectionApi(), &Telegram::Client::ConnectionApi::statusChanged,
             this, &MorseConnection::onConnectionStatusChanged);
     connect(m_client->messagingApi(), &Telegram::Client::MessagingApi::messageReceived,
              this, &MorseConnection::onNewMessageReceived);
+    connect(m_client->messagingApi(), &Telegram::Client::MessagingApi::syncMessages,
+             this, &MorseConnection::onSyncMessagesReceived);
 //    connect(m_core, &CTelegramCore::chatChanged,
 //            this, &MorseConnection::whenChatChanged);
 //    connect(m_core, &CTelegramCore::contactStatusChanged,
@@ -306,6 +316,8 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     }
     m_fileManager = new CFileManager(m_client, this);
     connect(m_fileManager, &CFileManager::requestComplete, this, &MorseConnection::onFileRequestCompleted);
+
+    loadState();
 }
 
 void MorseConnection::doConnect(Tp::DBusError *error)
@@ -1104,6 +1116,17 @@ void MorseConnection::updateSelfContactState(Tp::ConnectionStatus status)
     simplePresenceIface->setPresences(newPresences);
 }
 
+void MorseConnection::onSyncMessagesReceived(const Peer &peer, const QVector<quint32> &messages)
+{
+    // Telegram always sort messages from new to old.
+    // Workaround KTp not sorting messages by timestamp
+    // by reversing the order from old to new.
+
+    QVector<quint32> reversedMessages = messages;
+    std::reverse(reversedMessages.begin(), reversedMessages.end());
+    addMessages(peer, reversedMessages);
+}
+
 /* Receive message from outside (telegram server) */
 void MorseConnection::onNewMessageReceived(const Peer peer, quint32 messageId)
 {
@@ -1200,12 +1223,25 @@ void MorseConnection::updateContactList()
 
 void MorseConnection::onDialogsReady()
 {
+    bool m_omitGroupChats = true;
+    Telegram::PeerList interestingPeers;
+    for (const Telegram::Peer &peer : m_dialogs->peers()) {
+        if (m_omitGroupChats) {
+            if (peerIsRoom(peer)) {
+                continue;
+            }
+        }
+        interestingPeers.append(peer);
+    }
+    m_client->messagingApi()->syncPeers(interestingPeers);
+
     updateContactList();
 }
 
 void MorseConnection::onDisconnected()
 {
     qDebug() << Q_FUNC_INFO;
+    saveState();
     m_client->connectionApi()->disconnectFromServer();
 }
 
@@ -1351,6 +1387,17 @@ void MorseConnection::roomListStopListing(Tp::DBusError *error)
 {
     Q_UNUSED(error)
     roomListChannel->setListingRooms(false);
+}
+
+void MorseConnection::loadState()
+{
+    m_dataStorage->loadData();
+}
+
+void MorseConnection::saveState()
+{
+    m_client->accountStorage()->sync();
+    m_dataStorage->saveData();
 }
 
 QString MorseConnection::getAccountDataDirectory() const

@@ -88,6 +88,7 @@ public:
     uint ensureChat(const Telegram::Peer &identifier);
 
     Telegram::Client::Client *core() const { return m_client; }
+    Telegram::Peer selfPeer() const;
 
 public slots:
     void onNewMessageReceived(const Telegram::Peer peer, quint32 messageId);

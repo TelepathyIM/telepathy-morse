@@ -972,6 +972,11 @@ uint MorseConnection::ensureChat(const Telegram::Peer &identifier)
     return handle;
 }
 
+Telegram::Peer MorseConnection::selfPeer() const
+{
+    return Peer::fromUserId(m_client->dataStorage()->selfUserId());
+}
+
 /**
  * Add contacts with identifiers \a identifiers to known contacts list (not roster)
  *

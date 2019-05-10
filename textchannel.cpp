@@ -205,7 +205,8 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
     header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
 
     bool broadcast = false;
-    bool isOut = message.flags & TelegramNamespace::MessageFlagOut;
+    const bool isOut = message.flags & TelegramNamespace::MessageFlagOut;
+    const bool toSelf = message.peer() == m_connection->selfPeer();
 
     if (m_targetPeer.type == Telegram::Peer::Channel) {
         Telegram::ChatInfo info;
@@ -230,9 +231,10 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
     Telegram::DialogInfo dialogInfo;
     m_client->dataStorage()->getDialogInfo(&dialogInfo, m_targetPeer);
 
-    const bool isRead = isOut
-            ? (dialogInfo.readOutboxMaxId() >= message.id)
-            : (dialogInfo.readInboxMaxId() >= message.id);
+    const bool isRead = toSelf
+            || (isOut
+                ? (dialogInfo.readOutboxMaxId() >= message.id)
+                : (dialogInfo.readInboxMaxId() >= message.id));
 
     header[QLatin1String("delivery-status")] = QDBusVariant(isRead
                                                             ? Tp::DeliveryStatusRead

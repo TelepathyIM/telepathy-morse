@@ -100,9 +100,7 @@ private:
 
     uint m_targetHandle;
     uint m_targetHandleType;
-    uint m_selfHandle;
     Telegram::Peer m_targetPeer;
-    Telegram::Peer m_selfPeer;
 
     Tp::BaseChannelTextTypePtr m_channelTextType;
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;

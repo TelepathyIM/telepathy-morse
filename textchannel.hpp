@@ -78,6 +78,7 @@ public slots:
     void onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, const Telegram::MessageAction &action);
     void setMessageAction(quint32 userId, const Telegram::MessageAction &action);
     void onMessageReceived(const Telegram::Message &message);
+    void onMessageSent(quint64 messageRandomId, quint32 messageId);
     void updateChatParticipants(const Tp::UIntList &handles);
 
     void onChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
@@ -85,7 +86,6 @@ public slots:
 protected slots:
     void setMessageInboxRead(Telegram::Peer peer, quint32 messageId);
     void setMessageOutboxRead(Telegram::Peer peer, quint32 messageId);
-    void setResolvedMessageId(Telegram::Peer peer, quint64 messageRandomId, quint32 messageId);
     void reactivateLocalTyping();
 
 protected:

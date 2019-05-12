@@ -448,12 +448,8 @@ void MorseTextChannel::setMessageOutboxRead(Telegram::Peer peer, quint32 message
     addReceivedMessage(partList);
 }
 
-void MorseTextChannel::setResolvedMessageId(Telegram::Peer peer, quint64 messageRandomId, quint32 messageId)
+void MorseTextChannel::onMessageSent(quint64 messageRandomId, quint32 messageId)
 {
-    if (m_targetPeer != peer) {
-        return;
-    }
-
     int index = m_sentMessageIds.indexOf(SentMessageId(messageRandomId));
     if (index < 0) {
         return;

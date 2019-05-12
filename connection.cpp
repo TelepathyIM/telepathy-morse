@@ -1248,6 +1248,17 @@ void MorseConnection::onFileRequestCompleted(const QString &uniqueId)
     }
 }
 
+void MorseConnection::onMessageSent(const Peer &peer, quint64 messageRandomId, quint32 messageId)
+{
+    MorseTextChannelPtr textChannel = ensureTextChannel(peer);
+
+    if (!textChannel) {
+        return;
+    }
+
+    textChannel->onMessageSent(messageRandomId, messageId);
+}
+
 void MorseConnection::onGotRooms()
 {
     qDebug() << Q_FUNC_INFO;

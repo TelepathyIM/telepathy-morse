@@ -8,6 +8,7 @@
 #include <QLoggingCategory>
 
 static const QString c_telegramStateFile = QLatin1String("telegram-state.bin");
+static const QString c_morseStateFile = QLatin1String("morse-state.bin");
 
 MorseDataStorage::MorseDataStorage(QObject *parent) :
     Telegram::Client::InMemoryDataStorage(parent)
@@ -27,6 +28,8 @@ bool MorseDataStorage::saveData() const
     dir.mkpath(m_info->accountDataDirectory());
     QFile stateFile(m_info->accountDataDirectory() + QLatin1Char('/') + c_telegramStateFile);
 
+    // TODO: Save sent message ids map
+
     if (!stateFile.open(QIODevice::WriteOnly)) {
         qWarning() << Q_FUNC_INFO << "Unable to open state file" << stateFile.fileName();
     }
@@ -43,6 +46,8 @@ bool MorseDataStorage::saveData() const
 
 bool MorseDataStorage::loadData()
 {
+    // TODO: Load sent message ids map
+
     QFile stateFile(m_info->accountDataDirectory() + QLatin1Char('/') + c_telegramStateFile);
 
     if (!stateFile.open(QIODevice::ReadOnly)) {

@@ -46,23 +46,6 @@ class MessagingApi;
 
 typedef Tp::SharedPtr<MorseTextChannel> MorseTextChannelPtr;
 
-struct SentMessageId
-{
-    SentMessageId(quint64 random = 0, quint32 actualId = 0) :
-        randomId(random),
-        id(actualId)
-    {
-    }
-
-    bool operator==(const SentMessageId &info) const
-    {
-        return randomId == info.randomId && id == info.id;
-    }
-
-    quint64 randomId;
-    quint32 id;
-};
-
 class MorseTextChannel : public Tp::BaseChannelTextType
 {
     Q_OBJECT
@@ -109,7 +92,6 @@ private:
     Tp::BaseChannelRoomInterfacePtr m_roomIface;
     Tp::BaseChannelRoomConfigInterfacePtr m_roomConfigIface;
 
-    QVector<SentMessageId> m_sentMessageIds;
     QTimer *m_localTypingTimer;
 
 };

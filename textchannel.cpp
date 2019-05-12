@@ -129,13 +129,6 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_roomConfigIface));
 #endif
     }
-
-    // connect(m_core, SIGNAL(messageReadInbox(Telegram::Peer,quint32)),
-    //         SLOT(setMessageInboxRead(Telegram::Peer,quint32)));
-    // connect(m_core, SIGNAL(messageReadOutbox(Telegram::Peer,quint32)),
-    //         SLOT(setMessageOutboxRead(Telegram::Peer,quint32)));
-    connect(m_client->messagingApi(), &Telegram::Client::MessagingApi::messageSent,
-            this, &MorseTextChannel::setResolvedMessageId);
 }
 
 MorseTextChannelPtr MorseTextChannel::create(MorseConnection *morseConnection, Tp::BaseChannel *baseChannel)
@@ -160,7 +153,6 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
     }
 
     quint64 tmpId = m_api->sendMessage(m_targetPeer, content);
-    m_sentMessageIds.append(SentMessageId(tmpId));
 
     return QString::number(tmpId);
 }
@@ -199,7 +191,9 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
     Tp::MessagePartList partList;
     Tp::MessagePart header;
 
-    const QString token = QString::number(message.id);
+    quint64 sentMessageToken = m_connection->getSentMessageToken(m_targetPeer, message.id);
+    const QString token = QString::number(sentMessageToken ? sentMessageToken : message.id);
+
     header[QLatin1String("message-token")] = QDBusVariant(token);
     header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
     header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
@@ -423,17 +417,9 @@ void MorseTextChannel::setMessageOutboxRead(Telegram::Peer peer, quint32 message
         return;
     }
 
-    quint64 id = messageId;
-    foreach (const SentMessageId &info, m_sentMessageIds) {
-        if (info.id == messageId) {
-            id = info.randomId;
-            break;
-        }
-    }
-
     // TODO: Mark *all* messages up to this as read
 
-    const QString token = QString::number(id);
+    const QString token = m_connection->getMessageToken(peer, messageId);
 
     Tp::MessagePartList partList;
 
@@ -450,12 +436,7 @@ void MorseTextChannel::setMessageOutboxRead(Telegram::Peer peer, quint32 message
 
 void MorseTextChannel::onMessageSent(quint64 messageRandomId, quint32 messageId)
 {
-    int index = m_sentMessageIds.indexOf(SentMessageId(messageRandomId));
-    if (index < 0) {
-        return;
-    }
-
-    m_sentMessageIds[index].id = messageId;
+    Q_UNUSED(messageId)
 
     const QString token = QString::number(messageRandomId);
 

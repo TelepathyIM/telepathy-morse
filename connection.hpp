@@ -96,6 +96,9 @@ public:
     Telegram::Client::Client *core() const { return m_client; }
     Telegram::Peer selfPeer() const;
 
+    quint64 getSentMessageToken(const Telegram::Peer &dialog, quint32 messageId) const;
+    QString getMessageToken(const Telegram::Peer &dialog, quint32 messageId) const;
+
 public slots:
     void onSyncMessagesReceived(const Telegram::Peer &peer, const QVector<quint32> &messages);
     void onNewMessageReceived(const Telegram::Peer peer, quint32 messageId);
@@ -171,6 +174,9 @@ private:
     QMap<uint, Telegram::Peer> m_contactHandles;
     QMap<uint, Telegram::Peer> m_chatHandles;
     QHash<QString,Telegram::Peer> m_peerPictureRequests;
+
+    using SentMessageMap = QHash<quint32, quint64>; // messageId to randomMessageId
+    QHash<Telegram::Peer, SentMessageMap> m_sentMessageMap;
 
     MorseInfo *m_info = nullptr;
     Telegram::Client::AppInformation *m_appInfo = nullptr;

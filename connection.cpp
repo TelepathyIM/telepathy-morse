@@ -282,6 +282,8 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
 
     connect(m_client->connectionApi(), &Telegram::Client::ConnectionApi::statusChanged,
             this, &MorseConnection::onConnectionStatusChanged);
+    connect(m_client->messagingApi(), &Telegram::Client::MessagingApi::messageSent,
+             this, &MorseConnection::onMessageSent);
     connect(m_client->messagingApi(), &Telegram::Client::MessagingApi::messageReceived,
              this, &MorseConnection::onNewMessageReceived);
     connect(m_client->messagingApi(), &Telegram::Client::MessagingApi::syncMessages,
@@ -1024,6 +1026,21 @@ Telegram::Peer MorseConnection::selfPeer() const
     return Peer::fromUserId(m_client->dataStorage()->selfUserId());
 }
 
+quint64 MorseConnection::getSentMessageToken(const Peer &dialog, quint32 messageId) const
+{
+    if (m_sentMessageMap.contains(dialog)) {
+        const SentMessageMap &map = m_sentMessageMap[dialog];
+        return map.value(messageId);
+    }
+    return 0;
+}
+
+QString MorseConnection::getMessageToken(const Peer &dialog, quint32 messageId) const
+{
+    const quint64 sentMessageToken = getSentMessageToken(dialog, messageId);
+    return QString::number(sentMessageToken ? sentMessageToken : messageId);
+}
+
 /**
  * Add contacts with identifiers \a identifiers to known contacts list (not roster)
  *
@@ -1268,6 +1285,8 @@ void MorseConnection::onMessageSent(const Peer &peer, quint64 messageRandomId, q
     if (!textChannel) {
         return;
     }
+
+    m_sentMessageMap[peer].insert(messageId, messageRandomId);
 
     textChannel->onMessageSent(messageRandomId, messageId);
 }

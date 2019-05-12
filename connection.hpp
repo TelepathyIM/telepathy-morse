@@ -29,6 +29,9 @@
 #include <TelegramQt/TelegramNamespace>
 
 class CFileManager;
+class MorseTextChannel;
+
+using MorseTextChannelPtr = Tp::SharedPtr<MorseTextChannel>;
 
 namespace Telegram {
 
@@ -62,6 +65,7 @@ public:
 
     QStringList inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error);
     Tp::BaseChannelPtr createChannelCB(const QVariantMap &request, Tp::DBusError *error);
+    MorseTextChannelPtr ensureTextChannel(const Telegram::Peer &peer);
 
     Tp::UIntList requestHandles(uint handleType, const QStringList &identifiers, Tp::DBusError *error);
 

@@ -680,6 +680,40 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
     return baseChannel;
 }
 
+MorseTextChannelPtr MorseConnection::ensureTextChannel(const Peer &peer)
+{
+    bool groupChatMessage = peerIsRoom(peer);
+
+    if (groupChatMessage) {
+        return MorseTextChannelPtr();
+    }
+
+    uint targetHandle = ensureHandle(peer);
+
+    //TODO: initiator should be group creator
+    Tp::DBusError error;
+    bool yours;
+
+    QVariantMap request;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = groupChatMessage ? Tp::HandleTypeRoom : Tp::HandleTypeContact;
+    Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
+
+    if (error.isValid()) {
+        qWarning() << Q_FUNC_INFO << "ensureChannel failed:" << error.name() << " " << error.message();
+        return MorseTextChannelPtr();
+    }
+
+    MorseTextChannelPtr textChannel = MorseTextChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_TEXT));
+
+    if (!textChannel) {
+        qCritical() << Q_FUNC_INFO << "Error, channel is not a morseTextChannel?";
+    }
+
+    return textChannel;
+}
+
 Tp::UIntList MorseConnection::requestHandles(uint handleType, const QStringList &identifiers, Tp::DBusError *error)
 {
     qDebug() << Q_FUNC_INFO << identifiers;
@@ -1100,38 +1134,14 @@ void MorseConnection::onNewMessageReceived(const Peer peer, quint32 messageId)
 
 void MorseConnection::addMessages(const Peer peer, const QVector<quint32> &messageIds)
 {
-    bool groupChatMessage = peerIsRoom(peer);
-
-    if (groupChatMessage) {
-        return;
-    }
-
-    uint targetHandle = ensureHandle(peer);
-
     QVector<quint32> newIds = messageIds;
     if (newIds.isEmpty()) {
         return;
     }
 
-    //TODO: initiator should be group creator
-    Tp::DBusError error;
-    bool yours;
-
-    QVariantMap request;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = groupChatMessage ? Tp::HandleTypeRoom : Tp::HandleTypeContact;
-    Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
-
-    if (error.isValid()) {
-        qWarning() << Q_FUNC_INFO << "ensureChannel failed:" << error.name() << " " << error.message();
-        return;
-    }
-
-    MorseTextChannelPtr textChannel = MorseTextChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_TEXT));
+    MorseTextChannelPtr textChannel = ensureTextChannel(peer);
 
     if (!textChannel) {
-        qCritical() << Q_FUNC_INFO << "Error, channel is not a morseTextChannel?";
         return;
     }
 

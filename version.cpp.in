@@ -1,0 +1,11 @@
+#include "info.hpp"
+
+QString MorseInfo::version()
+{
+    return QLatin1String("@MORSE_VERSION@");
+}
+
+QString MorseInfo::buildVersion()
+{
+    return QLatin1String("@MORSE_BUILD_VERSION@");
+}

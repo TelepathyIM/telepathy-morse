@@ -25,6 +25,7 @@
 
 #include <TelegramQt/TelegramNamespace>
 
+#include "info.hpp"
 #include "protocol.hpp"
 
 #ifdef ENABLE_DEBUG_IFACE
@@ -36,6 +37,9 @@ int main(int argc, char *argv[])
     QCoreApplication app(argc, argv);
     app.setOrganizationName(QLatin1String("TelepathyIM"));
     app.setApplicationName(QLatin1String("telepathy-morse"));
+
+    qInfo().noquote().nospace() << "Initialize Telepathy Morse v" << MorseInfo::version()
+                                << " (build " << MorseInfo::buildVersion() << ")";
 
     Telegram::initialize();
     Tp::registerTypes();

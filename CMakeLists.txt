@@ -34,11 +34,23 @@ set(morse_SOURCES
     main.cpp
     connection.cpp
     connection.hpp
+    info.cpp
+    info.hpp
     protocol.cpp
     protocol.hpp
     textchannel.cpp
     textchannel.hpp
 )
+
+if (NOT BUILD_VERSION)
+    set(BUILD_VERSION "unknown")
+endif()
+
+set(MORSE_VERSION "${PROJECT_VERSION}")
+set(MORSE_BUILD_VERSION ${BUILD_VERSION})
+
+configure_file(version.cpp.in "${CMAKE_CURRENT_BINARY_DIR}/version.cpp" @ONLY)
+list(APPEND morse_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/version.cpp")
 
 if (TELEPATHY_QT_VERSION VERSION_LESS "0.9.7")
     message(WARNING "TelepathyQt version < 0.9.7, so group chat and debug interface support will be disabled.")

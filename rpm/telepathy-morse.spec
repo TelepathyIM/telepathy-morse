@@ -24,6 +24,7 @@ A Telegram connection manager.
 
 %build
 %cmake \
+    -DBUILD_VERSION="%{version}" \
     -DCMAKE_INSTALL_PREFIX=%{_prefix} \
     -DCMAKE_INSTALL_LIBEXECDIR=%{_libexecdir} \
     -DCMAKE_INSTALL_DATADIR=%{_datadir} \

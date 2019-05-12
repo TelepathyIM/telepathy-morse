@@ -1,6 +1,15 @@
-project(telepathy-morse)
+cmake_minimum_required(VERSION 3.1)
 
-cmake_minimum_required(VERSION 2.8)
+project(telepathy-morse
+    VERSION 0.2.0
+    LANGUAGES CXX
+)
+
+set(OVERRIDE_CXX_STANDARD 11 CACHE STRING "Compile with custom C++ standard version")
+
+set(CMAKE_CXX_STANDARD ${OVERRIDE_CXX_STANDARD})
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(TelepathyQt5 0.9.6 REQUIRED)
 find_package(TelepathyQt5Service 0.9.6 REQUIRED)
@@ -11,6 +20,7 @@ find_package(TelegramQt5 REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Core DBus Xml Network)
 
 include(GNUInstallDirs)
+include(FeatureSummary)
 
 include_directories(
     ${CMAKE_SOURCE_DIR}
@@ -18,7 +28,7 @@ include_directories(
 )
 
 add_definitions(-DQT_NO_CAST_FROM_ASCII)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 set(morse_SOURCES
     main.cpp
@@ -106,3 +116,10 @@ install(FILES
 #    FILES morse.png
 #    DESTINATION share/icons/hicolor/48x48/apps
 #)
+
+message(STATUS "${PROJECT_NAME} configuration:")
+message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "  Qt: ${Qt5_VERSION} at ${_qt5Core_install_prefix}")
+
+feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)

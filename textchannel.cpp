@@ -192,6 +192,12 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
     Tp::MessagePart header;
 
     quint64 sentMessageToken = m_connection->getSentMessageToken(m_targetPeer, message.id);
+#ifndef ENABLE_SCROLLBACK
+    if (sentMessageToken) {
+        // Most of the clients go crazy on any kind of duplicated messages, including scrollback.
+        return;
+    }
+#endif // ENABLE_SCROLLBACK
     const QString token = QString::number(sentMessageToken ? sentMessageToken : message.id);
 
     header[QLatin1String("message-token")] = QDBusVariant(token);

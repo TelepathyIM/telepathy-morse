@@ -234,9 +234,12 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
                                                             ? Tp::DeliveryStatusRead
                                                             : Tp::DeliveryStatusAccepted);
 
-    const bool scrollback = isRead || isOut;
-    if (scrollback) {
+    const bool silent = isRead || isOut;
+    if (sentMessageToken) {
         header[QLatin1String("scrollback")] = QDBusVariant(true);
+    }
+    if (silent) {
+        header[QLatin1String("silent")] = QDBusVariant(true);
         // Telegram has no timestamp for message read, only sent.
         // Fallback to the message sent timestamp to keep received messages in chronological order.
         // Alternatively, client can sort messages in order of message-sent.

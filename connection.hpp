@@ -195,6 +195,8 @@ private:
     QString m_serverKeyFile;
     uint m_serverPort = 0;
     uint m_keepAliveInterval;
+
+    bool m_enableGroupChats = false;
 };
 
 #endif // MORSE_CONNECTION_HPP

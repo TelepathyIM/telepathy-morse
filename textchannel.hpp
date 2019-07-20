@@ -75,8 +75,8 @@ public:
     void messageAcknowledgedCallback(const QString &messageId);
 
 public slots:
-    void onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, TelegramNamespace::MessageAction action);
-    void setMessageAction(quint32 userId, TelegramNamespace::MessageAction action);
+    void onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, const Telegram::MessageAction &action);
+    void setMessageAction(quint32 userId, const Telegram::MessageAction &action);
     void onMessageReceived(const Telegram::Message &message);
     void updateChatParticipants(const Tp::UIntList &handles);
 

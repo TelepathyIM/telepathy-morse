@@ -170,7 +170,7 @@ void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)
     m_api->readHistory(m_targetPeer, messageId.toUInt());
 }
 
-void MorseTextChannel::onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, TelegramNamespace::MessageAction action)
+void MorseTextChannel::onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, const Telegram::MessageAction &action)
 {
     // We are connected to broadcast signal, so have to select only needed calls
     const Telegram::Peer identifier = peer;
@@ -180,13 +180,17 @@ void MorseTextChannel::onMessageActionChanged(const Telegram::Peer &peer, quint3
     setMessageAction(userId, action);
 }
 
-void MorseTextChannel::setMessageAction(quint32 userId, TelegramNamespace::MessageAction action)
+void MorseTextChannel::setMessageAction(quint32 userId, const Telegram::MessageAction &action)
 {
     const uint handle = m_connection->ensureContact(userId);
-    if (action) {
-        m_chatStateIface->chatStateChanged(handle, Tp::ChannelChatStateComposing);
-    } else {
+    switch (action.type) {
+    case Telegram::MessageAction::None:
         m_chatStateIface->chatStateChanged(handle, Tp::ChannelChatStateActive);
+        break;
+    case Telegram::MessageAction::Typing:
+    default:
+        m_chatStateIface->chatStateChanged(handle, Tp::ChannelChatStateComposing);
+        break;
     }
 }
 
@@ -472,7 +476,7 @@ void MorseTextChannel::setResolvedMessageId(Telegram::Peer peer, quint64 message
 
 void MorseTextChannel::reactivateLocalTyping()
 {
-    m_api->setMessageAction(m_targetPeer, TelegramNamespace::MessageActionTyping);
+    m_api->setMessageAction(m_targetPeer, Telegram::MessageAction::Typing);
 }
 
 void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
@@ -486,10 +490,10 @@ void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
     }
 
     if (state == Tp::ChannelChatStateComposing) {
-        m_api->setMessageAction(m_targetPeer, TelegramNamespace::MessageActionTyping);
+        m_api->setMessageAction(m_targetPeer, Telegram::MessageAction::Typing);
         m_localTypingTimer->start();
     } else {
-        m_api->setMessageAction(m_targetPeer, TelegramNamespace::MessageActionNone);
+        m_api->setMessageAction(m_targetPeer, Telegram::MessageAction::None);
         m_localTypingTimer->stop();
     }
 }

@@ -107,7 +107,7 @@ private slots:
     void onAuthenticated();
     void onSelfUserAvailable();
     void onAuthCodeRequired();
-    void onAuthErrorOccurred(TelegramNamespace::AuthenticationError errorCode, const QByteArray &errorMessage);
+    void onAuthErrorOccurred(Telegram::Namespace::AuthenticationError errorCode, const QByteArray &errorMessage);
     void onPasswordRequired();
     void onPasswordCheckFailed();
     void onSignInFinished();

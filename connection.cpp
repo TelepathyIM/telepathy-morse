@@ -387,7 +387,7 @@ void MorseConnection::onSelfUserAvailable()
 {
     qDebug() << Q_FUNC_INFO;
 
-    const Telegram::Peer selfIdentifier = Telegram::Peer::fromUserId(m_client->contactsApi()->selfContactId());
+    const Telegram::Peer selfIdentifier = Telegram::Peer::fromUserId(m_client->contactsApi()->selfUserId());
     if (!selfIdentifier.isValid()) {
         qCritical() << Q_FUNC_INFO << "Self id unexpectedly not available";
         return;
@@ -432,15 +432,15 @@ void MorseConnection::onAuthCodeRequired()
     }
 }
 
-void MorseConnection::onAuthErrorOccurred(TelegramNamespace::AuthenticationError errorCode,
+void MorseConnection::onAuthErrorOccurred(Namespace::AuthenticationError errorCode,
                                           const QByteArray &errorMessage)
 {
     QVariantMap details;
     switch (errorCode) {
-    case TelegramNamespace::AuthenticationErrorPhoneCodeExpired:
+    case Namespace::AuthenticationErrorPhoneCodeExpired:
         details[QLatin1String("server-message")] = QStringLiteral("Auth code expired");
         break;
-    case TelegramNamespace::AuthenticationErrorPhoneCodeInvalid:
+    case Namespace::AuthenticationErrorPhoneCodeInvalid:
         details[QLatin1String("server-message")] = QStringLiteral("Invalid auth code");
         break;
     default:
@@ -1053,7 +1053,7 @@ void MorseConnection::updateContactsPresence(const QVector<Telegram::Peer> &iden
             continue;
         }
 
-        TelegramNamespace::ContactStatus st = TelegramNamespace::ContactStatusOnline;
+        Namespace::ContactStatus st = Namespace::ContactStatusOnline;
 
         if (m_client) {
             // We list broadcast channels as Contacts
@@ -1067,15 +1067,15 @@ void MorseConnection::updateContactsPresence(const QVector<Telegram::Peer> &iden
         Tp::SimplePresence presence;
 
         switch (st) {
-        case TelegramNamespace::ContactStatusOnline:
+        case Namespace::ContactStatusOnline:
             presence.status = QLatin1String("available");
             presence.type = Tp::ConnectionPresenceTypeAvailable;
             break;
-        case TelegramNamespace::ContactStatusOffline:
+        case Namespace::ContactStatusOffline:
             presence.status = QLatin1String("offline");
             presence.type = Tp::ConnectionPresenceTypeOffline;
             break;
-        case TelegramNamespace::ContactStatusUnknown:
+        case Namespace::ContactStatusUnknown:
             presence.status = QLatin1String("unknown");
             presence.type = Tp::ConnectionPresenceTypeUnknown;
             break;

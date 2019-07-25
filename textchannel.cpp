@@ -205,7 +205,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
     header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
 
     bool broadcast = false;
-    const bool isOut = message.flags & TelegramNamespace::MessageFlagOut;
+    const bool isOut = message.flags & Telegram::Namespace::MessageFlagOut;
     const bool toSelf = message.peer() == m_connection->selfPeer();
 
     if (m_targetPeer.type == Telegram::Peer::Channel) {
@@ -261,13 +261,13 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         body << text;
     }
 
-    if (message.type != TelegramNamespace::MessageTypeText) { // More, than a plain text message
+    if (message.type != Telegram::Namespace::MessageTypeText) { // More, than a plain text message
         Telegram::MessageMediaInfo info;
         m_client->dataStorage()->getMessageMediaInfo(&info, message.peer(), message.id);
 
         bool handled = true;
         switch (message.type) {
-        case TelegramNamespace::MessageTypeGeo: {
+        case Telegram::Namespace::MessageTypeGeo: {
             static const QString jsonTemplate = QLatin1String("{\"type\":\"point\",\"coordinates\":[%1, %2]}");
             Tp::MessagePart geo;
             geo[QLatin1String("content-type")] = QDBusVariant(QLatin1String("application/geo+json"));
@@ -276,7 +276,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
             body << geo;
         }
             break;
-        case TelegramNamespace::MessageTypeContact: {
+        case Telegram::Namespace::MessageTypeContact: {
             Telegram::UserInfo userInfo;
             if (!info.getContactInfo(&userInfo)) {
                 qWarning() << Q_FUNC_INFO << "Unable to get user info from contact media message" << message.id;
@@ -295,7 +295,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
             body << userVCardPart;
         }
             break;
-        case TelegramNamespace::MessageTypeWebPage: {
+        case Telegram::Namespace::MessageTypeWebPage: {
             Tp::MessagePart webPart;
             webPart[QLatin1String("interface")] = QDBusVariant(TP_QT_IFACE_CHANNEL + QLatin1String(".Interface.WebPage"));
             webPart[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));

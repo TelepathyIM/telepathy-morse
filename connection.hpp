@@ -43,6 +43,7 @@ class AuthOperation;
 class Client;
 class ContactList;
 class DialogList;
+class FileOperation;
 class InMemoryDataStorage;
 
 } // Client namespace
@@ -121,7 +122,7 @@ private slots:
     void updateContactList();
     void onDialogsReady();
     void onDisconnected();
-    void onFileRequestCompleted(const QString &uniqueId);
+    void onAvatarRequestFinished(Telegram::Client::FileOperation *fileOperation, const Telegram::Peer &peer);
     void onMessageSent(const Telegram::Peer &peer, quint64 messageRandomId, quint32 messageId);
     void onContactStatusChanged(quint32 userId, Telegram::Namespace::ContactStatus status);
 

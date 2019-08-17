@@ -39,6 +39,8 @@
 #include <TelegramQt/ContactList>
 #include <TelegramQt/Debug>
 #include <TelegramQt/DialogList>
+#include <TelegramQt/FilesApi>
+#include <TelegramQt/FileOperation>
 #include <TelegramQt/PendingMessages>
 #include <TelegramQt/MessagingApi>
 
@@ -171,9 +173,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
                                                      TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO,
                                                      TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
                                                      TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING,
-                                                 #ifdef ENABLE_AVATARS
                                                      TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS,
-                                                 #endif // ENABLE_AVATARS
                                                  });
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactsIface));
 
@@ -216,14 +216,12 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     aliasingIface->setGetAliasesCallback(Tp::memFun(this, &MorseConnection::getAliases));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(aliasingIface));
 
-#ifdef ENABLE_AVATARS
     /* Connection.Interface.Avatars */
     avatarsIface = Tp::BaseConnectionAvatarsInterface::create();
     avatarsIface->setAvatarDetails(avatarDetails());
     avatarsIface->setGetKnownAvatarTokensCallback(Tp::memFun(this, &MorseConnection::getKnownAvatarTokens));
     avatarsIface->setRequestAvatarsCallback(Tp::memFun(this, &MorseConnection::requestAvatars));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(avatarsIface));
-#endif // ENABLE_AVATARS
 
 #ifdef ENABLE_GROUP_CHAT
 # ifdef USE_BUNDLED_GROUPS_IFACE
@@ -806,9 +804,12 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(info.getBestDisplayName());
             }
 
-            //if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
-            //    attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_core->peerPictureToken(identifier));
-            //}
+            if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
+                Telegram::FileInfo pictureInfo;
+                if (info.getPeerPicture(&pictureInfo, Telegram::PeerPictureSize::Small)) {
+                    attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(pictureInfo.getFileId());
+                }
+            }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO + QLatin1String("/info")] = QVariant::fromValue(getUserInfo(identifier.id));
@@ -1258,25 +1259,33 @@ void MorseConnection::onDisconnected()
     m_client->connectionApi()->disconnectFromServer();
 }
 
-#ifdef ENABLE_AVATARS
-void MorseConnection::onFileRequestCompleted(const QString &uniqueId)
+void MorseConnection::onAvatarRequestFinished(Telegram::Client::FileOperation *fileOperation, const Peer &peer)
 {
-    qDebug() << Q_FUNC_INFO << uniqueId;
-#ifdef ENABLE_AVATARS
-    if (m_peerPictureRequests.contains(uniqueId)) {
-        const Telegram::Peer peer = m_peerPictureRequests.value(uniqueId);
+    const Telegram::FileInfo *fileInfo = fileOperation->fileInfo();
+    const QString fileId = fileInfo->getFileId();
+    qDebug() << Q_FUNC_INFO << fileId << fileOperation;
+    fileOperation->deleteLater();
+
+    if (m_peerPictureRequests.contains(fileId)) {
+        if (fileOperation->isFailed()) {
+            qWarning() << Q_FUNC_INFO << "Operation failed:" << fileOperation->errorDetails();
+            // It seems that the Telepathy spec doesn't cover avatar request fails. It says:
+            //    If the handles are valid but retrieving an avatar fails (for any reason, including
+            //    the contact not having an avatar) the AvatarRetrieved signal is not emitted for
+            //    that contact.
+            // Do nothing but the warning.
+            return;
+        }
+        const QByteArray data = fileOperation->device()->readAll();
         if (!peerIsRoom(peer)) {
-            const FileInfo *fileInfo = m_fileManager->getFileInfo(uniqueId);
-            avatarsIface->avatarRetrieved(peer.id, uniqueId, fileInfo->data(), fileInfo->mimeType());
+            avatarsIface->avatarRetrieved(peer.id, fileId, data, fileInfo->mimeType());
         } else {
-            qWarning() << "MorseConnection::onFileRequestCompleted(): Ignore room picture";
+            qDebug() << "MorseConnection::onFileRequestCompleted(): Ignore room picture";
         }
     } else {
         qWarning() << "MorseConnection::onFileRequestCompleted(): Unexpected file id";
     }
-#endif // ENABLE_AVATARS
 }
-#endif // ENABLE_AVATARS
 
 void MorseConnection::onMessageSent(const Peer &peer, quint64 messageRandomId, quint32 messageId)
 {
@@ -1357,11 +1366,23 @@ Tp::AvatarTokenMap MorseConnection::getKnownAvatarTokens(const Tp::UIntList &con
     }
 
     Tp::AvatarTokenMap result;
-    foreach (quint32 handle, contacts) {
+    Telegram::UserInfo userInfo;
+    Telegram::FileInfo pictureFile;
+    for (quint32 handle : contacts) {
         if (!m_contactHandles.contains(handle)) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
         }
-        //result.insert(handle, m_core->peerPictureToken(m_handles.value(handle)));
+
+        const Peer peer = m_contactHandles.value(handle);
+        if (!m_client->dataStorage()->getUserInfo(&userInfo, peer.id)) {
+            qWarning() << "requestAvatars(): Unable to get userInfo for" << peer.toString();
+            continue;
+        }
+        if (!userInfo.getPeerPicture(&pictureFile, Telegram::PeerPictureSize::Small)) {
+            continue;
+        }
+
+        result.insert(handle, pictureFile.getFileId());
     }
 
     return result;
@@ -1377,31 +1398,29 @@ void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
     }
 
-#ifdef ENABLE_AVATARS
     foreach (quint32 handle, contacts) {
         if (!m_contactHandles.contains(handle)) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
         }
         const Telegram::Peer peer = m_contactHandles.value(handle);
-        Telegram::RemoteFile pictureFile;
-        m_fileManager->getPeerPictureFileInfo(peer, &pictureFile);
-        const QString requestId = pictureFile.getUniqueId();
-        const FileInfo *fileInfo = m_fileManager->getFileInfo(requestId);
-        if (fileInfo && fileInfo->isComplete()) {
-            const QByteArray data = m_fileManager->getData(requestId);
-            if (!data.isEmpty()) {
-                // I don't see an easy way to delay the invocation; emit the signal synchronously for now. Should not be a problem for a good client.
-                avatarsIface->avatarRetrieved(handle, requestId, data, fileInfo->mimeType());
-            }
+        Telegram::UserInfo userInfo;
+        if (!m_client->dataStorage()->getUserInfo(&userInfo, peer.id)) {
+            qWarning() << "requestAvatars(): Unable to get userInfo for" << peer.toString();
             continue;
         }
-        const QString newRequestId = m_fileManager->requestFile(pictureFile);
-        if (newRequestId != requestId) {
-            qWarning() << "Unexpected request id!" << newRequestId << "(expected:" << requestId;
+        Telegram::FileInfo pictureFile;
+        userInfo.getPeerPicture(&pictureFile, Telegram::PeerPictureSize::Small);
+        if (!pictureFile.isValid()) {
+            qWarning() << "requestAvatars(): Unable to get peer picture info for" << peer.toString();
+            continue;
         }
-        m_peerPictureRequests.insert(newRequestId, peer);
+
+        Telegram::Client::FileOperation *fileOperation = m_client->filesApi()->downloadFile(&pictureFile);
+        fileOperation->connectToFinished(this, &MorseConnection::onAvatarRequestFinished,
+                              fileOperation, peer);
+
+        m_peerPictureRequests.insert(pictureFile.getFileId(), peer);
     }
-#endif
 }
 
 void MorseConnection::roomListStartListing(Tp::DBusError *error)

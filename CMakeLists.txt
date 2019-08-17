@@ -85,11 +85,6 @@ if (USE_BUNDLED_GROUPS_IFACE)
     )
 endif()
 
-# 'Unstable' stuff which is not a part of TelegramQt yet
-list(APPEND morse_SOURCES
-    extras/CFileManager.cpp
-)
-
 add_executable(telepathy-morse ${morse_SOURCES})
 
 set_target_properties(telepathy-morse PROPERTIES AUTOMOC TRUE)

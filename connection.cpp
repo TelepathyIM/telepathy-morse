@@ -55,8 +55,6 @@
 #include <QDir>
 #include <QFile>
 
-#include "extras/CFileManager.hpp"
-
 static constexpr int c_selfHandle = 1;
 static const QString c_telegramAccountSubdir = QLatin1String("telepathy/morse");
 static const QString c_accountFile = QLatin1String("account.bin");
@@ -316,8 +314,6 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
             qWarning() << "Unknown proxy type" << proxyType << ", ignored.";
         }
     }
-    m_fileManager = new CFileManager(m_client, this);
-    connect(m_fileManager, &CFileManager::requestComplete, this, &MorseConnection::onFileRequestCompleted);
 
     loadState();
 }

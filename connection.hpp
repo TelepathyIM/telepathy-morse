@@ -28,7 +28,6 @@
 #include <TelegramQt/ConnectionApi>
 #include <TelegramQt/TelegramNamespace>
 
-class CFileManager;
 class MorseDataStorage;
 class MorseInfo;
 class MorseTextChannel;
@@ -186,7 +185,6 @@ private:
     Telegram::Client::AuthOperation *m_signOperation = nullptr;
     Telegram::Client::DialogList *m_dialogs = nullptr;
     Telegram::Client::ContactList *m_contacts = nullptr;
-    CFileManager *m_fileManager = nullptr;
 
     int m_authReconnectionsCount = 0;
 

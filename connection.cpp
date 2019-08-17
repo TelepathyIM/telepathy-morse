@@ -759,8 +759,8 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
             attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = identifier.toString();
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = m_contactsSubscription.value(handle, Tp::SubscriptionStateUnknown);
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/publish")] = m_contactsSubscription.value(handle, Tp::SubscriptionStateUnknown);
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/publish")] = Tp::SubscriptionStateYes;
             }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
@@ -1104,28 +1104,6 @@ void MorseConnection::updateSelfContactState(Tp::ConnectionStatus status)
     simplePresenceIface->setPresences(newPresences);
 }
 
-void MorseConnection::setSubscriptionState(const QVector<Telegram::Peer> &identifiers, const QVector<uint> &handles, uint state)
-{
-    qDebug() << Q_FUNC_INFO;
-    if (identifiers.isEmpty()) {
-        return;
-    }
-    Tp::ContactSubscriptionMap changes;
-    Tp::HandleIdentifierMap identifiersMap;
-
-    for(int i = 0; i < identifiers.size(); ++i) {
-        Tp::ContactSubscriptions change;
-        change.publish = Tp::SubscriptionStateYes;
-        change.publishRequest = QString();
-        change.subscribe = state;
-        changes[handles[i]] = change;
-        identifiersMap[handles[i]] = identifiers[i].toString();
-        m_contactsSubscription[handles[i]] = state;
-    }
-    Tp::HandleIdentifierMap removals;
-    contactListIface->contactsChangedWithID(changes, identifiersMap, removals);
-}
-
 /* Receive message from outside (telegram server) */
 void MorseConnection::onNewMessageReceived(const Peer peer, quint32 messageId)
 {
@@ -1211,7 +1189,6 @@ void MorseConnection::updateContactList()
         change.subscribe = Tp::SubscriptionStateYes;
         changes[newContactListHandles[i]] = change;
         identifiersMap[newContactListHandles[i]] = newContactListIdentifiers.at(i).toString();
-        m_contactsSubscription[newContactListHandles[i]] = Tp::SubscriptionStateYes;
     }
 
     contactListIface->contactsChangedWithID(changes, identifiersMap, removals);

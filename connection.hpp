@@ -134,7 +134,6 @@ private:
 
     void updateContactsPresence(const QVector<Telegram::Peer> &identifiers);
     void updateSelfContactState(Tp::ConnectionStatus status);
-    void setSubscriptionState(const QVector<Telegram::Peer> &identifiers, const QVector<uint> &handles, uint state);
 
     void startMechanismWithData_authCode(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
     void startMechanismWithData_password(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
@@ -166,8 +165,6 @@ private:
     QVector<quint32> m_contactList;
     QMap<uint, Telegram::Peer> m_contactHandles;
     QMap<uint, Telegram::Peer> m_chatHandles;
-    /* Maps a contact handle to its subscription state */
-    QHash<uint, uint> m_contactsSubscription;
     QHash<QString,Telegram::Peer> m_peerPictureRequests;
 
     Telegram::Client::AppInformation *m_appInfo = nullptr;

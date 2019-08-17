@@ -73,6 +73,26 @@ Tp::AvatarSpec MorseConnection::avatarDetails()
     return spec;
 }
 
+static Tp::SimplePresence telegramStatusToTelepathyPresence(Telegram::Namespace::ContactStatus status)
+{
+    Tp::SimplePresence presence;
+    switch (status) {
+    case Namespace::ContactStatusOnline:
+        presence.status = QLatin1String("available");
+        presence.type = Tp::ConnectionPresenceTypeAvailable;
+        break;
+    case Namespace::ContactStatusOffline:
+        presence.status = QLatin1String("offline");
+        presence.type = Tp::ConnectionPresenceTypeOffline;
+        break;
+    case Namespace::ContactStatusUnknown:
+        presence.status = QLatin1String("unknown");
+        presence.type = Tp::ConnectionPresenceTypeUnknown;
+        break;
+    }
+    return presence;
+}
+
 Tp::SimpleStatusSpecMap MorseConnection::getSimpleStatusSpecMap()
 {
     //Presence
@@ -288,8 +308,8 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
              this, &MorseConnection::onSyncMessagesReceived);
 //    connect(m_core, &CTelegramCore::chatChanged,
 //            this, &MorseConnection::whenChatChanged);
-//    connect(m_core, &CTelegramCore::contactStatusChanged,
-//            this, &MorseConnection::setContactStatus);
+    connect(m_client->contactsApi(), &Telegram::Client::ContactsApi::contactStatusChanged,
+            this, &MorseConnection::onContactStatusChanged);
 
     const QString proxyType = MorseProtocol::getProxyType(parameters);
     if (!proxyType.isEmpty()) {
@@ -1088,22 +1108,7 @@ void MorseConnection::updateContactsPresence(const QVector<Telegram::Peer> &iden
             }
         }
 
-        Tp::SimplePresence presence;
-        switch (st) {
-        case Namespace::ContactStatusOnline:
-            presence.status = QLatin1String("available");
-            presence.type = Tp::ConnectionPresenceTypeAvailable;
-            break;
-        case Namespace::ContactStatusOffline:
-            presence.status = QLatin1String("offline");
-            presence.type = Tp::ConnectionPresenceTypeOffline;
-            break;
-        case Namespace::ContactStatusUnknown:
-            presence.status = QLatin1String("unknown");
-            presence.type = Tp::ConnectionPresenceTypeUnknown;
-            break;
-        }
-        newPresences[handle] = presence;
+        newPresences[handle] = telegramStatusToTelepathyPresence(st);
     }
     simplePresenceIface->setPresences(newPresences);
 }
@@ -1282,6 +1287,14 @@ void MorseConnection::onMessageSent(const Peer &peer, quint64 messageRandomId, q
     m_sentMessageMap[peer].insert(messageId, messageRandomId);
 
     textChannel->onMessageSent(messageRandomId, messageId);
+}
+
+void MorseConnection::onContactStatusChanged(quint32 userId, Namespace::ContactStatus status)
+{
+    uint handle = ensureContact(userId);
+    Tp::SimpleContactPresences newPresences;
+    newPresences[handle] = telegramStatusToTelepathyPresence(status);
+    simplePresenceIface->setPresences(newPresences);
 }
 
 void MorseConnection::onGotRooms()

@@ -123,6 +123,7 @@ private slots:
     void onDisconnected();
     void onFileRequestCompleted(const QString &uniqueId);
     void onMessageSent(const Telegram::Peer &peer, quint64 messageRandomId, quint32 messageId);
+    void onContactStatusChanged(quint32 userId, Telegram::Namespace::ContactStatus status);
 
     /* Channel.Type.RoomList */
     void onGotRooms();

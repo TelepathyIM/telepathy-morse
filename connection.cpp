@@ -768,6 +768,11 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
             }
             attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = identifier.toString();
 
+            Telegram::UserInfo info;
+            if (!m_client->dataStorage()->getUserInfo(&info, identifier.id)) {
+                qWarning() << Q_FUNC_INFO << "Unknown userId" << identifier.id;
+            }
+
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/publish")] = Tp::SubscriptionStateYes;
@@ -778,7 +783,7 @@ Tp::ContactAttributesMap MorseConnection::getContactAttributes(const Tp::UIntLis
             }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(getAlias(identifier));
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(info.getBestDisplayName());
             }
 
             //if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
@@ -937,13 +942,7 @@ QString MorseConnection::getAlias(const Telegram::Peer identifier)
     if (identifier.type == Telegram::Peer::User) {
         Telegram::UserInfo info;
         if (m_client->dataStorage()->getUserInfo(&info, identifier.id)) {
-            if (!info.firstName().isEmpty() || !info.lastName().isEmpty()) {
-                if (!info.firstName().isEmpty() && !info.lastName().isEmpty()) {
-                    return info.firstName() + QLatin1Char(' ') + info.lastName();
-                }
-                return !info.firstName().isEmpty() ? info.firstName() : info.lastName();
-            }
-            return info.userName();
+            return info.getBestDisplayName();
         }
     } else {
         Telegram::ChatInfo info;

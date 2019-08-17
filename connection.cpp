@@ -1089,7 +1089,6 @@ void MorseConnection::updateContactsPresence(const QVector<Telegram::Peer> &iden
         }
 
         Tp::SimplePresence presence;
-
         switch (st) {
         case Namespace::ContactStatusOnline:
             presence.status = QLatin1String("available");
@@ -1104,9 +1103,6 @@ void MorseConnection::updateContactsPresence(const QVector<Telegram::Peer> &iden
             presence.type = Tp::ConnectionPresenceTypeUnknown;
             break;
         }
-
-        presence.status = QLatin1String("available");
-        presence.type = Tp::ConnectionPresenceTypeAvailable;
         newPresences[handle] = presence;
     }
     simplePresenceIface->setPresences(newPresences);

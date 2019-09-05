@@ -1258,6 +1258,7 @@ void MorseConnection::onDisconnected()
     m_client->connectionApi()->disconnectFromServer();
 }
 
+#ifdef ENABLE_AVATARS
 void MorseConnection::onFileRequestCompleted(const QString &uniqueId)
 {
     qDebug() << Q_FUNC_INFO << uniqueId;
@@ -1275,6 +1276,7 @@ void MorseConnection::onFileRequestCompleted(const QString &uniqueId)
     }
 #endif // ENABLE_AVATARS
 }
+#endif // ENABLE_AVATARS
 
 void MorseConnection::onMessageSent(const Peer &peer, quint64 messageRandomId, quint32 messageId)
 {

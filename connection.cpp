@@ -151,9 +151,9 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
                                                      TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO,
                                                      TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
                                                      TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING,
-                                                 #if 0
+                                                 #ifdef ENABLE_AVATARS
                                                      TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS,
-                                                 #endif
+                                                 #endif // ENABLE_AVATARS
                                                  });
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(contactsIface));
 
@@ -196,14 +196,14 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     aliasingIface->setGetAliasesCallback(Tp::memFun(this, &MorseConnection::getAliases));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(aliasingIface));
 
-#if 0
+#ifdef ENABLE_AVATARS
     /* Connection.Interface.Avatars */
     avatarsIface = Tp::BaseConnectionAvatarsInterface::create();
     avatarsIface->setAvatarDetails(avatarDetails());
     avatarsIface->setGetKnownAvatarTokensCallback(Tp::memFun(this, &MorseConnection::getKnownAvatarTokens));
     avatarsIface->setRequestAvatarsCallback(Tp::memFun(this, &MorseConnection::requestAvatars));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(avatarsIface));
-#endif
+#endif // ENABLE_AVATARS
 
 #ifdef ENABLE_GROUP_CHAT
 # ifdef USE_BUNDLED_GROUPS_IFACE
@@ -1261,6 +1261,7 @@ void MorseConnection::onDisconnected()
 void MorseConnection::onFileRequestCompleted(const QString &uniqueId)
 {
     qDebug() << Q_FUNC_INFO << uniqueId;
+#ifdef ENABLE_AVATARS
     if (m_peerPictureRequests.contains(uniqueId)) {
         const Telegram::Peer peer = m_peerPictureRequests.value(uniqueId);
         if (!peerIsRoom(peer)) {
@@ -1272,6 +1273,7 @@ void MorseConnection::onFileRequestCompleted(const QString &uniqueId)
     } else {
         qWarning() << "MorseConnection::onFileRequestCompleted(): Unexpected file id";
     }
+#endif // ENABLE_AVATARS
 }
 
 void MorseConnection::onMessageSent(const Peer &peer, quint64 messageRandomId, quint32 messageId)
@@ -1365,6 +1367,7 @@ void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
     }
 
+#ifdef ENABLE_AVATARS
     foreach (quint32 handle, contacts) {
         if (!m_contactHandles.contains(handle)) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
@@ -1388,6 +1391,7 @@ void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError
         }
         m_peerPictureRequests.insert(newRequestId, peer);
     }
+#endif
 }
 
 void MorseConnection::roomListStartListing(Tp::DBusError *error)

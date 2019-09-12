@@ -2,7 +2,7 @@
 
 QString MorseInfo::version()
 {
-    return QLatin1String("@MORSE_VERSION@");
+    return QLatin1String("@TelepathyMorse_VERSION@");
 }
 
 QString MorseInfo::buildVersion()

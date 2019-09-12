@@ -91,7 +91,7 @@ set_target_properties(telepathy-morse PROPERTIES AUTOMOC TRUE)
 
 target_include_directories(telepathy-morse PRIVATE
     ${TELEPATHY_QT5_INCLUDE_DIR}
-    ${TELEGRAM_QT5_INCLUDE_DIR})
+)
 
 target_link_libraries(telepathy-morse
     Qt5::Core
@@ -99,9 +99,7 @@ target_link_libraries(telepathy-morse
     Qt5::Network
     ${TELEPATHY_QT5_LIBRARIES}
     ${TELEPATHY_QT5_SERVICE_LIBRARIES}
-    ${TELEGRAM_QT5_LIBRARIES}
-    -lcrypto
-    -lz
+    TelegramQt5::Core
 )
 
 configure_file(dbus-service.in org.freedesktop.Telepathy.ConnectionManager.morse.service)

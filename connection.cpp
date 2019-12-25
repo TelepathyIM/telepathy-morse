@@ -340,6 +340,7 @@ void MorseConnection::doConnect(Tp::DBusError *error)
     setStatus(Tp::ConnectionStatusConnecting, Tp::ConnectionStatusReasonRequested);
 
     if (m_client->accountStorage()->loadData() && m_client->accountStorage()->hasMinimalDataSet()) {
+        qDebug() << "Has account data, authId:" << m_client->accountStorage()->authId();
         Telegram::Client::AuthOperation *checkInOperation = m_client->connectionApi()->checkIn();
         checkInOperation->connectToFinished(this, &MorseConnection::onCheckInFinished, checkInOperation);
     } else {

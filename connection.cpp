@@ -218,8 +218,6 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(avatarsIface));
 
 #ifdef ENABLE_GROUP_CHAT
-    m_enableGroupChats = true;
-
 # ifdef USE_BUNDLED_GROUPS_IFACE
     ConnectionContactGroupsInterfacePtr groupsIface = ConnectionContactGroupsInterface::create();
 # else
@@ -719,7 +717,7 @@ MorseTextChannelPtr MorseConnection::ensureTextChannel(const Peer &peer)
 {
     bool groupChatMessage = peerIsRoom(peer);
 
-    if (groupChatMessage && !m_enableGroupChats) {
+    if (groupChatMessage) {
         return MorseTextChannelPtr();
     }
 
@@ -1244,9 +1242,10 @@ void MorseConnection::updateContactList()
 
 void MorseConnection::onDialogsReady()
 {
+    bool m_omitGroupChats = true;
     Telegram::PeerList interestingPeers;
     for (const Telegram::Peer &peer : m_dialogs->peers()) {
-        if (!m_enableGroupChats) {
+        if (m_omitGroupChats) {
             if (peerIsRoom(peer)) {
                 continue;
             }

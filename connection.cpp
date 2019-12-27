@@ -1303,6 +1303,10 @@ void MorseConnection::onMessageSent(const Peer &peer, quint64 messageRandomId, q
 void MorseConnection::onContactStatusChanged(quint32 userId, Namespace::ContactStatus status)
 {
     uint handle = ensureContact(userId);
+    if (handle == selfHandle()) {
+        // Ignore self contact status changes
+        return;
+    }
     Tp::SimpleContactPresences newPresences;
     newPresences[handle] = telegramStatusToTelepathyPresence(status);
     simplePresenceIface->setPresences(newPresences);

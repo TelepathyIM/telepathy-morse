@@ -285,6 +285,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     accountStorage->setPhoneNumber(m_selfPhone);
     accountStorage->setAccountIdentifier(m_info->accountIdentifier());
     accountStorage->setFileName(m_info->accountDataDirectory() + QLatin1Char('/') + c_accountFile);
+    connect(accountStorage, &Client::FileAccountStorage::accountInvalidated, this, &MorseConnection::onAccountInvalidated);
     m_client->setAccountStorage(accountStorage);
 
     m_dataStorage = new MorseDataStorage(m_client);
@@ -532,6 +533,14 @@ void MorseConnection::onCheckInFinished(Client::AuthOperation *checkInOperation)
     qDebug() << Q_FUNC_INFO << checkInOperation->errorDetails();
     if (!checkInOperation->isSucceeded()) {
         signInOrUp();
+    }
+}
+
+void MorseConnection::onAccountInvalidated(const QString &accountIdentifier)
+{
+    qWarning() << Q_FUNC_INFO << accountIdentifier;
+    if (accountIdentifier == m_info->accountIdentifier()) {
+        m_client->accountStorage()->sync();
     }
 }
 

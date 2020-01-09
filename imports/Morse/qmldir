@@ -1,0 +1,4 @@
+module Morse
+plugin MorseQmlPlugin
+classname MorseQmlPlugin
+typeinfo plugins.qmltypes

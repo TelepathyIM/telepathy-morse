@@ -6,6 +6,7 @@ project(TelepathyMorse
 )
 
 set(OVERRIDE_CXX_STANDARD 11 CACHE STRING "Compile with custom C++ standard version")
+option(BUILD_QML_IMPORT "Enable compilation of qml import plugin" FALSE)
 
 set(CMAKE_CXX_STANDARD ${OVERRIDE_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -134,6 +135,10 @@ target_compile_definitions(telepathy-morse PRIVATE
 )
 
 configure_file(dbus-service.in org.freedesktop.Telepathy.ConnectionManager.morse.service)
+
+if(BUILD_QML_IMPORT)
+    add_subdirectory(imports/Morse)
+endif()
 
 install(
     TARGETS telepathy-morse

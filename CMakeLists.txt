@@ -28,8 +28,6 @@ target_sources(telepathy-morse PRIVATE
     connection.hpp
     datastorage.cpp
     datastorage.hpp
-    info.cpp
-    info.hpp
     protocol.cpp
     protocol.hpp
     textchannel.cpp
@@ -58,8 +56,24 @@ set_target_properties(telepathy-morse
 )
 
 configure_file(version.cpp.in "${CMAKE_CURRENT_BINARY_DIR}/version.cpp" @ONLY)
-target_sources(telepathy-morse PRIVATE
+
+add_library(MorseInfo STATIC
+    info.cpp
+    info.hpp
     "${CMAKE_CURRENT_BINARY_DIR}/version.cpp"
+)
+
+target_include_directories(MorseInfo PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(MorseInfo PUBLIC
+    Qt5::Core
+)
+
+set_target_properties(MorseInfo
+    PROPERTIES
+        AUTOMOC TRUE
 )
 
 if (TELEPATHY_QT_VERSION VERSION_LESS "0.9.7")
@@ -108,6 +122,7 @@ target_link_libraries(telepathy-morse
     ${TELEPATHY_QT5_LIBRARIES}
     ${TELEPATHY_QT5_SERVICE_LIBRARIES}
     TelegramQt5::Core
+    MorseInfo
 )
 
 target_compile_definitions(telepathy-morse PRIVATE

@@ -10,6 +10,7 @@ class MorseInfo : public QObject
     Q_PROPERTY(QString buildVersion READ buildVersion CONSTANT)
 
     Q_PROPERTY(QString accountDataDirectory READ accountDataDirectory NOTIFY accountDataDirectoryChanged)
+    Q_PROPERTY(QString accountDataFilePath READ accountDataFilePath NOTIFY accountDataDirectoryChanged)
     Q_PROPERTY(QString accountIdentifier READ accountIdentifier WRITE setAccountIdentifier NOTIFY accountIdentifierChanged)
     Q_PROPERTY(QString serverIdentifier READ serverIdentifier WRITE setServerIdentifier NOTIFY serverIdentifierChanged)
 public:
@@ -18,6 +19,7 @@ public:
     static QString buildVersion();
 
     QString accountDataDirectory() const;
+    QString accountDataFilePath() const;
     QString accountIdentifier() const;
     QString serverIdentifier() const;
 

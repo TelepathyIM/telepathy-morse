@@ -54,13 +54,7 @@
 #define DIALOGS_AS_CONTACTLIST
 //#define BROADCAST_AS_CONTACT
 
-#include <QDir>
-#include <QFile>
-
 static constexpr int c_selfHandle = 1;
-static const QString c_telegramAccountSubdir = QLatin1String("telepathy/morse");
-static const QString c_accountFile = QLatin1String("account.bin");
-
 static const QString c_onlineSimpleStatusKey = QLatin1String("available");
 static const QString c_saslMechanismTelepathyPassword = QLatin1String("X-TELEPATHY-PASSWORD");
 
@@ -284,7 +278,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     Client::FileAccountStorage *accountStorage = new Client::FileAccountStorage(m_client);
     accountStorage->setPhoneNumber(m_selfPhone);
     accountStorage->setAccountIdentifier(m_info->accountIdentifier());
-    accountStorage->setFileName(m_info->accountDataDirectory() + QLatin1Char('/') + c_accountFile);
+    accountStorage->setFileName(m_info->accountDataFilePath());
     connect(accountStorage, &Client::FileAccountStorage::accountInvalidated, this, &MorseConnection::onAccountInvalidated);
     m_client->setAccountStorage(accountStorage);
 
@@ -1459,15 +1453,6 @@ void MorseConnection::saveState()
 {
     m_client->accountStorage()->sync();
     m_dataStorage->saveData();
-}
-
-QString MorseConnection::getAccountDataDirectory() const
-{
-    const QString serverIdentifier = m_serverAddress.isEmpty() ? QStringLiteral("official") : m_serverAddress;
-    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-            + QLatin1Char('/') + c_telegramAccountSubdir
-            + QLatin1Char('/') + serverIdentifier
-            + QLatin1Char('/') + m_selfPhone;
 }
 
 bool MorseConnection::peerIsRoom(const Telegram::Peer peer) const

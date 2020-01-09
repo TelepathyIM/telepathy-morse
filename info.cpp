@@ -2,20 +2,37 @@
 
 #include <QStandardPaths>
 
-static const QString c_telegramAccountSubdir = QLatin1String("telepathy/morse");
+static const QString c_accountsDirectory = QLatin1String("telepathy/morse");
+static const QString c_accountFile = QLatin1String("account.bin");
 
 MorseInfo::MorseInfo(QObject *parent)
     : QObject(parent)
 {
+    connect(this, &MorseInfo::accountIdentifierChanged,
+            this, &MorseInfo::accountDataDirectoryChanged);
+    connect(this, &MorseInfo::serverIdentifierChanged,
+            this, &MorseInfo::accountDataDirectoryChanged);
 }
 
 QString MorseInfo::accountDataDirectory() const
 {
+    if (m_accountIdentifier.isEmpty()) {
+        return QString();
+    }
     const QString serverIdentifier = m_serverIdentifier.isEmpty() ? QStringLiteral("official") : m_serverIdentifier;
     return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-            + QLatin1Char('/') + c_telegramAccountSubdir
+            + QLatin1Char('/') + c_accountsDirectory
             + QLatin1Char('/') + serverIdentifier
             + QLatin1Char('/') + m_accountIdentifier;
+}
+
+QString MorseInfo::accountDataFilePath() const
+{
+    const QString directory = accountDataDirectory();
+    if (directory.isEmpty()) {
+        return QString();
+    }
+    return directory + QLatin1Char('/') + c_accountFile;
 }
 
 QString MorseInfo::accountIdentifier() const

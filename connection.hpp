@@ -156,7 +156,6 @@ private:
 
     void loadState();
     void saveState();
-    QString getAccountDataDirectory() const;
 
     Tp::BaseConnectionContactsInterfacePtr contactsIface;
     Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;

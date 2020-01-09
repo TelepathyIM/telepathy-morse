@@ -9,7 +9,9 @@ Source0:    https://github.com/TelepathyIM/telepathy-morse/archive/%{name}-%{ver
 Requires:   telepathy-mission-control
 BuildRequires: pkgconfig(dbus-1) >= 1.1.0
 BuildRequires: pkgconfig(Qt5Core)
+BuildRequires: pkgconfig(Qt5DBus)
 BuildRequires: pkgconfig(Qt5Network)
+BuildRequires: pkgconfig(Qt5Qml)
 BuildRequires: pkgconfig(TelegramQt5) >= 0.2.0
 BuildRequires: pkgconfig(TelepathyQt5) >= 0.9.6
 BuildRequires: pkgconfig(TelepathyQt5Service) >= 0.9.6
@@ -19,15 +21,20 @@ BuildRequires: cmake >= 3.2
 %description
 A Telegram connection manager.
 
+%package devel
+Summary:    Development files for Morse connection manager
+Group:      Development/Libraries
+Requires:   %{name} = %{version}-%{release}
+%description devel
+%{summary}.
+
 %prep
 %setup -q -n %{name}-%{version}
 
 %build
 %cmake \
     -DBUILD_VERSION="%{version}" \
-    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
-    -DCMAKE_INSTALL_LIBEXECDIR=%{_libexecdir} \
-    -DCMAKE_INSTALL_DATADIR=%{_datadir} \
+    -DBUILD_QML_IMPORT=TRUE \
     .
 
 %__make %{?_smp_mflags}
@@ -43,3 +50,9 @@ A Telegram connection manager.
 %{_libexecdir}/%{name}
 %{_datadir}/dbus-1/services/*.service
 %{_datadir}/telepathy/managers/*.manager
+%{_libdir}/qt5/qml/Morse/qmldir
+%{_libdir}/qt5/qml/Morse/libMorseQmlPlugin.so
+
+%files devel
+%defattr(-,root,root,-)
+%{_libdir}/qt5/qml/Morse/plugins.qmltypes

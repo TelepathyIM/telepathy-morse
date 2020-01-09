@@ -14,6 +14,16 @@ MorseInfo::MorseInfo(QObject *parent)
             this, &MorseInfo::accountDataDirectoryChanged);
 }
 
+quint32 MorseInfo::appId()
+{
+    return 14617u;
+}
+
+QString MorseInfo::appHash()
+{
+    return QStringLiteral("e17ac360fd072f83d5d08db45ce9a121");
+}
+
 QString MorseInfo::accountDataDirectory() const
 {
     if (m_accountIdentifier.isEmpty()) {

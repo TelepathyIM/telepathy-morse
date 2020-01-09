@@ -9,6 +9,9 @@ class MorseInfo : public QObject
     Q_PROPERTY(QString version READ version CONSTANT)
     Q_PROPERTY(QString buildVersion READ buildVersion CONSTANT)
 
+    Q_PROPERTY(quint32 appId READ appId CONSTANT)
+    Q_PROPERTY(QString appHash READ appHash CONSTANT)
+
     Q_PROPERTY(QString accountDataDirectory READ accountDataDirectory NOTIFY accountDataDirectoryChanged)
     Q_PROPERTY(QString accountDataFilePath READ accountDataFilePath NOTIFY accountDataDirectoryChanged)
     Q_PROPERTY(QString accountIdentifier READ accountIdentifier WRITE setAccountIdentifier NOTIFY accountIdentifierChanged)
@@ -17,6 +20,9 @@ public:
     explicit MorseInfo(QObject *parent = nullptr);
     static QString version();
     static QString buildVersion();
+
+    static quint32 appId();
+    static QString appHash();
 
     QString accountDataDirectory() const;
     QString accountDataFilePath() const;

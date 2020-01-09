@@ -243,9 +243,9 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     setSelfHandle(c_selfHandle);
 
     m_appInfo = new Client::AppInformation(this);
-    m_appInfo->setAppId(14617);
-    m_appInfo->setAppHash(QLatin1String("e17ac360fd072f83d5d08db45ce9a121"));
-    m_appInfo->setAppVersion(QLatin1String("0.2"));
+    m_appInfo->setAppId(MorseInfo::appId());
+    m_appInfo->setAppHash(MorseInfo::appHash());
+    m_appInfo->setAppVersion(MorseInfo::version());
     m_appInfo->setDeviceInfo(QLatin1String("pc"));
     m_appInfo->setOsInfo(QLatin1String("GNU/Linux"));
     m_appInfo->setLanguageCode(QLocale::system().bcp47Name());

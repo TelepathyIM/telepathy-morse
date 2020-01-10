@@ -279,6 +279,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     accountStorage->setPhoneNumber(m_selfPhone);
     accountStorage->setAccountIdentifier(m_info->accountIdentifier());
     accountStorage->setFileName(m_info->accountDataFilePath());
+    qDebug() << "Account data file:" << accountStorage->fileName();
     connect(accountStorage, &Client::FileAccountStorage::accountInvalidated, this, &MorseConnection::onAccountInvalidated);
     m_client->setAccountStorage(accountStorage);
 

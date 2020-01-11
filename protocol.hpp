@@ -32,6 +32,7 @@ public:
     virtual ~MorseProtocol();
 
     static QString getAccount(const QVariantMap &parameters);
+    static bool getEnableAuthentication(const QVariantMap &parameters);
     static QString getServerAddress(const QVariantMap &parameters);
     static quint16 getServerPort(const QVariantMap &parameters);
     static QString getServerKey(const QVariantMap &parameters);

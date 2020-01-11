@@ -157,6 +157,7 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     m_serverPort = MorseProtocol::getServerPort(parameters);
     m_serverKeyFile = MorseProtocol::getServerKey(parameters);
     m_keepAliveInterval = MorseProtocol::getKeepAliveInterval(parameters, Client::Settings::defaultPingInterval() / 1000);
+    m_enableAuthentication = MorseProtocol::getEnableAuthentication(parameters);
 
     /* Connection.Interface.Contacts */
     contactsIface = Tp::BaseConnectionContactsInterface::create();
@@ -343,8 +344,17 @@ void MorseConnection::doConnect(Tp::DBusError *error)
         Telegram::Client::AuthOperation *checkInOperation = m_client->connectionApi()->checkIn();
         checkInOperation->connectToFinished(this, &MorseConnection::onCheckInFinished, checkInOperation);
     } else {
-        signInOrUp();
+        tryToStartAuthentication();
     }
+}
+
+void MorseConnection::tryToStartAuthentication()
+{
+    if (!m_enableAuthentication) {
+        setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonAuthenticationFailed);
+    }
+
+    signInOrUp();
 }
 
 void MorseConnection::signInOrUp()
@@ -527,7 +537,7 @@ void MorseConnection::onCheckInFinished(Client::AuthOperation *checkInOperation)
 {
     qDebug() << Q_FUNC_INFO << checkInOperation->errorDetails();
     if (!checkInOperation->isSucceeded()) {
-        signInOrUp();
+        tryToStartAuthentication();
     }
 }
 

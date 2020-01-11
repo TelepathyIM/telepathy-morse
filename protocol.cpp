@@ -32,6 +32,7 @@
 #include <QVariantMap>
 
 static const QLatin1String c_account = QLatin1String("account");
+static const QLatin1String c_enableAuthentication = QLatin1String("enable-authentication");
 static const QLatin1String c_serverAddress = QLatin1String("server-address");
 static const QLatin1String c_serverPort = QLatin1String("server-port");
 static const QLatin1String c_serverKey = QLatin1String("server-key");
@@ -53,6 +54,7 @@ MorseProtocol::MorseProtocol(const QDBusConnection &dbusConnection, const QStrin
 
     setParameters(Tp::ProtocolParameterList()
                   << Tp::ProtocolParameter(c_account, QLatin1String("s"), Tp::ConnMgrParamFlagRequired)
+                  << Tp::ProtocolParameter(c_enableAuthentication, QLatin1String("b"), Tp::ConnMgrParamFlagHasDefault, true)
                   << Tp::ProtocolParameter(c_serverAddress, QLatin1String("s"), Tp::ConnMgrParamFlagHasDefault, QString())
                   << Tp::ProtocolParameter(c_serverPort, QLatin1String("u"), 0)
                   << Tp::ProtocolParameter(c_serverKey, QLatin1String("s"), Tp::ConnMgrParamFlagHasDefault, QString())
@@ -95,6 +97,11 @@ MorseProtocol::~MorseProtocol()
 QString MorseProtocol::getAccount(const QVariantMap &parameters)
 {
     return parameters.value(c_account).toString();
+}
+
+bool MorseProtocol::getEnableAuthentication(const QVariantMap &parameters)
+{
+    return parameters.value(c_enableAuthentication).toBool();
 }
 
 QString MorseProtocol::getServerAddress(const QVariantMap &parameters)

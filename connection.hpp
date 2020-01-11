@@ -63,6 +63,7 @@ public:
     static Tp::RequestableChannelClassSpecList getRequestableChannelList();
 
     void doConnect(Tp::DBusError *error);
+    void tryToStartAuthentication();
     void signInOrUp();
 
     QStringList inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error);
@@ -195,6 +196,7 @@ private:
     QString m_serverKeyFile;
     uint m_serverPort = 0;
     uint m_keepAliveInterval;
+    bool m_enableAuthentication = false;
 };
 
 #endif // MORSE_CONNECTION_HPP

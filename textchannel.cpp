@@ -474,7 +474,7 @@ void MorseTextChannel::setChatState(uint state, Tp::DBusError *error)
     }
 
     if (state == Tp::ChannelChatStateComposing) {
-        m_api->setMessageAction(m_targetPeer, Telegram::MessageAction::Typing);
+        reactivateLocalTyping();
         m_localTypingTimer->start();
     } else {
         m_api->setMessageAction(m_targetPeer, Telegram::MessageAction::None);

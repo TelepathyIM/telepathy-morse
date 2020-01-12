@@ -159,7 +159,9 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
 
 void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)
 {
-    m_api->readHistory(m_targetPeer, messageId.toUInt());
+    Q_UNUSED(messageId);
+    // Acknowledge != read. DO NOT mark the message as read here.
+    // Clients acknowledge messages after they have actually stored them (or displayed to the user)
 }
 
 void MorseTextChannel::onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, const Telegram::MessageAction &action)

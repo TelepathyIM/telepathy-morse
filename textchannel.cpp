@@ -146,6 +146,8 @@ MorseTextChannel::~MorseTextChannel()
 
 QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error)
 {
+    m_api->readHistory(m_targetPeer, m_dialogInfo.lastMessageId());
+
     QString content;
     for (const Tp::MessagePart &part : messageParts) {
         if (part.contains(QLatin1String("content-type"))

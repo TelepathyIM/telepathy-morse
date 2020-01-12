@@ -67,6 +67,7 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
       m_localTypingTimer(nullptr)
 {
     m_api = m_client->messagingApi();
+    updateDialogInfo();
 
     QStringList supportedContentTypes = QStringList()
             << QLatin1String("text/plain")
@@ -193,6 +194,8 @@ void MorseTextChannel::setMessageAction(quint32 userId, const Telegram::MessageA
 
 void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
 {
+    updateDialogInfo();
+
     Tp::MessagePartList partList;
     Tp::MessagePart header;
 
@@ -224,13 +227,10 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         header[QLatin1String("message-sender-id")] = QDBusVariant(senderId.toString());
     }
 
-    Telegram::DialogInfo dialogInfo;
-    m_client->dataStorage()->getDialogInfo(&dialogInfo, m_targetPeer);
-
     const bool isRead = toSelf
             || (isOut
-                ? (dialogInfo.readOutboxMaxId() >= message.id)
-                : (dialogInfo.readInboxMaxId() >= message.id));
+                ? (m_dialogInfo.readOutboxMaxId() >= message.id)
+                : (m_dialogInfo.readInboxMaxId() >= message.id));
 
     header[QLatin1String("delivery-status")] = QDBusVariant(isRead
                                                             ? Tp::DeliveryStatusRead
@@ -437,6 +437,11 @@ void MorseTextChannel::setMessageOutboxRead(Telegram::Peer peer, quint32 message
     partList << header;
 
     addReceivedMessage(partList);
+}
+
+void MorseTextChannel::updateDialogInfo()
+{
+    m_client->dataStorage()->getDialogInfo(&m_dialogInfo, m_targetPeer);
 }
 
 void MorseTextChannel::onMessageSent(quint64 messageRandomId, quint32 messageId)

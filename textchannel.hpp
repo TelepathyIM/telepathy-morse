@@ -69,6 +69,7 @@ public slots:
 protected slots:
     void setMessageInboxRead(Telegram::Peer peer, quint32 messageId);
     void setMessageOutboxRead(Telegram::Peer peer, quint32 messageId);
+    void updateDialogInfo();
     void reactivateLocalTyping();
 
 protected:
@@ -84,6 +85,7 @@ private:
     uint m_targetHandle;
     uint m_targetHandleType;
     Telegram::Peer m_targetPeer;
+    Telegram::DialogInfo m_dialogInfo;
     bool m_broadcast = false;
 
     Tp::BaseChannelTextTypePtr m_channelTextType;

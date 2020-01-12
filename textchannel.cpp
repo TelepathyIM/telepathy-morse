@@ -96,6 +96,12 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
     connect(m_api, &Telegram::Client::MessagingApi::messageActionChanged,
             this, &MorseTextChannel::onMessageActionChanged);
 
+    Telegram::ChatInfo info;
+    if (m_targetPeer.type != Telegram::Peer::User) {
+        m_client->dataStorage()->getChatInfo(&info, m_targetPeer);
+    }
+    m_broadcast = info.broadcast();
+
     if (m_targetHandleType == Tp::HandleTypeRoom) {
 #ifdef ENABLE_GROUP_CHAT
         Tp::ChannelGroupFlags groupFlags = Tp::ChannelGroupFlagProperties;
@@ -107,9 +113,6 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
         m_groupIface->setGroupFlags(groupFlags);
         m_groupIface->setSelfHandle(m_connection->selfHandle());
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_groupIface));
-
-        Telegram::ChatInfo info;
-        m_client->dataStorage()->getChatInfo(&info, m_targetPeer);
 
         QDateTime creationTimestamp;
         if (info.date()) {
@@ -206,19 +209,10 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
     header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
     header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
 
-    bool broadcast = false;
     const bool isOut = message.flags & Telegram::Namespace::MessageFlagOut;
     const bool toSelf = message.peer() == m_connection->selfPeer();
 
-    if (m_targetPeer.type == Telegram::Peer::Channel) {
-        Telegram::ChatInfo info;
-        if (!m_client->dataStorage()->getChatInfo(&info, m_targetPeer.id)) {
-            qWarning() << "Unable to get chat info" << m_targetPeer.toString();
-        }
-        broadcast = info.broadcast();
-    }
-
-    if (broadcast) {
+    if (m_broadcast) {
         header[QLatin1String("message-sender")]    = QDBusVariant(m_targetHandle);
         header[QLatin1String("message-sender-id")] = QDBusVariant(m_targetPeer.toString());
     } else if (isOut) {

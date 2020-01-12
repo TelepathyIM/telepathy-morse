@@ -84,6 +84,7 @@ private:
     uint m_targetHandle;
     uint m_targetHandleType;
     Telegram::Peer m_targetPeer;
+    bool m_broadcast = false;
 
     Tp::BaseChannelTextTypePtr m_channelTextType;
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;

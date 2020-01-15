@@ -100,6 +100,8 @@ public:
     quint64 getSentMessageToken(const Telegram::Peer &dialog, quint32 messageId) const;
     QString getMessageToken(const Telegram::Peer &dialog, quint32 messageId) const;
 
+    bool peerIsRoom(const Telegram::Peer peer) const;
+
 public slots:
     void onSyncMessagesReceived(const Telegram::Peer &peer, const QVector<quint32> &messages);
     void onNewMessageReceived(const Telegram::Peer peer, quint32 messageId);
@@ -135,8 +137,6 @@ protected:
     Tp::BaseChannelPtr createRoomListChannel();
 
 private:
-    bool peerIsRoom(const Telegram::Peer peer) const;
-
     uint getContactHandle(const Telegram::Peer &identifier) const;
     uint getChatHandle(const Telegram::Peer &identifier) const;
     uint addContacts(const QVector<Telegram::Peer> &identifiers);

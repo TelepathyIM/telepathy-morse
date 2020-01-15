@@ -57,6 +57,8 @@ public:
 
     void messageAcknowledgedCallback(const QString &messageId);
 
+    QString getMessageToken(quint32 messageId) const;
+
 public slots:
     void onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, const Telegram::MessageAction &action);
     void setMessageAction(quint32 userId, const Telegram::MessageAction &action);

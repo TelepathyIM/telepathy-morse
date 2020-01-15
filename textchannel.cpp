@@ -170,6 +170,13 @@ void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)
     // Clients acknowledge messages after they have actually stored them (or displayed to the user)
 }
 
+QString MorseTextChannel::getMessageToken(quint32 messageId) const
+{
+    const quint64 sentMessageToken = m_connection->getSentMessageToken(m_targetPeer, messageId);
+    const QString token = QString::number(sentMessageToken ? sentMessageToken : messageId);
+    return token;
+}
+
 void MorseTextChannel::onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, const Telegram::MessageAction &action)
 {
     // We are connected to broadcast signal, so have to select only needed calls
@@ -208,7 +215,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         return;
     }
 #endif // ENABLE_SCROLLBACK
-    const QString token = QString::number(sentMessageToken ? sentMessageToken : message.id);
+    const QString token = getMessageToken(message.id);
 
     header[QLatin1String("message-token")] = QDBusVariant(token);
     header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);

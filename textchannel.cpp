@@ -208,20 +208,20 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
     Tp::MessagePartList partList;
     Tp::MessagePart header;
 
-    quint64 sentMessageToken = m_connection->getSentMessageToken(m_targetPeer, message.id);
+    quint64 sentMessageToken = m_connection->getSentMessageToken(m_targetPeer, message.id());
 #ifndef ENABLE_SCROLLBACK
     if (sentMessageToken) {
         // Most of the clients go crazy on any kind of duplicated messages, including scrollback.
         return;
     }
 #endif // ENABLE_SCROLLBACK
-    const QString token = getMessageToken(message.id);
+    const QString token = getMessageToken(message.id());
 
     header[QLatin1String("message-token")] = QDBusVariant(token);
     header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
-    header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp);
+    header[QLatin1String("message-sent")]  = QDBusVariant(message.timestamp());
 
-    const bool isOut = message.flags & Telegram::Namespace::MessageFlagOut;
+    const bool isOut = message.flags() & Telegram::Namespace::MessageFlagOut;
     const bool toSelf = message.peer() == m_connection->selfPeer();
 
     if (m_broadcast) {
@@ -231,15 +231,15 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->selfHandle());
         header[QLatin1String("message-sender-id")] = QDBusVariant(m_connection->selfID());
     } else {
-        const Telegram::Peer senderId = Telegram::Peer::fromUserId(message.fromId);
+        const Telegram::Peer senderId = Telegram::Peer::fromUserId(message.fromUserId());
         header[QLatin1String("message-sender")]    = QDBusVariant(m_connection->ensureHandle(senderId));
         header[QLatin1String("message-sender-id")] = QDBusVariant(senderId.toString());
     }
 
     const bool isRead = toSelf
             || (isOut
-                ? (m_dialogInfo.readOutboxMaxId() >= message.id)
-                : (m_dialogInfo.readInboxMaxId() >= message.id));
+                ? (m_dialogInfo.readOutboxMaxId() >= message.id())
+                : (m_dialogInfo.readInboxMaxId() >= message.id()));
 
     header[QLatin1String("delivery-status")] = QDBusVariant(isRead
                                                             ? Tp::DeliveryStatusRead
@@ -254,7 +254,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         // Telegram has no timestamp for message read, only sent.
         // Fallback to the message sent timestamp to keep received messages in chronological order.
         // Alternatively, client can sort messages in order of message-sent.
-        header[QLatin1String("message-received")]  = QDBusVariant(message.timestamp);
+        header[QLatin1String("message-received")]  = QDBusVariant(message.timestamp());
     } else {
         uint currentTimestamp = static_cast<uint>(QDateTime::currentMSecsSinceEpoch() / 1000ll);
         header[QLatin1String("message-received")]  = QDBusVariant(currentTimestamp);
@@ -272,24 +272,24 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         if (!alias.isEmpty()) {
             forwardHeader[QLatin1String("message-sender-alias")] = QDBusVariant(alias);
         }
-        forwardHeader[QLatin1String("message-sent")] = QDBusVariant(message.fwdTimestamp);
+        forwardHeader[QLatin1String("message-sent")] = QDBusVariant(message.forwardTimestamp());
         partList << forwardHeader;
     }
 
     Tp::MessagePartList body;
-    if (!message.text.isEmpty()) {
+    if (!message.text().isEmpty()) {
         Tp::MessagePart text;
         text[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
-        text[QLatin1String("content")] = QDBusVariant(message.text);
+        text[QLatin1String("content")] = QDBusVariant(message.text());
         body << text;
     }
 
-    if (message.type != Telegram::Namespace::MessageTypeText) { // More, than a plain text message
+    if (message.type() != Telegram::Namespace::MessageTypeText) { // More, than a plain text message
         Telegram::MessageMediaInfo info;
-        m_client->dataStorage()->getMessageMediaInfo(&info, message.peer(), message.id);
+        m_client->dataStorage()->getMessageMediaInfo(&info, message.peer(), message.id());
 
         bool handled = true;
-        switch (message.type) {
+        switch (message.type()) {
         case Telegram::Namespace::MessageTypeGeo: {
             static const QString jsonTemplate = QLatin1String("{\"type\":\"point\",\"coordinates\":[%1, %2]}");
             Tp::MessagePart geo;
@@ -302,13 +302,13 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
         case Telegram::Namespace::MessageTypeContact: {
             Telegram::UserInfo userInfo;
             if (!info.getContactInfo(&userInfo)) {
-                qWarning() << Q_FUNC_INFO << "Unable to get user info from contact media message" << message.id;
+                qWarning() << Q_FUNC_INFO << "Unable to get user info from contact media message" << message.id();
                 break;
             }
 
             QString data = userToVCard(userInfo);
             if (data.isEmpty()) {
-                qWarning() << Q_FUNC_INFO << "Unable to get user vcard from user info from message" << message.id;
+                qWarning() << Q_FUNC_INFO << "Unable to get user vcard from user info from message" << message.id();
                 break;
             }
             Tp::MessagePart userVCardPart;

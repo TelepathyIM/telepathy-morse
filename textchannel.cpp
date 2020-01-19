@@ -22,6 +22,7 @@
 
 #include <TelegramQt/Client>
 #include <TelegramQt/DataStorage>
+#include <TelegramQt/Debug>
 #include <TelegramQt/MessagingApi>
 
 #include <TelepathyQt/Constants>
@@ -98,7 +99,7 @@ MorseTextChannel::MorseTextChannel(MorseConnection *morseConnection, Tp::BaseCha
             this, &MorseTextChannel::onMessageActionChanged);
 
     Telegram::ChatInfo info;
-    if (m_targetPeer.type != Telegram::Peer::User) {
+    if (m_targetPeer.type() != Telegram::Peer::User) {
         m_client->dataStorage()->getChatInfo(&info, m_targetPeer);
     }
     m_broadcast = info.broadcast();
@@ -389,15 +390,15 @@ void MorseTextChannel::updateChatParticipants(const Tp::UIntList &handles)
 #endif
 }
 
-void MorseTextChannel::onChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles)
+void MorseTextChannel::onChatDetailsChanged(const Telegram::Peer &peer, const Tp::UIntList &handles)
 {
-    qDebug() << Q_FUNC_INFO << chatId;
+    qDebug() << Q_FUNC_INFO << peer;
 
-    if (m_targetPeer.id == chatId) {
+    if (m_targetPeer == peer) {
         updateChatParticipants(handles);
 
         Telegram::ChatInfo info;
-        if (m_client->dataStorage()->getChatInfo(&info, chatId)) {
+        if (m_client->dataStorage()->getChatInfo(&info, peer)) {
             m_roomConfigIface->setTitle(info.title());
             m_roomConfigIface->setConfigurationRetrieved(true);
         }

@@ -66,7 +66,7 @@ public slots:
     void onMessageSent(quint64 messageRandomId, quint32 messageId);
     void updateChatParticipants(const Tp::UIntList &handles);
 
-    void onChatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
+    void onChatDetailsChanged(const Telegram::Peer &peer, const Tp::UIntList &handles);
 
 protected slots:
     void setMessageInboxRead(Telegram::Peer peer, quint32 messageId);

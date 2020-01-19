@@ -108,7 +108,7 @@ public slots:
     void addMessages(const Telegram::Peer peer, const QVector<quint32> &messageIds);
 
 signals:
-    void chatDetailsChanged(quint32 chatId, const Tp::UIntList &handles);
+    void chatDetailsChanged(const Telegram::Peer peer, const Tp::UIntList &handles);
 
 private slots:
     void onConnectionStatusChanged(Telegram::Client::ConnectionApi::Status status,

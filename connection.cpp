@@ -1292,7 +1292,8 @@ void MorseConnection::onAvatarRequestFinished(Telegram::Client::FileOperation *f
         }
         const QByteArray data = fileOperation->device()->readAll();
         if (!peerIsRoom(peer)) {
-            avatarsIface->avatarRetrieved(peer.id, fileId, data, fileInfo->mimeType());
+            uint handle = ensureContact(peer);
+            avatarsIface->avatarRetrieved(handle, fileId, data, fileInfo->mimeType());
         } else {
             qDebug() << "MorseConnection::onFileRequestCompleted(): Ignore room picture";
         }

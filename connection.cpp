@@ -1411,15 +1411,18 @@ void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError
 {
     if (contacts.isEmpty()) {
         error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("No handles provided"));
+        return;
     }
 
     if (status() != Tp::ConnectionStatusConnected) {
         error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        return;
     }
 
     foreach (quint32 handle, contacts) {
         if (!m_contactHandles.contains(handle)) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle(s)"));
+            return;
         }
         const Telegram::Peer peer = m_contactHandles.value(handle);
         Telegram::UserInfo userInfo;

@@ -5,6 +5,7 @@ ObjectPath = /org/freedesktop/Telepathy/ConnectionManager/morse
 
 [Protocol telegram]
 param-account=s required
+param-enable-authentication=b
 param-server-address=s
 param-server-port=q
 param-server-key=s
@@ -15,6 +16,7 @@ param-proxy-address=s
 param-proxy-port=q
 param-proxy-username=s
 param-proxy-password=s
+default-enable-authentication=true
 default-keepalive=true
 default-keepalive-interval=15
 

@@ -1071,6 +1071,27 @@ QString MorseConnection::getMessageToken(const Peer &dialog, quint32 messageId) 
     return QString::number(sentMessageToken ? sentMessageToken : messageId);
 }
 
+quint32 MorseConnection::getMessageId(const Peer &dialog, const QString &messageToken) const
+{
+    bool ok;
+    quint64 messageId64 = messageToken.toULongLong(&ok);
+    if (!ok) {
+        return 0;
+    }
+
+    quint32 messageId = 0;
+    if (m_sentMessageMap.contains(dialog)) {
+        const SentMessageMap &map = m_sentMessageMap[dialog];
+        messageId = map.key(messageId64);
+    }
+
+    if (!messageId && !(messageId64 >> 32)) {
+        messageId = static_cast<quint32>(messageId64);
+    }
+
+    return messageId;
+}
+
 /**
  * Add contacts with identifiers \a identifiers to known contacts list (not roster)
  *

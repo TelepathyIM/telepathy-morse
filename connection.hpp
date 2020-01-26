@@ -99,6 +99,7 @@ public:
 
     quint64 getSentMessageToken(const Telegram::Peer &dialog, quint32 messageId) const;
     QString getMessageToken(const Telegram::Peer &dialog, quint32 messageId) const;
+    quint32 getMessageId(const Telegram::Peer &dialog, const QString &messageToken) const;
 
     bool peerIsRoom(const Telegram::Peer peer) const;
 

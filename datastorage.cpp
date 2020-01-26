@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QFile>
 #include <QLoggingCategory>
+#include <QTimer>
 
 static const QString c_telegramStateFile = QLatin1String("telegram-state.bin");
 static const QString c_morseStateFile = QLatin1String("morse-state.bin");
@@ -18,6 +19,22 @@ MorseDataStorage::MorseDataStorage(QObject *parent) :
 void MorseDataStorage::setInfo(MorseInfo *info)
 {
     m_info = info;
+}
+
+void MorseDataStorage::scheduleSave()
+{
+    if (!m_delayedSaveTimer) {
+        m_delayedSaveTimer = new QTimer(this);
+        m_delayedSaveTimer->setSingleShot(true);
+        m_delayedSaveTimer->setInterval(500);
+        connect(m_delayedSaveTimer, &QTimer::timeout, this, &MorseDataStorage::saveData);
+    }
+
+    // Do not restart the timer if it is already active to make sure that
+    // two or three messages per second do not completely prevent the client from the save.
+    if (!m_delayedSaveTimer->isActive()) {
+        m_delayedSaveTimer->start();
+    }
 }
 
 bool MorseDataStorage::saveData() const

@@ -3,6 +3,8 @@
 
 #include <TelegramQt/DataStorage>
 
+QT_FORWARD_DECLARE_CLASS(QTimer)
+
 class MorseInfo;
 
 class MorseDataStorage : public Telegram::Client::InMemoryDataStorage
@@ -14,11 +16,13 @@ public:
     void setInfo(MorseInfo *info);
 
 public slots:
+    void scheduleSave();
     bool saveData() const;
     bool loadData();
 
 protected:
     MorseInfo *m_info = nullptr;
+    QTimer *m_delayedSaveTimer = nullptr;
 
 };
 

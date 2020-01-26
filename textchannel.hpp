@@ -55,9 +55,10 @@ public:
 
     QString sendMessageCallback(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
 
-    void messageAcknowledgedCallback(const QString &messageId);
+    void messageAcknowledgedCallback(const QString &messageToken);
 
     QString getMessageToken(quint32 messageId) const;
+    quint32 getMessageId(const QString &token) const;
 
 public slots:
     void onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, const Telegram::MessageAction &action);
@@ -67,6 +68,9 @@ public slots:
     void updateChatParticipants(const Tp::UIntList &handles);
 
     void onChatDetailsChanged(const Telegram::Peer &peer, const Tp::UIntList &handles);
+
+signals:
+    void messageAcknowledged(const Telegram::Peer &peer, quint32 messageId);
 
 protected slots:
     void setMessageInboxRead(Telegram::Peer peer, quint32 messageId);

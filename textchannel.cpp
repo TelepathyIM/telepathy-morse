@@ -164,18 +164,28 @@ QString MorseTextChannel::sendMessageCallback(const Tp::MessagePartList &message
     return QString::number(tmpId);
 }
 
-void MorseTextChannel::messageAcknowledgedCallback(const QString &messageId)
+void MorseTextChannel::messageAcknowledgedCallback(const QString &messageToken)
 {
-    Q_UNUSED(messageId);
     // Acknowledge != read. DO NOT mark the message as read here.
     // Clients acknowledge messages after they have actually stored them (or displayed to the user)
+
+    const quint32 messageId = getMessageId(messageToken);
+    if (!messageId) {
+        qWarning() << this << m_targetPeer << "invalid message token" << messageToken;
+        return;
+    }
+
+    emit messageAcknowledged(m_targetPeer, messageId);
 }
 
 QString MorseTextChannel::getMessageToken(quint32 messageId) const
 {
-    const quint64 sentMessageToken = m_connection->getSentMessageToken(m_targetPeer, messageId);
-    const QString token = QString::number(sentMessageToken ? sentMessageToken : messageId);
-    return token;
+    return m_connection->getMessageToken(m_targetPeer, messageId);
+}
+
+quint32 MorseTextChannel::getMessageId(const QString &token) const
+{
+    return m_connection->getMessageId(m_targetPeer, token);
 }
 
 void MorseTextChannel::onMessageActionChanged(const Telegram::Peer &peer, quint32 userId, const Telegram::MessageAction &action)

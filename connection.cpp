@@ -711,6 +711,9 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
         MorseTextChannelPtr textChannel = MorseTextChannel::create(this, baseChannel.data());
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
 
+        connect(textChannel.data(), &MorseTextChannel::messageAcknowledged,
+                m_dataStorage, &MorseDataStorage::scheduleSave);
+
         if (targetHandleType == Tp::HandleTypeRoom) {
             connect(this, &MorseConnection::chatDetailsChanged,
                     textChannel.data(), &MorseTextChannel::onChatDetailsChanged);

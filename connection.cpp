@@ -238,6 +238,12 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     setCreateChannelCallback(Tp::memFun(this, &MorseConnection::createChannelCB));
     setRequestHandlesCallback(Tp::memFun(this, &MorseConnection::requestHandles));
 
+#if 1 || TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 9)
+    chatReadIface = Tp::BaseConnectionChatReadInterface::create(0);
+    chatReadIface->setMarkReadCallback(Tp::memFun(this, &MorseConnection::markRead));
+    plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(chatReadIface));
+#endif
+
     // Interfaces setup complete
 
     connect(this, &BaseConnection::disconnected, this, &MorseConnection::onDisconnected);
@@ -1451,6 +1457,46 @@ void MorseConnection::requestAvatars(const Tp::UIntList &contacts, Tp::DBusError
 
         m_peerPictureRequests.insert(pictureFile.getFileId(), peer);
     }
+}
+
+void MorseConnection::markRead(const QVariantMap &channelRequest, const QString &messageToken, Tp::DBusError *error)
+{
+    const RequestDetails details = channelRequest;
+    if (details.channelType() != TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
+        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported channel type"));
+        return;
+    }
+
+    const QString targetId = details.getTargetIdentifier(this);
+    const uint targetHandleType = details.targetHandleType();
+    const Telegram::Peer targetPeer = Telegram::Peer::fromString(targetId);
+    const uint targetHandle = ensureHandle(targetPeer);
+
+    if (!targetHandle) {
+        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid target"));
+        return;
+    }
+
+    // Extra sanity check
+    if (peerIsRoom(targetPeer)) {
+        if (targetHandleType != Tp::HandleTypeRoom) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid target"));
+            return;
+        }
+    } else {
+        if (targetHandleType != Tp::HandleTypeContact) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid target"));
+            return;
+        }
+    }
+
+    const quint32 messageId = getMessageId(targetPeer, messageToken);
+    if (!messageId) {
+        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Invalid message token"));
+        return;
+    }
+
+    m_client->messagingApi()->readHistory(targetPeer, messageId);
 }
 
 void MorseConnection::roomListStartListing(Tp::DBusError *error)

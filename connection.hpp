@@ -152,6 +152,9 @@ private:
     Tp::AvatarTokenMap getKnownAvatarTokens(const Tp::UIntList &contacts, Tp::DBusError *error);
     void requestAvatars(const Tp::UIntList &contacts, Tp::DBusError *error);
 
+    /* Connection.Interface.ChatRead */
+    void markRead(const QVariantMap &channelRequest, const QString &messageToken, Tp::DBusError *error);
+
     /* Channel.Type.RoomList */
     void roomListStartListing(Tp::DBusError *error);
     void roomListStopListing(Tp::DBusError *error);
@@ -168,6 +171,9 @@ private:
     Tp::BaseConnectionContactInfoInterfacePtr contactInfoIface;
     Tp::BaseConnectionContactListInterfacePtr contactListIface;
     Tp::BaseConnectionContactsInterfacePtr contactsIface;
+#if 1 || TP_QT_VERSION >= TP_QT_VERSION_CHECK(0, 9, 9)
+    Tp::BaseConnectionChatReadInterfacePtr chatReadIface;
+#endif
     Tp::BaseConnectionRequestsInterfacePtr requestsIface;
     Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;
 

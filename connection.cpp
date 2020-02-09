@@ -22,6 +22,7 @@
 #include "datastorage.hpp"
 #include "info.hpp"
 #include "protocol.hpp"
+#include "requestdetails.hpp"
 #include "textchannel.hpp"
 
 #if TP_QT_VERSION < TP_QT_VERSION_CHECK(0, 9, 8)
@@ -636,44 +637,28 @@ QStringList MorseConnection::inspectHandles(uint handleType, const Tp::UIntList 
 
 Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, Tp::DBusError *error)
 {
-    const QString channelType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")).toString();
+    const RequestDetails details = request;
+    const QString channelType = details.channelType();
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_ROOM_LIST) {
         return createRoomListChannel();
     }
 
-    uint targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
-    uint targetHandle = 0;
-    Telegram::Peer targetID;
-
-    switch (targetHandleType) {
-    case Tp::HandleTypeContact:
-        if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"))) {
-            targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
-            targetID = m_contactHandles.value(targetHandle);
-        } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
-            targetID = Telegram::Peer::fromString(request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString());
-            targetHandle = ensureHandle(targetID);
+    const Tp::HandleType targetHandleType = details.targetHandleType();
+    const QString targetId = details.getTargetIdentifier(this);
+    const Telegram::Peer targetPeer = Telegram::Peer::fromString(targetId);
+    const uint targetHandle = ensureHandle(targetPeer);
+    if (targetId.isEmpty() || !targetPeer.isValid() || !targetHandle) {
+        if (error) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid target"));
         }
-        break;
-    case Tp::HandleTypeRoom:
-        if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"))) {
-            targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
-            targetID = m_chatHandles.value(targetHandle);
-        } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
-            targetID = Telegram::Peer::fromString(request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString());
-            targetHandle = ensureHandle(targetID);
-        }
-        break;
-    default:
-        break;
+        return Tp::BaseChannelPtr();
     }
 
     // Looks like there is no any case for InitiatorID other than selfID
-    uint initiatorHandle = 0;
-
-    if (targetHandleType == Tp::HandleTypeContact) {
-        initiatorHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle"), selfHandle()).toUInt();
+    uint initiatorHandle = details.initiatorHandle();
+    if (!initiatorHandle) {
+        initiatorHandle = selfHandle();
     }
 
     qDebug() << "MorseConnection::createChannel " << channelType
@@ -694,18 +679,8 @@ Tp::BaseChannelPtr MorseConnection::createChannelCB(const QVariantMap &request, 
         return Tp::BaseChannelPtr();
     }
 
-    if (!targetHandle
-            || ((targetHandleType == Tp::HandleTypeContact) && !m_contactHandles.contains(targetHandle))
-            || ((targetHandleType == Tp::HandleTypeRoom) && !m_chatHandles.contains(targetHandle))
-            ) {
-        if (error) {
-            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Target handle is unknown."));
-        }
-        return Tp::BaseChannelPtr();
-    }
-
-    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, Tp::HandleType(targetHandleType), targetHandle);
-    baseChannel->setTargetID(targetID.toString());
+    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, targetHandleType, targetHandle);
+    baseChannel->setTargetID(targetId);
     baseChannel->setInitiatorHandle(initiatorHandle);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {

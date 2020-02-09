@@ -1019,6 +1019,10 @@ uint MorseConnection::setPresence(const QString &status, const QString &message,
 
 uint MorseConnection::ensureHandle(const Telegram::Peer &identifier)
 {
+    if (!identifier.isValid()) {
+        return 0;
+    }
+
     if (peerIsRoom(identifier)) {
         return ensureChat(identifier);
     } else {
@@ -1033,9 +1037,13 @@ uint MorseConnection::ensureContact(quint32 userId)
 
 uint MorseConnection::ensureContact(const Telegram::Peer &identifier)
 {
+    if (!identifier.isValid()) {
+        return 0;
+    }
+
     uint handle = getContactHandle(identifier);
     if (!handle) {
-        handle = addContacts( {identifier});
+        handle = addContacts( {identifier} );
     }
     return handle;
 }

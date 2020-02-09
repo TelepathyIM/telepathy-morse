@@ -41,6 +41,8 @@ target_sources(telepathy-morse PRIVATE
     datastorage.hpp
     protocol.cpp
     protocol.hpp
+    requestdetails.cpp
+    requestdetails.hpp
     textchannel.cpp
     textchannel.hpp
 )

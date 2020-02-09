@@ -230,13 +230,14 @@ MorseConnection::MorseConnection(const QDBusConnection &dbusConnection, const QS
     /* Connection.Interface.Requests */
     requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
     requestsIface->requestableChannelClasses = getRequestableChannelList().bareClasses();
-
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(requestsIface));
 
     setConnectCallback(Tp::memFun(this, &MorseConnection::doConnect));
     setInspectHandlesCallback(Tp::memFun(this, &MorseConnection::inspectHandles));
     setCreateChannelCallback(Tp::memFun(this, &MorseConnection::createChannelCB));
     setRequestHandlesCallback(Tp::memFun(this, &MorseConnection::requestHandles));
+
+    // Interfaces setup complete
 
     connect(this, &BaseConnection::disconnected, this, &MorseConnection::onDisconnected);
 

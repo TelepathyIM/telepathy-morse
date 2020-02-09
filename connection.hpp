@@ -159,16 +159,18 @@ private:
     void loadState();
     void saveState();
 
-    Tp::BaseConnectionContactsInterfacePtr contactsIface;
-    Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;
-    Tp::BaseConnectionContactListInterfacePtr contactListIface;
-    Tp::BaseConnectionContactInfoInterfacePtr contactInfoIface;
-    Tp::BaseConnectionAliasingInterfacePtr aliasingIface;
-    Tp::BaseConnectionAvatarsInterfacePtr avatarsIface;
-    Tp::BaseConnectionAddressingInterfacePtr addressingIface;
-    Tp::BaseConnectionRequestsInterfacePtr requestsIface;
+private:
     Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface_authCode;
     Tp::BaseChannelSASLAuthenticationInterfacePtr saslIface_password;
+    Tp::BaseConnectionAddressingInterfacePtr addressingIface;
+    Tp::BaseConnectionAliasingInterfacePtr aliasingIface;
+    Tp::BaseConnectionAvatarsInterfacePtr avatarsIface;
+    Tp::BaseConnectionContactInfoInterfacePtr contactInfoIface;
+    Tp::BaseConnectionContactListInterfacePtr contactListIface;
+    Tp::BaseConnectionContactsInterfacePtr contactsIface;
+    Tp::BaseConnectionRequestsInterfacePtr requestsIface;
+    Tp::BaseConnectionSimplePresenceInterfacePtr simplePresenceIface;
+
     Tp::BaseChannelRoomListTypePtr roomListChannel;
 
     QString m_wantedPresence;

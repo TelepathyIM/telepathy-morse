@@ -316,7 +316,10 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
             fileMessage[QLatin1String("content-type")] = QDBusVariant(fileInfo.mimeType());
             fileMessage[QLatin1String("alternative")] = QDBusVariant(QLatin1String("multimedia"));
             fileMessage[QLatin1String("file-id")] = QDBusVariant(fileInfo.getFileId());
-            fileMessage[QLatin1String("size")] = QDBusVariant(fileInfo.size());
+            if (!fileInfo.fileName().isEmpty()) {
+                fileMessage[QLatin1String("file-name")] = QDBusVariant(fileInfo.fileName());
+            }
+            fileMessage[QLatin1String("file-size")] = QDBusVariant(fileInfo.size());
             // TODO: Add extra meta info (width, height, duration, etc...)
             body << fileMessage;
         }

@@ -26,25 +26,25 @@
 #include <TelegramQt/FilesApi>
 
 #include <TelepathyQt/IODevice>
+#include <TelepathyQt/ChannelClassSpec>
 
-MorseFileTransferChannel::MorseFileTransferChannel(MorseConnection *connection, Tp::BaseChannel *baseChannel, const RequestDetails &details)
-    : Tp::BaseChannelFileTransferType(details), m_localAbort(false)
+MorseFileTransferChannel::MorseFileTransferChannel(MorseConnection *connection, Telegram::Client::FileOperation *fileOperation, const RequestDetails &details)
+    : Tp::BaseChannelFileTransferType(details)
+    , m_localAbort(false)
 {
-    m_ioChannel = new Tp::IODevice();
-    m_ioChannel->open(QIODevice::ReadWrite);
-
-    Telegram::Client::FilesApi *api = connection->filesApi();
-    Telegram::Client::FileOperation *operation = api->downloadFile(details.fileId(), m_ioChannel);
-
-    connect(operation, &Telegram::Client::FileOperation::finished,
+    connect(fileOperation, &Telegram::Client::FileOperation::finished,
             this, &MorseFileTransferChannel::onTransferFinished);
 
-    remoteProvideFile(m_ioChannel);
+    const Telegram::FileInfo *fileInfo = fileOperation->fileInfo();
+    setContentType(fileInfo->mimeType());
+    setSize(fileInfo->size());
+
+    remoteProvideFile(fileOperation->device());
 }
 
 void MorseFileTransferChannel::onTransferFinished()
 {
-
+    // setTransferComplete();
 }
 
 MorseFileTransferChannelPtr MorseFileTransferChannel::create(MorseConnection *connection, const RequestDetails &details, Tp::DBusError *error)
@@ -59,7 +59,18 @@ MorseFileTransferChannelPtr MorseFileTransferChannel::create(MorseConnection *co
         error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("No file identifier provided"));
         return MorseFileTransferChannelPtr();
     }
-    MorseFileTransferChannelPtr fileTransferChannel = MorseFileTransferChannel(connection, baseChannel.data(), details);
 
-    return fileTransferChannel;
+    Tp::IODevice *ioChannel = new Tp::IODevice();
+    ioChannel->open(QIODevice::ReadWrite);
+    Telegram::Client::FilesApi *api = connection->filesApi();
+    Telegram::Client::FileOperation *operation = api->downloadFile(details.fileId(), ioChannel);
+    ioChannel->setParent(operation);
+
+    if (!operation->fileInfo()->isValid()) {
+        // TODO: Check error
+        return MorseFileTransferChannelPtr();
+    }
+
+    MorseFileTransferChannel *fileTransferChannel = new MorseFileTransferChannel(connection, operation, details);
+    return MorseFileTransferChannelPtr(fileTransferChannel);
 }

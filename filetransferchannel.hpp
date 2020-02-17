@@ -51,7 +51,7 @@ public:
     static MorseFileTransferChannelPtr create(MorseConnection *connection, const RequestDetails &details, Tp::DBusError *error);
 
 private:
-    MorseFileTransferChannel(MorseConnection *connection, Tp::BaseChannel *baseChannel, const RequestDetails &details);
+    MorseFileTransferChannel(MorseConnection *connection, Telegram::Client::FileOperation *fileOperation, const RequestDetails &details);
 
 private slots:
     void onTransferFinished();

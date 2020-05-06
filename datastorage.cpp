@@ -9,7 +9,6 @@
 #include <QTimer>
 
 static const QString c_telegramStateFile = QLatin1String("telegram-state.bin");
-static const QString c_morseStateFile = QLatin1String("morse-state.bin");
 
 MorseDataStorage::MorseDataStorage(QObject *parent) :
     Telegram::Client::InMemoryDataStorage(parent)

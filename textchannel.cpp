@@ -256,7 +256,7 @@ void MorseTextChannel::onMessageReceived(const Telegram::Message &message)
                                                             ? Tp::DeliveryStatusRead
                                                             : Tp::DeliveryStatusAccepted);
 
-    const bool silent = isRead || isOut;
+    const bool silent = isRead || isOut || message.flags() & Telegram::Namespace::MessageFlagSilent;
     if (sentMessageToken) {
         header[QLatin1String("scrollback")] = QDBusVariant(true);
     }

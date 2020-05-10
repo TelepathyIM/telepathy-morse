@@ -13,7 +13,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Qt5 REQUIRED COMPONENTS Core DBus Xml Network)
-find_package(TelegramQt5 REQUIRED)
+
+if(EXISTS telegram-qt)
+    message(STATUS "Build TelegramQt as a subdirectory")
+    if(BUILD_QML_IMPORT)
+        set(TELEGRAMQT_BUILD_QML_IMPORT )
+    endif()
+    add_subdirectory(telegram-qt)
+else()
+    find_package(TelegramQt5 REQUIRED)
+endif()
+
 find_package(TelepathyQt5 0.9.6 REQUIRED)
 find_package(TelepathyQt5Service 0.9.6 REQUIRED)
 set(TELEPATHY_QT_VERSION ${TELEPATHY_QT5_VERSION})

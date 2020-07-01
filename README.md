@@ -25,7 +25,7 @@ Features
 Requirements
 ============
 
-* CMake 3.2+
+* CMake 3.6+
 * Qt 5.6+
 * TelepathyQt 0.9.7+
 * TelegramQt 0.2.0+ (not released yet; please use `master` branch)

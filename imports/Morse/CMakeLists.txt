@@ -37,11 +37,14 @@ install(
 
 set(GENERATED_QML_TYPES "${CMAKE_CURRENT_SOURCE_DIR}/plugins.qmltypes")
 add_custom_target(generate-qmltypes
-    COMMAND ${_qt5Core_install_prefix}/bin/qmlplugindump -noinstantiate -nonrelocatable -v Morse 0.1 ${INSTALL_QML_IMPORT_DIR} > ${CMAKE_CURRENT_SOURCE_DIR}/plugins.qmltypes
-    COMMAND sed -i "s/\\[\"QtQuick 2.*\"\\]/\\[\"QtQuick 2.6\"\\]/" ${CMAKE_CURRENT_SOURCE_DIR}/plugins.qmltypes
-    COMMAND sed -i "s/Morse 0.1.*/Morse 0.1\'/" ${CMAKE_CURRENT_SOURCE_DIR}/plugins.qmltypes
+    COMMAND ${_qt5Core_install_prefix}/bin/qmlplugindump
+        -noinstantiate
+        -nonrelocatable
+        -v Morse 0.1
+        ${INSTALL_QML_IMPORT_DIR} > ${GENERATED_QML_TYPES}
+    COMMAND sed -i "s/\\[\"QtQuick 2.*\"\\]/\\[\"QtQuick 2.6\"\\]/" ${GENERATED_QML_TYPES}
+    COMMAND sed -i "s/Morse 0.1.*/Morse 0.1\'/" ${GENERATED_QML_TYPES}
     SOURCES qmldir
-    BYPRODUCTS "${CMAKE_CURRENT_SOURCE_DIR}/plugins.qmltypes"
     VERBATIM
 )
 

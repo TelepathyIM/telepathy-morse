@@ -15,6 +15,8 @@ Module {
         exportMetaObjectRevisions: [0]
         Property { name: "version"; type: "string"; isReadonly: true }
         Property { name: "buildVersion"; type: "string"; isReadonly: true }
+        Property { name: "appId"; type: "uint"; isReadonly: true }
+        Property { name: "appHash"; type: "string"; isReadonly: true }
         Property { name: "accountDataDirectory"; type: "string"; isReadonly: true }
         Property { name: "accountDataFilePath"; type: "string"; isReadonly: true }
         Property { name: "accountIdentifier"; type: "string" }

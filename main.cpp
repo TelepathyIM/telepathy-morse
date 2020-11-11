@@ -52,6 +52,10 @@ int main(int argc, char *argv[])
     Tp::BaseProtocolPtr proto = Tp::BaseProtocol::create<MorseProtocol>(QLatin1String("telegram"));
     Tp::BaseConnectionManagerPtr cm = Tp::BaseConnectionManager::create(QLatin1String("morse"));
 
+    // cm->
+    // proto->plugInterface();
+    // cm->plugInterface();
+
     if (!cm->addProtocol(proto)) {
         qCritical() << "Unable to add" << proto->name() << "protocol";
         return 1;

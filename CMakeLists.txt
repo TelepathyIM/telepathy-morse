@@ -14,18 +14,20 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Qt5 REQUIRED COMPONENTS Core DBus Xml Network)
 
-if(EXISTS telegram-qt)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/telegram-qt)
     message(STATUS "Build TelegramQt as a subdirectory")
     if(BUILD_QML_IMPORT)
-        set(TELEGRAMQT_BUILD_QML_IMPORT )
+        set(TELEGRAMQT_BUILD_QML_IMPORT TRUE)
     endif()
     add_subdirectory(telegram-qt)
 else()
     find_package(TelegramQt5 REQUIRED)
 endif()
 
-find_package(TelepathyQt5 0.9.6 REQUIRED)
-find_package(TelepathyQt5Service 0.9.6 REQUIRED)
+if(NOT TARGET TelepathyQt5::Core)
+    find_package(TelepathyQt5 0.9.7 COMPONENTS Core Service REQUIRED)
+endif()
+
 set(TELEPATHY_QT_VERSION ${TELEPATHY_QT5_VERSION})
 
 include(GNUInstallDirs)
@@ -132,8 +134,8 @@ target_link_libraries(telepathy-morse
     Qt5::Core
     Qt5::DBus
     Qt5::Network
-    ${TELEPATHY_QT5_LIBRARIES}
-    ${TELEPATHY_QT5_SERVICE_LIBRARIES}
+    TelepathyQt5::Core
+    TelepathyQt5::Service
     TelegramQt5::Core
     MorseInfo
 )
@@ -142,9 +144,9 @@ target_compile_definitions(telepathy-morse PRIVATE
     QT_NO_CAST_FROM_BYTEARRAY
     QT_NO_CAST_TO_ASCII
     QT_NO_URL_CAST_FROM_STRING
-    QT_RESTRICTED_CAST_FROM_ASCII
     QT_STRICT_ITERATORS
 )
+# QT_RESTRICTED_CAST_FROM_ASCII
 
 configure_file(dbus-service.in org.freedesktop.Telepathy.ConnectionManager.morse.service)
 

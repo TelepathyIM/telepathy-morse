@@ -52,20 +52,20 @@ MorseProtocol::MorseProtocol(const QDBusConnection &dbusConnection, const QStrin
     setIconName(QLatin1String("telegram"));
     setVCardField(QLatin1String("tel"));
 
-    setParameters(Tp::ProtocolParameterList()
-                  << Tp::ProtocolParameter(c_account, QLatin1String("s"), Tp::ConnMgrParamFlagRequired)
-                  << Tp::ProtocolParameter(c_enableAuthentication, QLatin1String("b"), Tp::ConnMgrParamFlagHasDefault, true)
-                  << Tp::ProtocolParameter(c_serverAddress, QLatin1String("s"), Tp::ConnMgrParamFlagHasDefault, QString())
-                  << Tp::ProtocolParameter(c_serverPort, QLatin1String("u"), 0)
-                  << Tp::ProtocolParameter(c_serverKey, QLatin1String("s"), Tp::ConnMgrParamFlagHasDefault, QString())
-                  << Tp::ProtocolParameter(c_keepalive, QLatin1String("b"), Tp::ConnMgrParamFlagHasDefault, true)
-                  << Tp::ProtocolParameter(c_keepaliveInterval, QLatin1String("u"), Tp::ConnMgrParamFlagHasDefault, 15)
-                  << Tp::ProtocolParameter(c_proxyType, QLatin1String("s"), 0) // ATM we have only socks5 support, but Telegram supports http-proxy too
-                  << Tp::ProtocolParameter(c_proxyAddress, QLatin1String("s"), 0)
-                  << Tp::ProtocolParameter(c_proxyPort, QLatin1String("u"), 0)
-                  << Tp::ProtocolParameter(c_proxyUsername, QLatin1String("s"), 0)
-                  << Tp::ProtocolParameter(c_proxyPassword, QLatin1String("s"), Tp::ConnMgrParamFlagSecret)
-                  );
+    setParameters({
+                      Tp::ProtocolParameter(c_account, QLatin1String("s"), Tp::ConnMgrParamFlagRequired),
+                      Tp::ProtocolParameter(c_enableAuthentication, QLatin1String("b"), Tp::ConnMgrParamFlagHasDefault, true),
+                      Tp::ProtocolParameter(c_serverAddress, QLatin1String("s"), Tp::ConnMgrParamFlagHasDefault, QString()),
+                      Tp::ProtocolParameter(c_serverPort, QLatin1String("u"), 0),
+                      Tp::ProtocolParameter(c_serverKey, QLatin1String("s"), Tp::ConnMgrParamFlagHasDefault, QString()),
+                      Tp::ProtocolParameter(c_keepalive, QLatin1String("b"), Tp::ConnMgrParamFlagHasDefault, true),
+                      Tp::ProtocolParameter(c_keepaliveInterval, QLatin1String("u"), Tp::ConnMgrParamFlagHasDefault, 15),
+                      Tp::ProtocolParameter(c_proxyType, QLatin1String("s"), 0), // ATM we have only socks5 support, but Telegram supports http-proxy too
+                      Tp::ProtocolParameter(c_proxyAddress, QLatin1String("s"), 0),
+                      Tp::ProtocolParameter(c_proxyPort, QLatin1String("u"), 0),
+                      Tp::ProtocolParameter(c_proxyUsername, QLatin1String("s"), 0),
+                      Tp::ProtocolParameter(c_proxyPassword, QLatin1String("s"), Tp::ConnMgrParamFlagSecret),
+                  });
 
     setRequestableChannelClasses(MorseConnection::getRequestableChannelList());
 
